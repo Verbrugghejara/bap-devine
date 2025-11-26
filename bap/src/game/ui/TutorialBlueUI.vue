@@ -2,7 +2,7 @@
     <div class="tutorial-ui">
         <h2>Hoe werkt het?</h2>
         <div class="tutorial-description">
-            <p>Draai aan Blauw</p>
+            <p>Draai aan <span style="font-weight: bold;">blauw</span></p>
             <div class="tutorial-visuals">
                 <div class="tutorial-visuals-items">
                     <img
@@ -40,22 +40,22 @@
                 </div>
             </div>
         </div>
-            <div class="button-text fixed-bottom" style="position:relative;align-items:center;">
-                <svg width="32" height="32" style="margin-right:12px;" viewBox="0 0 32 32">
-                    <circle cx="16" cy="16" r="14" stroke="#35BBF0" stroke-width="4" fill="none" opacity="0.2" />
-                    <circle
-                        cx="16" cy="16" r="14"
-                        :stroke="'#35BBF0'"
-                        stroke-width="4"
-                        fill="none"
-                        :stroke-dasharray="circumference"
-                        :stroke-dashoffset="circumference - (circumference * enterHoldProgress)"
-                        stroke-linecap="round"
-                        style="transition: stroke-dashoffset 0.1s linear;"
-                    />
-                </svg>
-                OVERSLAAN
-            </div>
+        <div class="button-text fixed-bottom" style="position:relative;align-items:center;">
+            <svg width="32" height="32" style="margin-right:12px;" viewBox="0 0 32 32">
+                <circle cx="16" cy="16" r="14" stroke="#35BBF0" stroke-width="4" fill="none" opacity="0.2" />
+                <circle
+                    cx="16" cy="16" r="14"
+                    :stroke="'#35BBF0'"
+                    stroke-width="4"
+                    fill="none"
+                    :stroke-dasharray="circumference"
+                    :stroke-dashoffset="circumference - (circumference * enterHoldProgress)"
+                    stroke-linecap="round"
+                    style="transition: stroke-dashoffset 0.1s linear;"
+                />
+            </svg>
+            OVERSLAAN
+        </div>
     </div>
 </template>
 
@@ -272,7 +272,7 @@ h2 {
 
 .tutorial-description {
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: bold;
+    /* font-weight: bold; */
     font-size: 2em;
     border-radius: 24px;
     border: 5px solid #35BBF0;
@@ -348,11 +348,11 @@ h2 {
 }
 
 .fixed-bottom {
-    position: fixed;
-    right: 0;
+    /* position: absolute; */
+    left: 50%;
     /* bottom: 32px; */
     z-index: 200;
-    transform: none;
+    transform: translateX(-50%);
 }
 
 .button-text.animate {

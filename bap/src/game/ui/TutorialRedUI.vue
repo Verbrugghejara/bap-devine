@@ -2,7 +2,7 @@
     <div class="tutorial-ui">
         <h2>Hoe werkt het?</h2>
         <div class="tutorial-description">
-            <p>Draai aan Rood</p>
+            <p>Draai aan <span style="font-weight: bold;">rood</span></p>
             <div class="tutorial-visuals">
                 <div class="tutorial-visuals-items">
                     <img
@@ -41,7 +41,22 @@
                 </div>
             </div>
         </div>
-            <p class="button-text fixed-bottom">Overslaan</p>
+            <div class="button-text fixed-bottom" style="position:relative;align-items:center;">
+                <svg width="32" height="32" style="margin-right:12px;" viewBox="0 0 32 32">
+                    <circle cx="16" cy="16" r="14" stroke="#F25C54" stroke-width="4" fill="none" opacity="0.2" />
+                    <circle
+                        cx="16" cy="16" r="14"
+                        :stroke="'#F25C54'"
+                        stroke-width="4"
+                        fill="none"
+                        :stroke-dasharray="circumference"
+                        :stroke-dashoffset="circumference - (circumference * enterHoldProgress)"
+                        stroke-linecap="round"
+                        style="transition: stroke-dashoffset 0.1s linear;"
+                    />
+                </svg>
+                OVERSLAAN
+            </div>
     </div>
 </template>
 
@@ -155,13 +170,52 @@ const balloonRotation = ref(0); // graden
 
 let sensor1Timeout: any = null;
 let sensor2Timeout: any = null;
+let enterHoldTimeout: any = null;
+let enterHoldActive = false;
+
+const enterHoldProgress = ref(0); // 0..1
+const enterHoldStart = ref<number|null>(null);
+const circumference = 2 * Math.PI * 14; // r=14
+
+function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !enterHoldActive) {
+        enterHoldActive = true;
+        enterHoldStart.value = Date.now();
+        enterHoldProgress.value = 0;
+        const update = () => {
+            if (!enterHoldActive) return;
+            const elapsed = Date.now() - (enterHoldStart.value || 0);
+            enterHoldProgress.value = Math.min(1, elapsed / 3000);
+            if (enterHoldProgress.value >= 1) {
+                skipTutorial();
+                enterHoldActive = false;
+                enterHoldProgress.value = 0;
+                return;
+            }
+            enterHoldTimeout = setTimeout(update, 16);
+        };
+        update();
+    }
+}
+
+function handleKeyUp(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+        enterHoldActive = false;
+        clearTimeout(enterHoldTimeout);
+        enterHoldProgress.value = 0;
+    }
+}
 
 function skipTutorial() {
     EventBus.emit('change-scene', 'Game');
 }
 
+
 onMounted(() => {
     let lastBothActive = false;
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     // rotary1-move en rotary2-move zijn niet meer nodig voor de visuele feedback
 });
 onUnmounted(() => {
@@ -169,6 +223,10 @@ onUnmounted(() => {
     EventBus.off('rotary2-move');
     clearTimeout(sensor1Timeout);
     clearTimeout(sensor2Timeout);
+    
+    window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
+    clearTimeout(enterHoldTimeout);
 });
 
 
@@ -211,7 +269,7 @@ h2 {
 
 .tutorial-description {
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: bold;
+    /* font-weight: bold; */
     font-size: 2em;
     border-radius: 24px;
     border: 5px solid #F25C54;
@@ -287,11 +345,10 @@ h2 {
 }
 
 .fixed-bottom {
-    position: fixed;
-    right: 0;
+    left: 50%;
     /* bottom: 32px; */
     z-index: 200;
-    transform: none;
+    transform: translateX(-50%);
 }
 
 .button-text.animate {
