@@ -30,11 +30,13 @@ async def rotary_sender(websocket):
             angle1 = read_angle(bus1)
             angle2 = read_angle(bus3)
             if angle1 is not None:
-                print(f"Angle1: {angle1:.2f}°", end=' ')
+                # print(f"Angle1: {angle1:.2f}°", end=' ')
+                pass
             else:
                 print("Angle1: ERROR", end=' ')
             if angle2 is not None:
-                print(f"Angle2: {angle2:.2f}°")
+                # print(f"Angle2: {angle2:.2f}°")
+                pass
             else:
                 print("Angle2: ERROR")
             msg = json.dumps({"angle1": angle1, "angle2": angle2})

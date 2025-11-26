@@ -1,13 +1,13 @@
 
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
-import { DualRotaryWSClient } from "./DualRotaryWSClient";
+import { getRotaryClient } from '../utils/rotaryClientSingleton';
 // import { transform } from "typescript"; // Niet gebruikt, dus verwijderd
 import { SFEER_LABELS } from "../utils/sfeerLabels";
 
 
 export class MainMenu extends Scene {
-    rotary: DualRotaryWSClient | undefined;
+    rotary: any;
     title: GameObjects.Text;
     title2: GameObjects.Text;
     balloon: GameObjects.Image;
@@ -20,7 +20,7 @@ export class MainMenu extends Scene {
 
     create() {
             // Zet direct de WebSocket connectie op
-            this.rotary = new DualRotaryWSClient("ws://localhost:8765");
+            this.rotary = getRotaryClient();
         this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase());
         this.title = this.add.text(
             this.scale.width / 2,

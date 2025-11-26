@@ -7,11 +7,11 @@ export class Tutorial extends Scene {
     private _changeSceneHandler?: (sceneKey: string) => void;
 
     constructor() {
-        super('Tutorial');
+        super('ControllerChecks');
     }
 
     create() {
-        this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[2].colors.d.toString(16).padStart(6, '0').toUpperCase());
+        this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase());
         // Notify Vue that the Tutorial scene is active
         EventBus.emit('current-scene-ready', this);
 
@@ -39,4 +39,8 @@ export class Tutorial extends Scene {
         }
     }
 
+    destroy() {
+        this.shutdown();
+        // super.destroy(); // Scene in Phaser heeft geen destroy()
+    }
 }

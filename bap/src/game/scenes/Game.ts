@@ -5,7 +5,7 @@ function angleDiff(a: number, b: number): number {
     return diff;
 }
 
-import { DualRotaryWSClient } from './DualRotaryWSClient';
+import { getRotaryClient, closeRotaryClient } from '../utils/rotaryClientSingleton';
 import { SFEER_LABELS } from '../utils/sfeerLabels';
 
 import { EventBus } from '../EventBus';
@@ -27,7 +27,7 @@ export class Game extends Scene {
     birdDead: boolean = false;
     birdSpawnTimer: Phaser.Time.TimerEvent | null = null;
 
-    rotary: DualRotaryWSClient | null = null;
+    rotary: any = null;
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
 
     private sfeerOffsetY: number = 0;
@@ -92,9 +92,9 @@ export class Game extends Scene {
 
     create() {
             // Inactiviteitstimer starten
-            this.resetInactivityTimeout();
+            // this.resetInactivityTimeout();
         this.ballonHealth = 3;
-        this.rotary = new DualRotaryWSClient("ws://localhost:8765");
+        this.rotary = getRotaryClient();
         if (this.physics && this.physics.world) {
             this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
         }
@@ -173,11 +173,12 @@ export class Game extends Scene {
 
         EventBus.emit('current-scene-ready', this);
         // Luister naar rotary events om inactiviteit te resetten
-        EventBus.on('rotary1-move', this.resetInactivityTimeout, this);
-        EventBus.on('rotary2-move', this.resetInactivityTimeout, this);
+        // EventBus.on('rotary1-move', this.resetInactivityTimeout, this);
+        // EventBus.on('rotary2-move', this.resetInactivityTimeout, this);
         }
 
         resetInactivityTimeout() {
+            console.log("Resetting inactivity timeout");
             clearTimeout(this.inactivityTimeout);
             this.inactivityTimeout = setTimeout(() => {
                 EventBus.emit('change-scene', 'MainMenu');
@@ -272,7 +273,7 @@ export class Game extends Scene {
 
                 if (sensor1Active) {
                     EventBus.emit('rotary1-move');
-                    this.resetInactivityTimeout();
+                    // this.resetInactivityTimeout();
                     if (activeCount === 1) {
                         // Slechts één sensor actief: altijd naar links
                         this.ballon.x += 4;
@@ -285,7 +286,7 @@ export class Game extends Scene {
                 }
                 if (sensor2Active) {
                     EventBus.emit('rotary2-move');
-                    this.resetInactivityTimeout();
+                    // this.resetInactivityTimeout();
                     if (activeCount === 1) {
                         // Slechts één sensor actief: altijd naar links
                         this.ballon.x -= 4;
@@ -372,7 +373,8 @@ export class Game extends Scene {
     
     shutdown() {
         clearTimeout(this.inactivityTimeout);
-        EventBus.off('rotary1-move', this.resetInactivityTimeout, this);
-        EventBus.off('rotary2-move', this.resetInactivityTimeout, this);
+        // EventBus.off('rotary1-move', this.resetInactivityTimeout, this);
+        // EventBus.off('rotary2-move', this.resetInactivityTimeout, this);
+        closeRotaryClient();
     }
 }
