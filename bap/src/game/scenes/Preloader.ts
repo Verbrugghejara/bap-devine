@@ -40,11 +40,17 @@ export class Preloader extends Scene
         this.load.spritesheet('bird-death', 'bird/Death.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('heart', 'heart.svg');
         this.load.image('balloon', 'balloon.png');
-        this.load.image('rocket', 'rocket.svg');
+        this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
         // Vogel walk spritesheet (gebruik 128x128 en 8 frames als test)
         // this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 128, frameHeight: 128 });
     }
     create() {
+        this.anims.create({
+            key: 'propellor-blauw',
+            frames: this.anims.generateFrameNumbers('propellor-blauw', { start: 0, end: 7 }),
+            frameRate: 10,
+            repeat: -1
+        });
         this.anims.create({
             key: 'bird-walk',
             frames: this.anims.generateFrameNumbers('bird-walk', { start: 0, end: 3 }),

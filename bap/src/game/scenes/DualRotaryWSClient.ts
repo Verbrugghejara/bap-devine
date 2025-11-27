@@ -19,6 +19,7 @@ export class DualRotaryWSClient {
         this.ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                console.log('[DualRotaryWSClient] Received data:', data);
 
                 if (typeof data.angle1 === "number") {
                     this.prevAngles[0] = this.lastAngles[0];
@@ -29,6 +30,8 @@ export class DualRotaryWSClient {
                     this.prevAngles[1] = this.lastAngles[1];
                     this.lastAngles[1] = data.angle2;
                 }
+
+                console.log('[DualRotaryWSClient] lastAngles:', this.lastAngles, 'prevAngles:', this.prevAngles);
             } catch (e) {
                 console.error('[DualRotaryWSClient] Error parsing message:', e);
             }

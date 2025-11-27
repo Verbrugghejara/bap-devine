@@ -17,6 +17,8 @@ function startCountdown() {
     countDownNumber.value = 5;
     fadeOut.value = false;
     clearInterval(interval);
+    // Pauzeer de game scene
+    EventBus.emit('pause-game-scene');
     interval = setInterval(() => {
         if (typeof countDownNumber.value === 'number' && countDownNumber.value > 1) {
             countDownNumber.value--;
@@ -25,6 +27,8 @@ function startCountdown() {
             fadeOut.value = true;
             clearInterval(interval);
             setTimeout(() => {
+                // Resume de game scene
+                EventBus.emit('resume-game-scene');
                 emit('done');
             }, 900);
         }

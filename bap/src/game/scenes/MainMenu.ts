@@ -90,11 +90,18 @@ export class MainMenu extends Scene {
         bg.fillRoundedRect(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight, 16);
 
         // Zet rocket en tekst netjes naast elkaar gecentreerd
-        const rocketX = -btnContentWidth/2 + rocketSize/2;
-        const textX = rocketX + rocketSize/2 + iconMargin + startText.width/2;
-        const rocket = this.add.image(rocketX, 0, 'rocket')
-            .setDisplaySize(rocketSize, rocketSize)
-            .setOrigin(0.5, 0.5);
+        const circleRadius = rocketSize / 3;
+        // Bepaal totale content breedte (cirkel + margin + tekst)
+        const contentWidth = circleRadius * 2 + iconMargin + startText.width;
+        // Startpositie zodat geheel gecentreerd is
+        const contentStartX = -contentWidth / 2;
+        // Verticaal centreren: y=0 is het midden van de button-container
+        const circleY = 0;
+        const circleX = contentStartX + circleRadius;
+        const textX = circleX + circleRadius + iconMargin + startText.width / 2;
+        const circle = this.add.graphics();
+        circle.lineStyle(6, 0xffffff, 1);
+        circle.strokeCircle(circleX, circleY, circleRadius);
         startText.setX(textX);
         startText.setY(0);
 
@@ -102,7 +109,7 @@ export class MainMenu extends Scene {
         this.startButton = this.add.container(this.scale.width / 2, this.scale.height - 200, [
             shadow,
             bg,
-            rocket,
+            circle,
             startText
         ]);
 
@@ -112,10 +119,10 @@ export class MainMenu extends Scene {
         // Button animatie en scene-wissel functie
         const triggerButton = () => {
             const bg = this.startButton.list[1];
-            const rocket = this.startButton.list[2];
+            const circle = this.startButton.list[2];
             const startText = this.startButton.list[3];
             this.tweens.add({
-                targets: [bg, rocket, startText],
+                targets: [bg, circle, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,

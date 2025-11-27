@@ -15,7 +15,7 @@ sleep 2
 
 # 3. Start de webserver (npm run dev met --host)
 echo "[3/4] Starting Vite webserver..."
-cd bap && npm run dev &
+cd bap && npm run dev -- --host &
 NPM_PID=$!
 cd ..
 sleep 2
