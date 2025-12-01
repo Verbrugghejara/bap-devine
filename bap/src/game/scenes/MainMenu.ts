@@ -155,7 +155,7 @@ export class MainMenu extends Scene {
 
     changeScene() {
 
-        this.scene.start('Tutorial');
+        this.scene.start('TutorialBlue');
 
     }
 

@@ -9,13 +9,7 @@ import GameUI from './game/ui/GameUI.vue';
 import GameOverUI from './game/ui/GameOverUI.vue';
 import GameVictoryUI from './game/ui/GameVictoryUI.vue';
 import CountDownUI from './game/ui/CountDownUI.vue';
-import TutorialBlueUIComponent from './game/ui/TutorialBlueUI.vue';
-import TutorialRedUI from './game/ui/TutorialRedUI.vue';
-import type {Tutorial} from './game/scenes/Tutorial';
-// import type {Tutorial} from './game/scenes/Tutorial';
-const canMoveSprite = ref(false);
 import { EventBus } from './game/EventBus';
-// import TutorialRedUI from './game/ui/TutorialRedUI.vue';
 
 const phaserRef = ref();
 const showGameUI = ref(false);
@@ -27,80 +21,30 @@ const gameOverIndex = ref(0);
 
 const showGameVictory = ref(false);
 const gameVictoryIndex = ref(0);
-const showTutorialBlueUI = ref(false);
-const showTutorialRedUI = ref(false);
 const currentSceneKey = ref<string | null>(null);
 
-// Toon juiste tutorial UI op basis van EventBus scene-wissel
+// Scene-wissel: alleen Game, GameOver, GameVictory UI tonen
 EventBus.on('change-scene', (scene: string) => {
-    // Toon tutorials alleen als de actieve scene 'Tutorial' is
-    if (currentSceneKey.value !== 'Tutorial') {
-        showTutorialBlueUI.value = false;
-        showTutorialRedUI.value = false;
-        // GameUI blijft aan zolang het niet expliciet gameover/victory is
-        if (scene === 'GameOver' || scene === 'GameVictory') {
-            showGameUI.value = false;
-        } else if (scene === 'Game') {
-            showCountdown.value = true;
-            countdownActive.value = true;
-            showGameUI.value = true;
-            // Zet game op pauze zodra Game scene actief wordt
-            setTimeout(() => {
-                if (phaserRef.value && phaserRef.value.scene) {
-                    phaserRef.value.scene.scene.pause();
-                }
-            }, 0);
-        }
-        showGameOver.value = (scene === 'GameOver');
-        showGameVictory.value = (scene === 'GameVictory');
-        return;
-    }
-    if (scene === 'TutorialBlueUI') {
-        showTutorialBlueUI.value = true;
-        showTutorialRedUI.value = false;
+    if (scene === 'GameOver' || scene === 'GameVictory') {
         showGameUI.value = false;
-        showGameOver.value = false;
-        showGameVictory.value = false;
-    } else if (scene === 'TutorialRedUI') {
-        showTutorialBlueUI.value = false;
-        showTutorialRedUI.value = true;
-        showGameUI.value = false;
-        showGameOver.value = false;
-        showGameVictory.value = false;
-    } else {
-        showTutorialBlueUI.value = false;
-        showTutorialRedUI.value = false;
-        if (scene === 'GameOver' || scene === 'GameVictory') {
-            showGameUI.value = false;
-        } else if (scene === 'Game') {
-            showCountdown.value = true;
-            countdownActive.value = true;
-            showGameUI.value = true;
-            setTimeout(() => {
-                if (phaserRef.value && phaserRef.value.scene) {
-                    phaserRef.value.scene.scene.pause();
-                }
-            }, 0);
-        }
-        showGameOver.value = (scene === 'GameOver');
-        showGameVictory.value = (scene === 'GameVictory');
+    } else if (scene === 'Game') {
+        showCountdown.value = true;
+        countdownActive.value = true;
+        showGameUI.value = true;
+        setTimeout(() => {
+            if (phaserRef.value && phaserRef.value.scene) {
+                phaserRef.value.scene.scene.pause();
+            }
+        }, 0);
     }
+    showGameOver.value = (scene === 'GameOver');
+    showGameVictory.value = (scene === 'GameVictory');
 });
 
 
-const currentScene = (scene: MainMenu) => {
+const currentScene = (scene: any) => {
     currentSceneKey.value = scene.scene.key;
     showGameUI.value = scene.scene.key === 'Game';
-    // Toon tutorials alleen als de actieve scene 'Tutorial' is
-    if (scene.scene.key === 'Tutorial') {
-        if (!showTutorialBlueUI.value && !showTutorialRedUI.value) {
-            showTutorialBlueUI.value = true;
-            showTutorialRedUI.value = false;
-        }
-    } else {
-        showTutorialBlueUI.value = false;
-        showTutorialRedUI.value = false;
-    }
     if (scene.scene.key !== 'GameOver') {
         showGameOver.value = false;
     }
@@ -157,20 +101,27 @@ function onGameVictoryUI(index: number) {
 
 
 onMounted(() => {
-    // Toon geen tutorial bij start, alleen als scene 'Tutorial' is
-    showTutorialBlueUI.value = false;
-    showTutorialRedUI.value = false;
     showGameUI.value = false;
     showGameOver.value = false;
     showGameVictory.value = false;
     EventBus.on('gameover-ui', onGameOverUI);
     EventBus.on('gamevictory-ui', onGameVictoryUI);
+    EventBus.on('show-countdown', () => {
+        showCountdown.value = true;
+        countdownActive.value = true;
+        setTimeout(() => {
+            if (phaserRef.value && phaserRef.value.scene) {
+                phaserRef.value.scene.scene.pause();
+            }
+        }, 0);
+    });
 });
 
 
 onUnmounted(() => {
     EventBus.off('gameover-ui', onGameOverUI);
     EventBus.off('gamevictory-ui', onGameVictoryUI);
+    EventBus.off('show-countdown');
 });
 </script>
 
@@ -181,8 +132,6 @@ onUnmounted(() => {
         <GameUI v-if="showGameUI && currentSceneKey === 'Game'" />
         <GameOverUI v-if="showGameOver" :sfeerIndex="gameOverIndex" @restart="handleRestart" />
         <GameVictoryUI v-if="showGameVictory" :sfeerIndex="gameVictoryIndex" @restart="handleRestart" />
-        <MainMenu v-if="!showGameUI && !showGameOver && !showGameVictory && !showTutorialBlueUI && !showTutorialRedUI" />
-        <TutorialBlueUIComponent v-if="showTutorialBlueUI" />
-        <TutorialRedUI v-if="showTutorialRedUI" />
+        <!-- <MainMenu v-if="!showGameUI && !showGameOver && !showGameVictory" /> -->
     </div>
 </template>

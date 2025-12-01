@@ -14,13 +14,17 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 
 export class Game extends Scene {
+    private _lastLeftDown: boolean = false;
+    private _lastRightDown: boolean = false;
+    private _lastRotaryDiffs: [number, number] = [0, 0];
 
     private inactivityTimeout: any = null;
     huidigeSfeerIndex: number = 0;
     sfeerRects: Phaser.GameObjects.Rectangle[] = [];
     private sfeerBaseY: number[] = [];
     sfeerHoogtes: number[] = [];
-    ballon: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody | null = null;
+    ballon: Phaser.GameObjects.Sprite | null = null;
+    ballonContainer: Phaser.GameObjects.Container | null = null;
     ballonHealth: number = 3;
     ballonInvulnerable: boolean = false;
     birds: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
@@ -29,12 +33,21 @@ export class Game extends Scene {
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private sfeerOffsetY: number = 0;
     private _lastDiffs: [number, number] = [0, 0];
+    propellorRood: Phaser.GameObjects.Sprite | null;
+    propellorBlauw: Phaser.GameObjects.Sprite | null;
+    windBlauw: Phaser.GameObjects.Sprite | null = null;
+    windRood: Phaser.GameObjects.Sprite | null = null;
+    propellorOffsetXBlauw: number = -39;
+    propellorOffsetXRood: number = 39;
+    propellorOffsetY: number = 160;
 
     constructor() {
         super('Game');
+        // Start countdown overlay zodra Game scene wordt aangemaakt
+        EventBus.emit('show-countdown');
         // Luister naar pause/resume events vanuit EventBus
         EventBus.on('pause-game-scene', this.handlePauseGameScene, this);
-        EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
+        // EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
     }
 
     handlePauseGameScene() {
@@ -43,22 +56,17 @@ export class Game extends Scene {
         }
     }
 
-    handleResumeGameScene() {
-        if (this.scene.isPaused()) {
-            this.scene.resume();
-        }
-    }
 
 
     // Checkt overlap tussen twee game objects
     checkOverlap(a: any, b: any): boolean {
         if (!a || !b) return false;
-        let ab = (a.getBounds) ? a.getBounds() : a.body.getBounds();
-        let bb = (b.getBounds) ? b.getBounds() : b.body.getBounds();
+        const ab = (a.getBounds) ? a.getBounds() : a.body.getBounds();
+        const bb = (b.getBounds) ? b.getBounds() : b.body.getBounds();
         const marginA = 20, marginB = 20;
-        ab = new Phaser.Geom.Rectangle(ab.x + marginA, ab.y + marginA, ab.width - 2 * marginA, ab.height - 2 * marginA);
-        bb = new Phaser.Geom.Rectangle(bb.x + marginB, bb.y + marginB, bb.width - 2 * marginB, bb.height - 2 * marginB);
-        return Phaser.Geom.Intersects.RectangleToRectangle(ab, bb);
+        const abRect = new Phaser.Geom.Rectangle(ab.x + marginA, ab.y + marginA, ab.width - 2 * marginA, ab.height - 2 * marginA);
+        const bbRect = new Phaser.Geom.Rectangle(bb.x + marginB, bb.y + marginB, bb.width - 2 * marginB, bb.height - 2 * marginB);
+        return Phaser.Geom.Intersects.RectangleToRectangle(abRect, bbRect);
     }
 
 
@@ -120,39 +128,67 @@ export class Game extends Scene {
         }
         this.sfeerOffsetY = 0;
         try {
-            this.ballon = this.physics.add.sprite(
+            // Maak de ballon sprite
+            this.ballon = this.add.sprite(
+                0,
+                0,
+                "balloon"
+            ).setScale(0.5).setDepth(50);
+            // Maak de propellors aan, met offset t.o.v. ballon
+            this.propellorBlauw = this.add.sprite(
+                this.propellorOffsetXBlauw,
+                this.propellorOffsetY,
+                'propellor-blauw'
+            ).setScale(0.5).setDepth(1002);
+            // Zet animatie op eerste frame en pauzeer, speel niet automatisch
+            if (this.anims.exists('propellor-blauw')) {
+                this.propellorBlauw.setFrame(0);
+                this.propellorBlauw.anims.stop();
+            }
+            this.propellorRood = this.add.sprite(
+                this.propellorOffsetXRood,
+                this.propellorOffsetY,
+                'propellor-rood'
+            ).setScale(0.5).setDepth(1002);
+            // Zet animatie op eerste frame en pauzeer, speel niet automatisch
+            if (this.anims.exists('propellor-rood')) {
+                this.propellorRood.setFrame(0);
+                this.propellorRood.anims.stop();
+            }
+            this.windBlauw = null;
+            this.windRood = null;
+            // Zet alles in een container, ballon als laatste zodat hij niet achter de propellors zit
+            this.ballonContainer = this.add.container(
                 this.scale.width / 2,
                 this.scale.height * 0.85,
-                "balloon"
-            ).setScale(0.5).setDepth(50) as any;
-            if (this.ballon) {
-                (this.ballon.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-                this.ballon.setCollideWorldBounds(true);
-                if ((this.ballon as any).setScrollFactor) {
-                    (this.ballon as any).setScrollFactor(0, 0);
-                }
-            }
+                [this.propellorBlauw, this.propellorRood, this.ballon]
+            );
+            this.ballonContainer.setDepth(1002);
         } catch (e) {
-            console.error("[Game] Kan ballon niet aanmaken!", e);
+            console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
         }
         this.birds = [];
-        this.spawnBird();
-        this.birdSpawnTimer = this.time.addEvent({
-            delay: Phaser.Math.Between(4000, 7000),
-            loop: true,
-            callback: () => this.spawnBird()
-        });
+        // this.spawnBird();
+        // this.birdSpawnTimer = this.time.addEvent({
+        //     delay: Phaser.Math.Between(4000, 7000),
+        //     loop: true,
+        //     callback: () => this.spawnBird()
+        // });
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
         EventBus.emit('current-scene-ready', this);
     }
 
 
-    // resetInactivityTimeout() {
-    //     clearTimeout(this.inactivityTimeout);
-    //     this.inactivityTimeout = setTimeout(() => {
-    //         EventBus.emit('change-scene', 'MainMenu');
-    //     }, 10000);
-    // }
+    resetInactivityTimeout() {
+        if (this.inactivityTimeout) {
+            clearTimeout(this.inactivityTimeout);
+            this.inactivityTimeout = null;
+        }
+        this.inactivityTimeout = setTimeout(() => {
+            EventBus.emit('change-scene', 'MainMenu');
+            this.inactivityTimeout = null;
+        }, 10000);
+    }
 
 
     spawnBird() {
@@ -178,6 +214,8 @@ export class Game extends Scene {
     }
 
     update() {
+        // Houd de container op de juiste plek
+        
         const scrollSpeed = 6;
         this.sfeerOffsetY += scrollSpeed;
         for (let i = 0; i < this.sfeerRects.length; i++) {
@@ -216,7 +254,11 @@ export class Game extends Scene {
             this.scene.pause();
             return;
         }
-        if (this.ballon) {
+        if (this.ballonContainer) {
+            let rotaryEdge = false;
+            let deltaX = 0;
+            let sensor1Active = false;
+            let sensor2Active = false;
             if (this.rotary && Array.isArray(this.rotary.lastAngles) && Array.isArray(this.rotary.prevAngles)) {
                 if (
                     typeof this.rotary.lastAngles[0] === 'number' &&
@@ -236,47 +278,160 @@ export class Game extends Scene {
                     if (!this._lastDiffs) this._lastDiffs = [0, 0];
                     const diff1 = angleDiff(angles[0], prevs[0]);
                     const diff2 = angleDiff(angles[1], prevs[1]);
+                    // Detecteer edge: rotary net bewogen
+                    if ((Math.abs(diff1) > threshold && Math.abs(this._lastRotaryDiffs[0]) <= threshold) ||
+                        (Math.abs(diff2) > threshold && Math.abs(this._lastRotaryDiffs[1]) <= threshold)) {
+                        rotaryEdge = true;
+                    }
+                    this._lastRotaryDiffs = [diff1, diff2];
                     if (diff1 !== this._lastDiffs[0] || diff2 !== this._lastDiffs[1]) {
                         this._lastDiffs = [diff1, diff2];
-                        const sensor1Active = Math.abs(diff1) > threshold;
-                        const sensor2Active = Math.abs(diff2) > threshold;
+                        sensor1Active = Math.abs(diff1) > threshold;
+                        sensor2Active = Math.abs(diff2) > threshold;
                         const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
                         if (sensor1Active) {
                             EventBus.emit('rotary1-move');
                             if (activeCount === 1) {
-                                this.ballon.x += 4;
+                                deltaX += 4;
                             } else {
                                 if (diff1 < -threshold) {
-                                    this.ballon.x -= 4;
+                                    deltaX -= 4;
                                 }
                                 if (diff1 > threshold) {
-                                    this.ballon.x += 4;
+                                    deltaX += 4;
                                 }
                             }
                         }
                         if (sensor2Active) {
                             EventBus.emit('rotary2-move');
                             if (activeCount === 1) {
-                                this.ballon.x -= 4;
+                                deltaX -= 4;
                             } else {
                                 if (diff2 < -threshold) {
-                                    this.ballon.x -= 4;
+                                    deltaX -= 4;
                                 }
                                 if (diff2 > threshold) {
-                                    this.ballon.x += 4;
+                                    deltaX += 4;
                                 }
                             }
                         }
+                    } else {
+                        sensor1Active = Math.abs(diff1) > threshold;
+                        sensor2Active = Math.abs(diff2) > threshold;
                     }
                 }
             }
-            if (this.cursors) {
-                if (this.cursors.left?.isDown) this.ballon.x -= 10;
-                if (this.cursors.right?.isDown) this.ballon.x += 10;
+            // Propellor animatie logica
+            // PropellorBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
+            if (this.propellorBlauw) {
+                if (sensor1Active) {
+                    if (!this.propellorBlauw.anims.isPlaying) {
+                        this.propellorBlauw.play({ key: 'propellor-blauw', repeat: 0 });
+                        this.propellorBlauw.once('animationcomplete', () => {
+                            if (this.propellorBlauw && this.propellorBlauw.anims.currentAnim && this.propellorBlauw.anims.currentAnim.frames.length > 0) {
+                                this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
+                            }
+                        });
+                    }
+                } else {
+                    if (!this.propellorBlauw.anims.isPlaying && this.propellorBlauw.anims.currentAnim && this.propellorBlauw.anims.currentAnim.frames.length > 0) {
+                        this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
+                    }
+                }
             }
-            const bounds = this.ballon.getBounds();
-            if (bounds.left < 0) this.ballon.x += -bounds.left;
-            if (bounds.right > this.scale.width) this.ballon.x -= (bounds.right - this.scale.width);
+            // PropellorRood: speel altijd 1x af bij nieuwe draai (en alleen dan)
+            if (this.propellorRood) {
+                if (sensor2Active) {
+                    if (!this.propellorRood.anims.isPlaying) {
+                        this.propellorRood.play({ key: 'propellor-rood', repeat: 0 });
+                        this.propellorRood.once('animationcomplete', () => {
+                            if (this.propellorRood && this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
+                                this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
+                            }
+                        });
+                    }
+                } else {
+                    if (!this.propellorRood.anims.isPlaying && this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
+                        this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
+                    }
+                }
+            }
+
+            // WindBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
+            if (sensor1Active) {
+                if (!this.windBlauw) {
+                    if (this.ballonContainer) {
+                        this.windBlauw = this.add.sprite(
+                            this.ballonContainer.x + this.propellorOffsetXBlauw + 30,
+                            this.ballonContainer.y + this.propellorOffsetY,
+                            'wind-blauw'
+                        ).setDepth(1002).setScale(0.4);
+                        this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
+                        this.windBlauw.once('animationcomplete', () => {
+                            if (this.windBlauw) {
+                                this.windBlauw.destroy();
+                                this.windBlauw = null;
+                            }
+                        });
+                    }
+                }
+            } else {
+                if (this.windBlauw && !this.windBlauw.anims.isPlaying) {
+                    this.windBlauw.destroy();
+                    this.windBlauw = null;
+                }
+            }
+            // WindRood: speel altijd 1x af bij nieuwe draai (en alleen dan)
+            if (sensor2Active) {
+                if (!this.windRood) {
+                    if (this.ballonContainer) {
+                        this.windRood = this.add.sprite(
+                            this.ballonContainer.x + this.propellorOffsetXRood - 30,
+                            this.ballonContainer.y + this.propellorOffsetY,
+                            'wind-rood'
+                        ).setDepth(1002).setScale(0.4);
+                        this.windRood.play({ key: 'wind-rood', repeat: 0 });
+                        this.windRood.once('animationcomplete', () => {
+                            if (this.windRood) {
+                                this.windRood.destroy();
+                                this.windRood = null;
+                            }
+                        });
+                    }
+                }
+            } else {
+                if (this.windRood && !this.windRood.anims.isPlaying) {
+                    this.windRood.destroy();
+                    this.windRood = null;
+                }
+            }
+            let leftEdge = false, rightEdge = false;
+            if (this.cursors) {
+                if (this.cursors.left?.isDown && !this._lastLeftDown) leftEdge = true;
+                if (this.cursors.right?.isDown && !this._lastRightDown) rightEdge = true;
+                this._lastLeftDown = !!this.cursors.left?.isDown;
+                this._lastRightDown = !!this.cursors.right?.isDown;
+                if (this.cursors.left?.isDown) deltaX -= 10;
+                if (this.cursors.right?.isDown) deltaX += 10;
+            }
+            if (deltaX !== 0) {
+                this.ballonContainer.x += deltaX;
+            }
+            if (rotaryEdge || leftEdge || rightEdge) {
+                this.resetInactivityTimeout();
+            }
+            const bounds = this.ballonContainer.getBounds();
+            if (bounds.left < 0) this.ballonContainer.x += -bounds.left;
+            if (bounds.right > this.scale.width) this.ballonContainer.x -= (bounds.right - this.scale.width);
+        }
+        // WindBlauw/Rood positie updaten als ze bestaan
+        if (this.windBlauw && this.ballonContainer) {
+            this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
+            this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY;
+        }
+        if (this.windRood && this.ballonContainer) {
+            this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 50;
+            this.windRood.y = this.ballonContainer.y + this.propellorOffsetY;
         }
         if (this.ballon) {
             for (let i = this.birds.length - 1; i >= 0; i--) {
@@ -335,8 +490,8 @@ export class Game extends Scene {
     
     shutdown() {
         clearTimeout(this.inactivityTimeout);
+        this.inactivityTimeout = null;
         EventBus.off('pause-game-scene', this.handlePauseGameScene, this);
-        EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         closeRotaryClient();
     }
 }

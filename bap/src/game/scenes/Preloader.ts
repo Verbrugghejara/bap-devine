@@ -36,15 +36,41 @@ export class Preloader extends Scene
         this.load.image('star', 'star.png');
         this.load.image('ballon', 'ballon.png');
         this.load.image('background', 'bg.png');
+        this.load.image('bg-troposfeer', 'bgSferen/bgTroposfeer.jpg');
         this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('bird-death', 'bird/Death.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('heart', 'heart.svg');
         this.load.image('balloon', 'balloon.png');
+        this.load.image('active-blauw', 'activePropellorBlauw.png');
+        this.load.image('active-rood', 'activePropellorRood.png');
+        this.load.image('inactive', 'inactivePropellor.png');
+        this.load.image('arrows', 'arrows.png');
         this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
+        this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
+        this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
+        this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
         // Vogel walk spritesheet (gebruik 128x128 en 8 frames als test)
         // this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 128, frameHeight: 128 });
     }
     create() {
+        this.anims.create({
+            key: 'wind-blauw',
+            frames: this.anims.generateFrameNumbers('wind-blauw', { start: 0, end: 9 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'wind-rood',
+            frames: this.anims.generateFrameNumbers('wind-rood', { start: 0, end: 9 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'propellor-rood',
+            frames: this.anims.generateFrameNumbers('propellor-rood', { start: 0, end: 7 }),
+            frameRate: 10,
+            repeat: -1
+        });
         this.anims.create({
             key: 'propellor-blauw',
             frames: this.anims.generateFrameNumbers('propellor-blauw', { start: 0, end: 7 }),

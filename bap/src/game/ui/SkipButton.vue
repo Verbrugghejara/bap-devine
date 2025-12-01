@@ -1,5 +1,5 @@
 <template>
-  <div class="button-text fixed-bottom" style="position:relative;align-items:center;">
+  <div class="button-text fixed-bottom" style="position:relative;align-items:center;" @click="$emit('click')">
     <svg width="32" height="32" style="margin-right:12px;" viewBox="0 0 32 32">
       <circle cx="16" cy="16" r="14" :stroke="color" stroke-width="4" fill="none" opacity="0.2" />
       <circle
