@@ -1,9 +1,7 @@
-
 <script setup lang="ts">
 
 import Phaser from 'phaser';
 import { ref, toRaw, onMounted, onUnmounted } from 'vue';
-import MainMenu from './game/scenes/MainMenu.vue';
 import PhaserGame from './PhaserGame.vue';
 import GameUI from './game/ui/GameUI.vue';
 import GameOverUI from './game/ui/GameOverUI.vue';
@@ -25,6 +23,20 @@ const currentSceneKey = ref<string | null>(null);
 
 // Scene-wissel: alleen Game, GameOver, GameVictory UI tonen
 EventBus.on('change-scene', (scene: string) => {
+    console.log('[App.vue] Scene verandert naar:', scene);
+    if (phaserRef.value && phaserRef.value.scene) {
+        console.log('Beschikbare scenes:', Object.keys(phaserRef.value.scene.scene.manager.keys));
+    }
+    if (scene === 'MainMenu') {
+        if (phaserRef.value && phaserRef.value.scene) {
+            phaserRef.value.scene.scene.start('MainMenu');
+        }
+        showGameUI.value = false;
+        showGameOver.value = false;
+        showGameVictory.value = false;
+        showCountdown.value = false;
+        countdownActive.value = false;
+    }
     if (scene === 'GameOver' || scene === 'GameVictory') {
         showGameUI.value = false;
     } else if (scene === 'Game') {
@@ -39,6 +51,9 @@ EventBus.on('change-scene', (scene: string) => {
     }
     showGameOver.value = (scene === 'GameOver');
     showGameVictory.value = (scene === 'GameVictory');
+    if (!showGameOver.value) {
+        console.log('[App.vue] GameOverUI verdwijnt door scene-wissel naar', scene);
+    }
 });
 
 
@@ -53,9 +68,23 @@ const currentScene = (scene: any) => {
     }
 }
 
-function handleRestart() {
+function onGameOverUI(index: number) {
+    console.log('[App.vue] GameOverUI wordt getoond, index:', index);
+    gameOverIndex.value = index;
+    showGameOver.value = true;
+    showGameUI.value = false;
+}
+
+function onGameVictoryUI(index: number) {
+    gameVictoryIndex.value = index;
+    showGameVictory.value = true;
     showGameOver.value = false;
-    // Start de Game scene opnieuw
+    showGameUI.value = false;
+}
+
+function handleRestart() {
+    console.log('[App.vue] GameOverUI verdwijnt door restart');
+    showGameOver.value = false;
     if (phaserRef.value && phaserRef.value.scene) {
         phaserRef.value.scene.scene.restart();
     }
@@ -69,9 +98,6 @@ function handleRestart() {
     }, 0);
 }
 
-
-// ...existing code...
-
 function onCountdownDone() {
     // Forceer reset van countdownActive zodat de countdown altijd opnieuw start
     countdownActive.value = false;
@@ -82,23 +108,6 @@ function onCountdownDone() {
         }
     }, 0);
 }
-
-function onGameOverUI(index: number) {
-    gameOverIndex.value = index;
-    showGameOver.value = true;
-    showGameUI.value = false;
-}
-function onGameVictoryUI(index: number) {
-    gameVictoryIndex.value = index;
-    showGameVictory.value = true;
-    showGameOver.value = false;
-    showGameUI.value = false;
-    if (phaserRef.value && phaserRef.value.scene) {
-        phaserRef.value.scene.scene.remove('MainMenu');
-    }
-}
-
-
 
 onMounted(() => {
     showGameUI.value = false;
@@ -132,6 +141,5 @@ onUnmounted(() => {
         <GameUI v-if="showGameUI && currentSceneKey === 'Game'" />
         <GameOverUI v-if="showGameOver" :sfeerIndex="gameOverIndex" @restart="handleRestart" />
         <GameVictoryUI v-if="showGameVictory" :sfeerIndex="gameVictoryIndex" @restart="handleRestart" />
-        <!-- <MainMenu v-if="!showGameUI && !showGameOver && !showGameVictory" /> -->
     </div>
 </template>

@@ -44,11 +44,11 @@ export class Tutorial extends Scene {
         this.progressBar.clear();
         // Background
         this.progressBar.fillStyle(0xffffff, 0.25);
-        console.log(this.progress)
+        // console.log(this.progress)
         this.progressBar.fillRoundedRect(barX, barY, barWidth, barHeight, 16);
         // Fill (altijd binnen de lijnen, radius alleen rechts bij voldoende breedte)
         let fillWidth = (barWidth - 30) * this.progress;
-        console.log('fillWidth:', fillWidth)
+        // console.log('fillWidth:', fillWidth)
         if (this.progress > 0) {
             const radius = 16;
             this.progressBar.fillStyle(0xF25C54, 1);

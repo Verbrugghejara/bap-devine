@@ -27,7 +27,10 @@
 import AnimatedButton from './AnimatedButton.vue';
 import { sfeerProgress } from '../utils/sfeerProgressStore';
 import { EventBus } from '../EventBus';
+import { onMounted, onUnmounted } from 'vue';
 const emit = defineEmits(['restart']);
+
+let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 function restart() {
     // Forceer volledige herstart van de Game scene
@@ -35,6 +38,19 @@ function restart() {
     emit('restart');
     EventBus.emit('change-scene', 'Game:restart');
 }
+
+onMounted(() => {
+    timeoutId = setTimeout(() => {
+        console.log('[GameOverUI] Timeout: navigeer naar MainMenu');
+        EventBus.emit('change-scene', 'MainMenu');
+        
+        sfeerProgress.value = 0;
+    }, 30000);
+});
+
+onUnmounted(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+});
 
 </script>
 

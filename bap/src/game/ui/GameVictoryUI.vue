@@ -18,11 +18,13 @@
 
 <script setup lang="ts">
 import AnimatedButton from './AnimatedButton.vue';
-import { defineEmits, computed } from 'vue';
+import { EventBus } from '../EventBus';
+import { defineEmits, computed, onMounted, onUnmounted } from 'vue';
 const emit = defineEmits(['restart']);
 const props = defineProps<{ sfeerIndex: number }>();
 
 import { SFEER_LABELS } from '../utils/sfeerLabels';
+import { sfeerProgress } from '../utils/sfeerProgressStore';
 const sfeerColors = SFEER_LABELS.map(sfeer => `#${sfeer.colors.a.toString(16).padStart(6, '0')}`);
 
 const sfeerBg = computed(() => sfeerColors[props.sfeerIndex] || 'rgba(0,0,0,0.7)');
@@ -30,6 +32,18 @@ console.log('Sfeer background color:', sfeerBg.value);
 function restart() {
     emit('restart');
 }
+let timeoutId: ReturnType<typeof setTimeout> | null = null;
+onMounted(() => {
+    timeoutId = setTimeout(() => {
+        console.log('[GameVictoryUI] Timeout: navigeer naar MainMenu');
+        EventBus.emit('change-scene', 'MainMenu');
+        sfeerProgress.value = 0;
+        // emit('restart');
+    }, 30000);
+});
+onUnmounted(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+});
 </script>
 
 <style scoped>

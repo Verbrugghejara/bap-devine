@@ -37,6 +37,10 @@ export class Preloader extends Scene
         this.load.image('ballon', 'ballon.png');
         this.load.image('background', 'bg.png');
         this.load.image('bg-troposfeer', 'bgSferen/bgTroposfeer.jpg');
+        this.load.image('bg-stratosfeer', 'bgSferen/bgStratosfeer.jpg');
+        this.load.image('bg-mesosfeer', 'bgSferen/bgMesosfeer.jpg');
+        this.load.image('bg-thermosfeer', 'bgSferen/bgThermosfeer.jpg');
+        this.load.image('bg-exosfeer', 'bgSferen/bgExosfeer.jpg');
         this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('bird-death', 'bird/Death.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('heart', 'heart.svg');
@@ -67,13 +71,13 @@ export class Preloader extends Scene
         });
         this.anims.create({
             key: 'propellor-rood',
-            frames: this.anims.generateFrameNumbers('propellor-rood', { start: 0, end: 7 }),
+            frames: this.anims.generateFrameNumbers('propellor-rood', { start: 0, end: 5 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'propellor-blauw',
-            frames: this.anims.generateFrameNumbers('propellor-blauw', { start: 0, end: 7 }),
+            frames: this.anims.generateFrameNumbers('propellor-blauw', { start: 0, end: 5 }),
             frameRate: 10,
             repeat: -1
         });

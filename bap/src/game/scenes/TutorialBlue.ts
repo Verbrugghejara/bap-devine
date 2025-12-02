@@ -1,4 +1,3 @@
-
 import { Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
@@ -28,6 +27,8 @@ export class Tutorial extends Scene {
     activePropellor: Phaser.GameObjects.Image;
     inactivePropellor: Phaser.GameObjects.Image;
     arrows: Phaser.GameObjects.Image;
+    private enterKey: Phaser.Input.Keyboard.Key | null = null;
+    private enterHoldStart: number | null = null;
 
     constructor() {
         super('TutorialBlue');
@@ -46,11 +47,11 @@ export class Tutorial extends Scene {
         this.progressBar.clear();
         // Background
         this.progressBar.fillStyle(0xffffff, 0.25);
-        console.log(this.progress)
+        // console.log(this.progress)
         this.progressBar.fillRoundedRect(barX, barY, barWidth, barHeight, 16);
         // Fill (altijd binnen de lijnen, radius alleen rechts bij voldoende breedte)
         let fillWidth = (barWidth - 30) * this.progress;
-        console.log('fillWidth:', fillWidth)
+        // console.log('fillWidth:', fillWidth)
         if (this.progress > 0) {
             const radius = 16;
             // Bij te smal voor radius: gewone rechthoek
@@ -228,6 +229,14 @@ export class Tutorial extends Scene {
         text2.x = startX + text1.width;
         text1.y = descY;
         text2.y = descY;
+
+        // Keyboard input expliciet activeren en Enter-key toevoegen
+        if (this.input.keyboard) {
+            this.input.keyboard.enabled = true;
+            this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+            console.log('Enter key:', this.enterKey);
+        }
+        this.enterHoldStart = null;
     }
     update() {
                 // Opruimen windBlauw als animatie klaar is (failsafe)
@@ -373,6 +382,22 @@ export class Tutorial extends Scene {
         if (this.windBlauw) {
             this.windBlauw.x = this.balloon.x + this.propellorOffsetX - 50;
             this.windBlauw.y = this.balloon.y + this.propellorOffsetY;
+        }
+
+        // Check of Enter 3 seconden wordt ingedrukt
+        if (this.enterKey) {
+            if (this.enterKey.isDown) {
+                if (this.enterHoldStart === null) {
+                    this.enterHoldStart = Date.now();
+                } else {
+                    if (Date.now() - this.enterHoldStart >= 3000) {
+                        this.scene.start('Game');
+                        this.enterHoldStart = null;
+                    }
+                }
+            } else {
+                this.enterHoldStart = null;
+            }
         }
     }
 

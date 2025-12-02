@@ -1,4 +1,3 @@
-
 // Helper voor hoekverschil
 function angleDiff(a: number, b: number): number {
     let diff = a - b;
@@ -14,6 +13,7 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 
 export class Game extends Scene {
+        private smoothScrollSpeed: number = 5;
     private _lastLeftDown: boolean = false;
     private _lastRightDown: boolean = false;
     private _lastRotaryDiffs: [number, number] = [0, 0];
@@ -40,6 +40,17 @@ export class Game extends Scene {
     propellorOffsetXBlauw: number = -39;
     propellorOffsetXRood: number = 39;
     propellorOffsetY: number = 160;
+    bgTroposfeer: Phaser.GameObjects.Image | null = null;
+    bgStratosfeer: Phaser.GameObjects.Image | null = null;
+    bgMesosfeer: Phaser.GameObjects.Image | null = null;
+    bgThermosfeer: Phaser.GameObjects.Image | null = null;
+    bgExosfeer: Phaser.GameObjects.Image | null = null;
+
+    private enterKey: Phaser.Input.Keyboard.Key | null = null;
+    private wasEnterDown: boolean = false;
+    private isGamePaused: boolean = false;
+    private isGameActive: boolean = true;
+    private pauseStartTime: number | null = null;
 
     constructor() {
         super('Game');
@@ -97,18 +108,122 @@ export class Game extends Scene {
 
 
     create() {
+ 
+        // Reset alle relevante game state bij elke start van de Game scene
         this.ballonHealth = 3;
+        this.sfeerOffsetY = 0;
+        this.huidigeSfeerIndex = 0;
+        this.isGamePaused = false;
+        this.pauseStartTime = null;
+        // Toon countdown overlay bij elke nieuwe game
+        EventBus.emit('show-countdown');
         this.rotary = getRotaryClient();
         if (this.physics && this.physics.world) {
             this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
         }
-        this.sfeerHoogtes = Array(5).fill(this.scale.height * 1.25);
+        // Zet de achtergrondkleur van de scene op transparant
+        this.cameras.main.setBackgroundColor(0x00000000);
+        // Troposfeer = eerste sfeer, 3x zo hoog, met achtergrond
+        const standaardHoogte = this.scale.height;
+        // Troposfeer: 3 schermen hoog, Stratosfeer: 4 schermen hoog, Mesosfeer: 5 schermen hoog, Thermosfeer: 6 schermen hoog, Exosfeer: 7 schermen hoog
+        this.sfeerHoogtes = [
+            standaardHoogte * 3, // troposfeer
+            standaardHoogte * 4, // stratosfeer
+            standaardHoogte * 5, // mesosfeer
+            standaardHoogte * 6, // thermosfeer
+            standaardHoogte * 7, // exosfeer
+        ];
+                // Voeg de achtergrondafbeelding toe voor de exosfeer (vijfde sfeer)
+                const bgHoogteExosfeer = this.sfeerHoogtes[4];
+                if (this.textures.exists('bg-exosfeer')) {
+                    this.bgExosfeer = this.add.image(
+                        this.scale.width / 2,
+                        0, // tijdelijke y, wordt in update gezet
+                        'bg-exosfeer'
+                    ).setOrigin(0.5, 1)
+                        .setDepth(-204); // achter thermosfeer
+                    const texE = this.textures.get('bg-exosfeer').getSourceImage();
+                    const scaleYE = bgHoogteExosfeer / texE.height;
+                    this.bgExosfeer.setScale(this.scale.width / texE.width, scaleYE);
+                    console.log("[Game] Exosfeer achtergrond toegevoegd.");
+                } else {
+                    this.bgExosfeer = null;
+                }
         this.sfeerRects = [];
         this.sfeerBaseY = [];
+        // Voeg de achtergrondafbeelding toe voor de troposfeer (eerste sfeer)
+        const bgHoogte = this.sfeerHoogtes[0];
+        // Startpositie: onderkant van het canvas, zodat je direct de troposfeer ziet
+        if (this.textures.exists('bg-troposfeer')) {
+            this.bgTroposfeer = this.add.image(
+                this.scale.width / 2,
+                this.scale.height,
+                'bg-troposfeer'
+            ).setOrigin(0.5, 1)
+                .setDepth(-200);
+            // Schaal de afbeelding zodat de hoogte exact bgHoogte is, breedte wordt automatisch geschaald
+            const tex = this.textures.get('bg-troposfeer').getSourceImage();
+            const scaleY = bgHoogte / tex.height;
+            this.bgTroposfeer.setScale(this.scale.width / tex.width, scaleY);
+
+            console.log("[Game] Troposfeer achtergrond toegevoegd.");
+        } else {
+            this.bgTroposfeer = null;
+        }
+        // Voeg de achtergrondafbeelding toe voor de stratosfeer (tweede sfeer)
+        const bgHoogteStratosfeer = this.sfeerHoogtes[1];
+        if (this.textures.exists('bg-stratosfeer')) {
+            this.bgStratosfeer = this.add.image(
+                this.scale.width / 2,
+                0, // tijdelijke y, wordt in update gezet
+                'bg-stratosfeer'
+            ).setOrigin(0.5, 1)
+                .setDepth(-201); // achter troposfeer
+            const texS = this.textures.get('bg-stratosfeer').getSourceImage();
+            const scaleYS = bgHoogteStratosfeer / texS.height;
+            this.bgStratosfeer.setScale(this.scale.width / texS.width, scaleYS);
+            console.log("[Game] Stratosfeer achtergrond toegevoegd.");
+        } else {
+            this.bgStratosfeer = null;
+        }
+
+        // Voeg de achtergrondafbeelding toe voor de mesosfeer (derde sfeer)
+        const bgHoogteMesosfeer = this.sfeerHoogtes[2];
+        if (this.textures.exists('bg-mesosfeer')) {
+            this.bgMesosfeer = this.add.image(
+                this.scale.width / 2,
+                0, // tijdelijke y, wordt in update gezet
+                'bg-mesosfeer'
+            ).setOrigin(0.5, 1)
+                .setDepth(-202); // achter stratosfeer
+            const texM = this.textures.get('bg-mesosfeer').getSourceImage();
+            const scaleYM = bgHoogteMesosfeer / texM.height;
+            this.bgMesosfeer.setScale(this.scale.width / texM.width, scaleYM);
+            console.log("[Game] Mesosfeer achtergrond toegevoegd.");
+        } else {
+            this.bgMesosfeer = null;
+        }
+        const bgHoogteThermosfeer = this.sfeerHoogtes[3];
+        if (this.textures.exists('bg-thermosfeer')) {
+            this.bgThermosfeer = this.add.image(
+                this.scale.width / 2,
+                0, // tijdelijke y, wordt in update gezet
+                'bg-thermosfeer'
+            ).setOrigin(0.5, 1)
+                .setDepth(-203); // achter mesosfeer
+            const texT = this.textures.get('bg-thermosfeer').getSourceImage();
+            const scaleYT = bgHoogteThermosfeer / texT.height;
+            this.bgThermosfeer.setScale(this.scale.width / texT.width, scaleYT);
+            console.log("[Game] Thermosfeer achtergrond toegevoegd.");
+        } else {
+            this.bgThermosfeer = null;
+        }
+        // Sferen tekenen: eerste sfeer is troposfeer, rest standaard
         let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
         for (let i = 0; i < this.sfeerHoogtes.length; i++) {
             const hoogte = this.sfeerHoogtes[i];
-            const kleur = SFEER_LABELS[i].colors.a;
+            // Eerste sfeer: troposfeer-kleur, rest: SFEER_LABELS[i-1] (want troposfeer is apart)
+            const kleur = SFEER_LABELS[i]?.colors?.a ?? 0xffffff;
             const kleurInt = typeof kleur === 'number' ? kleur : 0xffffff;
             const baseCenterY = worldY;
             this.sfeerBaseY.push(baseCenterY);
@@ -119,6 +234,8 @@ export class Game extends Scene {
                 hoogte,
                 kleurInt
             ).setDepth(-100);
+            // Maak de eerste t/m vijfde sfeer-rectangle transparant zodat de achtergrond zichtbaar is
+            if (i === 0 || i === 1 || i === 2 || i === 3 || i === 4) rect.setFillStyle(kleurInt, 0);
             rect.width = this.scale.width;
             rect.height = hoogte;
             this.sfeerRects.push(rect);
@@ -175,6 +292,15 @@ export class Game extends Scene {
         //     callback: () => this.spawnBird()
         // });
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
+        if (this.input && this.input.keyboard) {
+            this.input.keyboard.enabled = true;
+            this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+            console.log('EnterKey initialized:', this.enterKey);
+        } else {
+            console.log('Keyboard input not available!');
+        }
+        this.wasEnterDown = false;
+        this.isGamePaused = false;
         EventBus.emit('current-scene-ready', this);
     }
 
@@ -214,16 +340,66 @@ export class Game extends Scene {
     }
 
     update() {
+        // Enter pauzeert/hervat het spel alleen als de game actief is
+        if (this.enterKey) {
+            if (this.enterKey.isDown && !this.wasEnterDown) {
+                this.isGamePaused = !this.isGamePaused;
+                console.log('Enter pressed. isGamePaused:', this.isGamePaused);
+                if (this.isGamePaused) {
+                    this.pauseStartTime = Date.now();
+                } else {
+                    this.pauseStartTime = null;
+                }
+            }
+            this.wasEnterDown = this.enterKey.isDown;
+        }
+        // Game-logica alleen uitvoeren als niet gepauzeerd
+        if (this.isGamePaused) {
+            // Debug: laat weten dat game gepauzeerd is
+            // Na 30 seconden op pauze: terug naar MainMenu
+            if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
+                this.scene.start('MainMenu');
+                this.isGamePaused = false;
+                this.pauseStartTime = null;
+            }
+            return;
+        }
+                // Laat de exosfeer-achtergrond direct aansluiten op de bovenkant van de thermosfeer-bg
+                if (this.bgExosfeer && this.bgThermosfeer) {
+                    this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
+                }
+        // Laat de thermosfeer-achtergrond direct aansluiten op de bovenkant van de mesosfeer-bg
+
         // Houd de container op de juiste plek
-        
-        const scrollSpeed = 6;
-        this.sfeerOffsetY += scrollSpeed;
+
+        // Scrollsnelheid per sfeer instellen
+        // const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        const scrollSpeeds = [100, 100, 100, 100, 100]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
+        // Vloeiend interpoleren naar de nieuwe snelheid
+        this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
+        this.sfeerOffsetY += this.smoothScrollSpeed;
         for (let i = 0; i < this.sfeerRects.length; i++) {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
         }
+        // Laat de troposfeer-achtergrond meescrollen met de eerste sfeer
+        if (this.bgTroposfeer) {
+            this.bgTroposfeer.y = this.sfeerBaseY[0] + this.sfeerOffsetY + this.sfeerHoogtes[0] / 2;
+        }
+        // Laat de stratosfeer-achtergrond direct aansluiten op de bovenkant van de troposfeer-bg
+        if (this.bgStratosfeer && this.bgTroposfeer) {
+            this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
+        }
+        // Laat de mesosfeer-achtergrond direct aansluiten op de bovenkant van de stratosfeer-bg
+        if (this.bgMesosfeer && this.bgStratosfeer) {
+            this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
+        }
+        if (this.bgThermosfeer && this.bgMesosfeer) {
+            this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
+        }
         for (const bird of this.birds) {
-            bird.y += scrollSpeed;
+            bird.y += this.smoothScrollSpeed;
         }
         const centerScreenY = this.scale.height / 2;
         const centerWorldY = centerScreenY - this.sfeerOffsetY;
@@ -417,9 +593,9 @@ export class Game extends Scene {
             if (deltaX !== 0) {
                 this.ballonContainer.x += deltaX;
             }
-            if (rotaryEdge || leftEdge || rightEdge) {
-                this.resetInactivityTimeout();
-            }
+            // if (rotaryEdge || leftEdge || rightEdge) {
+            //     this.resetInactivityTimeout();
+            // }
             const bounds = this.ballonContainer.getBounds();
             if (bounds.left < 0) this.ballonContainer.x += -bounds.left;
             if (bounds.right > this.scale.width) this.ballonContainer.x -= (bounds.right - this.scale.width);
@@ -487,7 +663,7 @@ export class Game extends Scene {
             }
         }
     }
-    
+
     shutdown() {
         clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = null;

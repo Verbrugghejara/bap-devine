@@ -14,7 +14,7 @@
           :style="{ background: SFEER_COLORS[sfeerIndex].e, transition: 'background 0.3s' }">
           <div class="sfeer-circle-inner"></div>
         </div>
-        <div class="sfeer-label-text">{{ sfeerText }}</div>
+        <div class="sfeer-label-text" :style="{ color: SFEER_COLORS[sfeerIndex].e }">{{ sfeerText }}</div>
       </div>
       <div class="healthbar">
         <div class="healthbar-bg" :style="{ border: `solid 4px ${SFEER_COLORS[sfeerIndex].e}` }">
