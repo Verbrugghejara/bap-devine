@@ -53,46 +53,70 @@ export class Preloader extends Scene
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
         this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
+        this.load.video('home-animation','mainMenuVideo.mp4')
         // Vogel walk spritesheet (gebruik 128x128 en 8 frames als test)
         // this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 128, frameHeight: 128 });
+
+        // for (let i = 0; i <= 449; i++) {
+        //     const key = `home-animation${i.toString().padStart(3, '0')}`;
+        //     this.load.image(key, `assets/homeAnimation/${key}.png`);
+        // }
     }
     create() {
-        this.anims.create({
-            key: 'wind-blauw',
-            frames: this.anims.generateFrameNumbers('wind-blauw', { start: 0, end: 9 }),
-            frameRate: 10,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'wind-rood',
-            frames: this.anims.generateFrameNumbers('wind-rood', { start: 0, end: 9 }),
-            frameRate: 10,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'propellor-rood',
-            frames: this.anims.generateFrameNumbers('propellor-rood', { start: 0, end: 5 }),
-            frameRate: 10,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'propellor-blauw',
-            frames: this.anims.generateFrameNumbers('propellor-blauw', { start: 0, end: 5 }),
-            frameRate: 10,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'bird-walk',
-            frames: this.anims.generateFrameNumbers('bird-walk', { start: 0, end: 3 }),
-            frameRate: 10,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'bird-death',
-            frames: this.anims.generateFrameNumbers('bird-death', { start: 0, end: 3 }),
-            frameRate: 8,
-            repeat: 0
-        });
-        this.scene.start('MainMenu');
+        // Animaties pas aanmaken als alles geladen is
+        // this.load.on('complete', () => {
+            this.anims.create({
+                key: 'wind-blauw',
+                frames: this.anims.generateFrameNumbers('wind-blauw', { start: 0, end: 9 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'wind-rood',
+                frames: this.anims.generateFrameNumbers('wind-rood', { start: 0, end: 9 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'propellor-rood',
+                frames: this.anims.generateFrameNumbers('propellor-rood', { start: 0, end: 5 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'propellor-blauw',
+                frames: this.anims.generateFrameNumbers('propellor-blauw', { start: 0, end: 5 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'bird-walk',
+                frames: this.anims.generateFrameNumbers('bird-walk', { start: 0, end: 3 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'bird-death',
+                frames: this.anims.generateFrameNumbers('bird-death', { start: 0, end: 3 }),
+                frameRate: 8,
+                repeat: 0
+            });
+            this.scene.start('MainMenu');
+
+            // Animatie van home-animation PNGs
+            // let homeAnimationFrames = [];
+            // for (let i = 0; i <= 449; i++) {
+            //     const frameKey = Phaser.Utils.String.Pad(i, 3, '0', 1);
+            //     homeAnimationFrames.push({ key: 'home-animation' + frameKey });
+            // }
+            // this.anims.create({
+            //     key: 'home-animation',
+            //     frames: homeAnimationFrames,
+            //     frameRate: 24,
+            //     repeat: -1
+            // });
+
+            // this.scene.start('MainMenu');
+        // });
     }
 }

@@ -21,37 +21,46 @@ export class MainMenu extends Scene {
     create() {
             // Zet direct de WebSocket connectie op
             this.rotary = getRotaryClient();
-        this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase());
-        this.title = this.add.text(
-            this.scale.width / 2,
-            this.scale.height / 4 - 300,
-            'Reis naar de',
-            {
-                fontFamily: 'Bungee',
-                fontSize: 74,
-                color: '#' + SFEER_LABELS[0].colors.c.toString(16).padStart(6, '0').toUpperCase(),
-            }
-        )
+        // this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase());
+        const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'home-animation')
             .setOrigin(0.5)
-            .setDepth(1)
-            .setShadow(0, 6, '#BC7F36', 0, false, true);
-        this.title2 = this.add.text(
-            this.scale.width / 2,
-            this.scale.height / 4 -200,
-            'Bovenwereld',
-            {
-                fontFamily: 'Bungee',
-                fontSize: 96,
-                color: '#' + SFEER_LABELS[0].colors.d.toString(16).padStart(6, '0').toUpperCase(),
-            }
-        )
-            .setOrigin(0.5)
-            .setDepth(1)
-            .setShadow(0, 6, '#860000', 0, false, true);
-        this.balloon = this.add.image(this.scale.width / 2, this.scale.height / 2, 'balloon')
-            .setOrigin(0.5)
-            .setDepth(1)
-            .setScale(1.5);
+            .setDepth(1000)
+        console.log('Video object:', video);
+        video.on('play', () => {
+            console.log('Video started playing!');
+        });
+        video.setMute(true);
+        video.play(true);
+        // this.title = this.add.text(
+        //     this.scale.width / 2,
+        //     this.scale.height / 4 - 300,
+        //     'Reis naar de',
+        //     {
+        //         fontFamily: 'Bungee',
+        //         fontSize: 74,
+        //         color: '#' + SFEER_LABELS[0].colors.c.toString(16).padStart(6, '0').toUpperCase(),
+        //     }
+        // )
+        //     .setOrigin(0.5)
+        //     .setDepth(1)
+        //     .setShadow(0, 6, '#BC7F36', 0, false, true);
+        // this.title2 = this.add.text(
+        //     this.scale.width / 2,
+        //     this.scale.height / 4 -200,
+        //     'Bovenwereld',
+        //     {
+        //         fontFamily: 'Bungee',
+        //         fontSize: 96,
+        //         color: '#' + SFEER_LABELS[0].colors.d.toString(16).padStart(6, '0').toUpperCase(),
+        //     }
+        // )
+        //     .setOrigin(0.5)
+        //     .setDepth(1)
+        //     .setShadow(0, 6, '#860000', 0, false, true);
+        // this.balloon = this.add.image(this.scale.width / 2, this.scale.height / 2, 'balloon')
+        //     .setOrigin(0.5)
+        //     .setDepth(1)
+        //     .setScale(1.5);
         // Padding instellen
         const paddingX = 24;
         const paddingY = 16;
@@ -60,14 +69,14 @@ export class MainMenu extends Scene {
             fontFamily: 'Bungee',
             fontSize: '54px',
             color: '#ffffff',
-        }).setOrigin(0.5, 0.5);
+        }).setOrigin(0.5, 0.5).setDepth(1001);
 
         // Rocket icon afmetingen
-        const rocketSize = 44;
+        const circleSize = 44;
         const iconMargin = 12;
 
         // Totale breedte: rocket + margin + tekst + padding
-        const btnContentWidth = rocketSize + iconMargin + startText.width;
+        const btnContentWidth = circleSize + iconMargin + startText.width;
         const btnWidth = btnContentWidth + 2 * paddingX;
         const btnHeight = startText.height + 2 * paddingY;
 
@@ -90,7 +99,7 @@ export class MainMenu extends Scene {
         bg.fillRoundedRect(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight, 16);
 
         // Zet rocket en tekst netjes naast elkaar gecentreerd
-        const circleRadius = rocketSize / 3;
+        const circleRadius = circleSize / 3;
         // Bepaal totale content breedte (cirkel + margin + tekst)
         const contentWidth = circleRadius * 2 + iconMargin + startText.width;
         // Startpositie zodat geheel gecentreerd is
@@ -112,8 +121,8 @@ export class MainMenu extends Scene {
             circle,
             startText
         ]);
-
         this.startButton.setSize(btnWidth, btnHeight);
+        this.startButton.setDepth(1100); // Zorg dat de button boven de video staat
         this.startButton.setInteractive({ useHandCursor: true });
 
         // Button animatie en scene-wissel functie

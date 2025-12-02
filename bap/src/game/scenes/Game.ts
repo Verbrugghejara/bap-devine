@@ -373,8 +373,8 @@ export class Game extends Scene {
         // Houd de container op de juiste plek
 
         // Scrollsnelheid per sfeer instellen
-        // const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        const scrollSpeeds = [100, 100, 100, 100, 100]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        // const scrollSpeeds = [100, 100, 100, 100, 100]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
         // Vloeiend interpoleren naar de nieuwe snelheid
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
