@@ -1,106 +1,92 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
+import { emit } from "process";
 
-export class GameOver extends Scene {
+export class GameVictory extends Scene {
     title: GameObjects.Text;
     description: GameObjects.Text;
     againButton: GameObjects.Container;
     againText: GameObjects.Text;
 
     constructor() {
-        super('GameOver');
+        super('GameVictory');
     }
 
     create() {
-        // Sfeer progression bar (zelfde stijl als in Tutorial)
-        const progressBarWidth = this.scale.width * 0.6;
-        const progressBarHeight = 32;
-        const progressBarX = this.scale.width / 2 - progressBarWidth / 2;
-        const progressBarY = this.scale.height / 2 - 400;
-        let sfeerProgress = 1; // fallback
-        if (window && (window as any).sfeerProgress !== undefined) {
-            sfeerProgress = (window as any).sfeerProgress;
-        }
-        // Achtergrond (wit, semi-transparant)
-        const bar = this.add.graphics();
-        bar.clear();
-        bar.fillStyle(0xffffff, 0.25);
-        bar.fillRoundedRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight, 16);
-        // Meters berekenen en tonen
-        const meters = Math.round(sfeerProgress * 1000);
-        this.add.text(
-            this.scale.width / 2,
-            progressBarY + 80,
-            `${meters} M`,
-            {
-                fontFamily: 'Bungee',
-                fontSize: 64,
-                color: '#FFFFFF',
-                fontStyle: 'bold',
-            }
-        ).setOrigin(0.5).setDepth(21).setShadow(0, 6, 'rgba(0, 0, 0, 0.25)', 0, false, true);
-        // Vulling (blauw, afgerond rechts)
-        let fillWidth = (progressBarWidth - 30) * sfeerProgress;
-        if (sfeerProgress > 0) {
-            const radius = 16;
-            // Draw fill
-            bar.fillStyle(Number('0x' + SFEER_LABELS[0].colors.c.toString(16).padStart(6, '0')), 1);
-            bar.fillRoundedRect(progressBarX, progressBarY, fillWidth + 30, progressBarHeight, { tl: radius, tr: radius, bl: radius, br: radius });
-            // Draw glossy bar ONLY on the fill, not on the background
-            if (fillWidth + 30 > 60) {
-                const highlightWidth = Math.max(60, (fillWidth));
-                const highlightHeight = 8;
-                const highlightX = progressBarX + (fillWidth + 30) / 2 - highlightWidth / 2;
-                const highlightY = progressBarY + 4;
-                bar.save();
-                bar.beginPath();
-                bar.fillStyle(0xffffff, 0.1);
-                bar.fillRoundedRect(highlightX, highlightY, highlightWidth, highlightHeight, 4);
-                bar.closePath();
-                bar.restore();
-            }
-            // Progress indicator toevoegen
-            const indicatorX = progressBarX + Math.max(0, Math.min(fillWidth + 30, progressBarWidth));
-            const indicatorY = progressBarY - progressBarHeight;
-            this.add.image(indicatorX, indicatorY, 'progress-indicator')
-                .setOrigin(0.5)
-                .setDepth(21)
-                .setScale(progressBarHeight / 32); // schaal aan op hoogte bar
-        }
-        // bar.strokeRoundedRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight, 16);
-        bar.setDepth(20);
-
-
-
-        this.add.image(this.scale.width / 2, 0, 'bg-gameover').setOrigin(0.5, 0).setDepth(1);
+        this.add.image(this.scale.width / 2, 0, 'bg-gamevictory').setOrigin(0.5, 0).setDepth(1);
         this.title = this.add.text(
             this.scale.width / 2,
             this.scale.height / 4 - 300,
-            'Game Over',
+            'Goed zo',
             {
                 fontFamily: 'Bungee',
                 fontSize: 80,
-                color: '#' + SFEER_LABELS[0].colors.d.toString(16).padStart(6, '0').toUpperCase(),
+                color: '#' + SFEER_LABELS[3].colors.e.toString(16).padStart(6, '0').toUpperCase(),
             }
         )
             .setOrigin(0.5)
             .setDepth(10)
-            .setShadow(0, 6, '#7D1D39', 0, false, true);
+            .setShadow(0, 6, '#2A292C', 0, false, true);
 
         this.description = this.add.text(
             this.scale.width / 2,
             this.scale.height / 4 - 150,
-            'Oei... dat was een gekke landing.',
+            'Yes! De alien is veilig thuis!\nWat een topteam!',
             {
                 fontFamily: 'Space Grotesk',
                 fontSize: 56,
-                color: '#FFFFFF',
-                fontStyle: 'bold'
+                color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
+                fontStyle: 'bold',
+                align: 'center',
+                wordWrap: { width: 900 }
             }
         )
             .setOrigin(0.5)
-            .setDepth(10)
+            .setDepth(10);
+
+        // Toon de tijd die nodig was om te winnen
+        let durationMs = 0;
+        if (typeof window !== 'undefined' && (window as any).gameDurationMs) {
+            durationMs = (window as any).gameDurationMs;
+        }
+        // Gebruik de tijd direct, geen correctie meer nodig
+        // Format mm:ss:ms:ms
+        const totalSeconds = Math.floor(durationMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const ms = durationMs % 1000;
+        // Toon 2 cijfers voor ms (honderdsten)
+        const msHundredths = Math.floor(ms / 10).toString().padStart(2, '0');
+        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${msHundredths}`;
+
+        // Timer icoon links naast de tijd
+        const iconKey = 'timer'; // Zorg dat deze sprite is geladen in de preload
+        const timeText = this.add.text(0, 0, `${formattedTime}`, {
+            fontFamily: 'Bungee',
+            fontSize: 80,
+                color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
+            fontStyle: 'bold',
+            align: 'center',
+        }).setOrigin(0, 0.5).setDepth(10).setShadow(0, 4, '#00000075', 0, false, true);
+
+
+        let iconSprite: Phaser.GameObjects.Image | null = null;
+        let groupWidth = timeText.width;
+            const timeIconMargin = 16;
+        if (this.textures.exists(iconKey)) {
+            iconSprite = this.add.image(0, 0, iconKey).setOrigin(0, 0.5).setDisplaySize(80, 80).setDepth(10);
+                groupWidth += iconSprite.displayWidth + timeIconMargin;
+        }
+        // Bepaal startpositie zodat geheel gecentreerd is
+        const groupX = this.scale.width / 2 - groupWidth / 2;
+        const groupY = this.scale.height / 4+100;
+        if (iconSprite) {
+            iconSprite.setPosition(groupX, groupY);
+                timeText.setPosition(groupX + iconSprite.displayWidth + timeIconMargin, groupY);
+        } else {
+            timeText.setPosition(this.scale.width / 2 - timeText.width / 2, groupY);
+        }
 
         const paddingX = 24;
         const paddingY = 16;
@@ -155,7 +141,7 @@ export class GameOver extends Scene {
         startText.setY(0);
 
         // Container als button
-        this.againButton = this.add.container(this.scale.width / 2, this.scale.height / 2, [
+        this.againButton = this.add.container(this.scale.width / 2, this.scale.height / 2 - 100, [
             shadow,
             bg,
             circle,
@@ -164,10 +150,17 @@ export class GameOver extends Scene {
         this.againButton.setSize(btnWidth, btnHeight);
         this.againButton.setDepth(1100); // Zorg dat de button boven de video staat
         this.againButton.setInteractive({ useHandCursor: true });
-
+        this.againButton.on('pointerdown', () => {
+            this.scene.start('Game');
+        });
+        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+            if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
+                this.scene.start('Game');
+            }
+        });
         this.againText = this.add.text(
             this.scale.width / 2,
-            this.scale.height / 2 - 100,
+            this.scale.height / 2 - 200,
             'Opnieuw proberen?',
             {
                 fontFamily: 'Space Grotesk',

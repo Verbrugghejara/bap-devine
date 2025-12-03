@@ -61,6 +61,9 @@ const visible = ref(true);
 function hideGameUI() {
   visible.value = false;
 }
+function showGameUI() {
+  visible.value = true;
+}
 
 function updateHealth(newHealth: number) {
   health.value = newHealth;
@@ -86,7 +89,8 @@ function updateSfeerProgress(progress: number) {
 }
 
 onMounted(() => {
-    EventBus.on('hide-gameui', hideGameUI);
+  EventBus.on('hide-gameui', hideGameUI);
+  EventBus.on('show-gameui', showGameUI);
   EventBus.on('update-health', updateHealth);
   EventBus.on('update-sfeer', updateSfeer);
   EventBus.on('update-sfeer-index', updateSfeerIndex);
@@ -94,7 +98,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    EventBus.off('hide-gameui', hideGameUI);
+  EventBus.off('hide-gameui', hideGameUI);
+  EventBus.off('show-gameui', showGameUI);
   EventBus.off('update-health', updateHealth);
   EventBus.off('update-sfeer', updateSfeer);
   EventBus.off('update-sfeer-index', updateSfeerIndex);

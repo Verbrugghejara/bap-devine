@@ -7,6 +7,12 @@ import { Preloader } from './scenes/Preloader';
 import { Tutorial } from './scenes/TutorialBlue';
 import { Tutorial as TutorialRed } from './scenes/TutorialRed';
 import { GameOver } from './scenes/GameOver';
+// If './scenes/GameVictory' has a default export:
+import { GameVictory } from './scenes/GameVictory';
+
+// Or, if it exports a different named member, e.g. 'VictoryScene':
+// import { VictoryScene } from './scenes/GameVictory';
+
 
 // Find out more information about the Game Config at:
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -29,7 +35,8 @@ const config: Phaser.Types.Core.GameConfig = {
         MainGame,
         Tutorial,
         TutorialRed,
-        GameOver
+        GameOver,
+        GameVictory
     ]
 };
 
