@@ -6,6 +6,7 @@ import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
 import { Tutorial } from './scenes/TutorialBlue';
 import { Tutorial as TutorialRed } from './scenes/TutorialRed';
+import { GameOver } from './scenes/GameOver';
 
 // Find out more information about the Game Config at:
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -27,7 +28,8 @@ const config: Phaser.Types.Core.GameConfig = {
         MainMenu,
         MainGame,
         Tutorial,
-        TutorialRed
+        TutorialRed,
+        GameOver
     ]
 };
 

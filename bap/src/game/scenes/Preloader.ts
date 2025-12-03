@@ -41,6 +41,7 @@ export class Preloader extends Scene
         this.load.image('bg-mesosfeer', 'bgSferen/bgMesosfeer.jpg');
         this.load.image('bg-thermosfeer', 'bgSferen/bgThermosfeer.jpg');
         this.load.image('bg-exosfeer', 'bgSferen/bgExosfeer.jpg');
+        this.load.image('bg-gameover', 'bgGameOver.jpg');
         this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('bird-death', 'bird/Death.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('heart', 'heart.svg');
@@ -49,6 +50,7 @@ export class Preloader extends Scene
         this.load.image('active-rood', 'activePropellorRood.png');
         this.load.image('inactive', 'inactivePropellor.png');
         this.load.image('arrows', 'arrows.png');
+        this.load.image('progress-indicator', 'progressIndicator.png');
         this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });

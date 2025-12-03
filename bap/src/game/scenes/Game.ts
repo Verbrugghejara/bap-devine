@@ -98,10 +98,11 @@ export class Game extends Scene {
                 }
             });
         }
-        if (this.ballonHealth <= 0) {
-            EventBus.emit('gameover-ui', this.huidigeSfeerIndex);
+        if (this.ballonHealth <= 2) {
             this.time.delayedCall(1000, () => {
-                this.scene.pause();
+                EventBus.emit('hide-gameui'); // Laat GameUI verdwijnen
+                // this.scene.pause();
+                this.scene.start('GameOver');
             });
         }
     }
@@ -285,12 +286,12 @@ export class Game extends Scene {
             console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
         }
         this.birds = [];
-        // this.spawnBird();
-        // this.birdSpawnTimer = this.time.addEvent({
-        //     delay: Phaser.Math.Between(4000, 7000),
-        //     loop: true,
-        //     callback: () => this.spawnBird()
-        // });
+        this.spawnBird();
+        this.birdSpawnTimer = this.time.addEvent({
+            delay: Phaser.Math.Between(4000, 7000),
+            loop: true,
+            callback: () => this.spawnBird()
+        });
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
         if (this.input && this.input.keyboard) {
             this.input.keyboard.enabled = true;
@@ -374,7 +375,7 @@ export class Game extends Scene {
 
         // Scrollsnelheid per sfeer instellen
         const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        // const scrollSpeeds = [100, 100, 100, 100, 100]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        // const scrollSpeeds = [50, 50, 50, 50, 50]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
         // Vloeiend interpoleren naar de nieuwe snelheid
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
@@ -425,6 +426,10 @@ export class Game extends Scene {
         const scrolled = Math.min(this.sfeerOffsetY, safeTotal);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
         EventBus.emit('update-sfeer-progress', progress);
+        // Sla de actuele progressie op in window zodat GameOver deze kan tonen
+        if (typeof window !== 'undefined') {
+            (window as any).sfeerProgress = progress;
+        }
         if (progress >= 1) {
             EventBus.emit('gamevictory-ui', this.huidigeSfeerIndex);
             this.scene.pause();

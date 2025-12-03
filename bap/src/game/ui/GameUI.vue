@@ -1,5 +1,5 @@
 <template>
-  <div class="game-ui-container">
+  <div class="game-ui-container" v-show="visible">
     <div class="sfeer-progress-outer">
       <!-- <div style="color:#222;font-size:18px;text-align:center;width:100%">Progress: {{ (sfeerProgress * 100).toFixed(1) }}%</div> -->
       <div class="sfeer-progress-bar" :style="{ border: `solid 5px ${SFEER_COLORS[sfeerIndex].e}` }">
@@ -57,6 +57,10 @@ import { sfeerProgress } from '../utils/sfeerProgressStore';
 const health = ref(3);
 const sfeerText = ref('TROPOSFEER');
 const sfeerIndex = ref(0);
+const visible = ref(true);
+function hideGameUI() {
+  visible.value = false;
+}
 
 function updateHealth(newHealth: number) {
   health.value = newHealth;
@@ -82,6 +86,7 @@ function updateSfeerProgress(progress: number) {
 }
 
 onMounted(() => {
+    EventBus.on('hide-gameui', hideGameUI);
   EventBus.on('update-health', updateHealth);
   EventBus.on('update-sfeer', updateSfeer);
   EventBus.on('update-sfeer-index', updateSfeerIndex);
@@ -89,6 +94,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    EventBus.off('hide-gameui', hideGameUI);
   EventBus.off('update-health', updateHealth);
   EventBus.off('update-sfeer', updateSfeer);
   EventBus.off('update-sfeer-index', updateSfeerIndex);
