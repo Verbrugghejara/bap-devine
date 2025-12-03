@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PauseUI from './game/ui/PauseUI.vue';
+const showPauseUI = ref(false);
 
 import Phaser from 'phaser';
 import { ref, toRaw, onMounted, onUnmounted } from 'vue';
@@ -23,6 +25,7 @@ const currentSceneKey = ref<string | null>(null);
 
 // Scene-wissel: alleen Game, GameOver, GameVictory UI tonen
 EventBus.on('change-scene', (scene: string) => {
+        showPauseUI.value = false;
     console.log('[App.vue] Scene verandert naar:', scene);
     if (phaserRef.value && phaserRef.value.scene) {
         console.log('Beschikbare scenes:', Object.keys(phaserRef.value.scene.scene.manager.keys));
@@ -110,6 +113,12 @@ function onCountdownDone() {
 }
 
 onMounted(() => {
+        EventBus.on('show-pauseui', () => {
+            showPauseUI.value = true;
+        });
+        EventBus.on('hide-pauseui', () => {
+            showPauseUI.value = false;
+        });
     showGameUI.value = false;
     showGameOver.value = false;
     showGameVictory.value = false;
@@ -128,6 +137,8 @@ onMounted(() => {
 
 
 onUnmounted(() => {
+        EventBus.off('show-pauseui');
+        EventBus.off('hide-pauseui');
     EventBus.off('gameover-ui', onGameOverUI);
     EventBus.off('gamevictory-ui', onGameVictoryUI);
     EventBus.off('show-countdown');
@@ -136,9 +147,12 @@ onUnmounted(() => {
 
 <template>
     <div style="width:100vw;height:100vh;position:relative;overflow:hidden;">
+        <!-- Preload pauseAlien image -->
+        <img src="/assets/pauseAlien.png" alt="" style="display:none;" />
         <PhaserGame ref="phaserRef" @current-active-scene="currentScene" />
         <CountDownUI v-if="showCountdown && currentSceneKey === 'Game'" :start="countdownActive" @done="onCountdownDone" />
         <GameUI v-if="showGameUI && currentSceneKey === 'Game'" />
+        <PauseUI v-if="showPauseUI && currentSceneKey === 'Game'" />
         <GameOverUI v-if="showGameOver" :sfeerIndex="gameOverIndex" @restart="handleRestart" />
         <GameVictoryUI v-if="showGameVictory" :sfeerIndex="gameVictoryIndex" @restart="handleRestart" />
     </div>

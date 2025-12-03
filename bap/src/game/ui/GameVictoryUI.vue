@@ -37,7 +37,6 @@ onMounted(() => {
     timeoutId = setTimeout(() => {
         console.log('[GameVictoryUI] Timeout: navigeer naar MainMenu');
         EventBus.emit('change-scene', 'MainMenu');
-        sfeerProgress.value = 0;
         // emit('restart');
     }, 30000);
 });

@@ -11,6 +11,7 @@ import { getRotaryClient, closeRotaryClient } from '../utils/rotaryClientSinglet
 import { SFEER_LABELS } from '../utils/sfeerLabels';
 import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
+import { sfeerProgress } from '../utils/sfeerProgressStore';
 
 export class Game extends Scene {
         private gameStartTime: number = 0;
@@ -61,7 +62,15 @@ export class Game extends Scene {
         EventBus.emit('show-countdown');
         // Luister naar pause/resume events vanuit EventBus
         EventBus.on('pause-game-scene', this.handlePauseGameScene, this);
-        // EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
+        EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
+    }
+
+    handleResumeGameScene() {
+        if (this.isGamePaused) {
+            this.isGamePaused = false;
+            this.pauseStartTime = null;
+            EventBus.emit('hide-pauseui');
+        }
     }
 
     handlePauseGameScene() {
@@ -119,6 +128,8 @@ export class Game extends Scene {
         this.isGamePaused = false;
         this.pauseStartTime = null;
         this.countdownDone = false;
+        
+        sfeerProgress.value = 0;
         // Toon countdown overlay bij elke nieuwe game
         EventBus.emit('show-countdown');
         // GameUI altijd tonen bij start van Game scene
@@ -297,12 +308,12 @@ export class Game extends Scene {
             console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
         }
         this.birds = [];
-        // this.spawnBird();
-        // this.birdSpawnTimer = this.time.addEvent({
-        //     delay: Phaser.Math.Between(4000, 7000),
-        //     loop: true,
-        //     callback: () => this.spawnBird()
-        // });
+        this.spawnBird();
+        this.birdSpawnTimer = this.time.addEvent({
+            delay: Phaser.Math.Between(4000, 7000),
+            loop: true,
+            callback: () => this.spawnBird()
+        });
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
         if (this.input && this.input.keyboard) {
             this.input.keyboard.enabled = true;
@@ -355,12 +366,14 @@ export class Game extends Scene {
         // Enter pauzeert/hervat het spel alleen als de game actief is
         if (this.enterKey) {
             if (this.enterKey.isDown && !this.wasEnterDown) {
-                this.isGamePaused = !this.isGamePaused;
-                console.log('Enter pressed. isGamePaused:', this.isGamePaused);
-                if (this.isGamePaused) {
+                if (!this.isGamePaused) {
+                    this.isGamePaused = true;
+                    console.log('Enter pressed. isGamePaused:', this.isGamePaused);
                     this.pauseStartTime = Date.now();
+                    EventBus.emit('show-pauseui');
                 } else {
-                    this.pauseStartTime = null;
+                    // Als al gepauzeerd, doe niets
+                    console.log('Enter pressed, maar game is al gepauzeerd.');
                 }
             }
             this.wasEnterDown = this.enterKey.isDown;
@@ -385,8 +398,8 @@ export class Game extends Scene {
         // Houd de container op de juiste plek
 
         // Scrollsnelheid per sfeer instellen
-        // const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        const scrollSpeeds = [150, 150, 150, 150, 150]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        // const scrollSpeeds = [150, 150, 150, 150, 150]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
         // Vloeiend interpoleren naar de nieuwe snelheid
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;

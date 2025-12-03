@@ -2,6 +2,7 @@ import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { emit } from "process";
+import { sfeerProgress } from "../utils/sfeerProgressStore";
 
 export class GameVictory extends Scene {
     title: GameObjects.Text;
@@ -14,6 +15,13 @@ export class GameVictory extends Scene {
     }
 
     create() {
+                // Na 30 seconden automatisch naar MainMenu
+                setTimeout(() => {
+                    if (this.scene.isActive()) {
+                        this.scene.start('MainMenu');
+                        
+                    }
+                }, 30000);
         this.add.image(this.scale.width / 2, 0, 'bg-gamevictory').setOrigin(0.5, 0).setDepth(1);
         this.title = this.add.text(
             this.scale.width / 2,

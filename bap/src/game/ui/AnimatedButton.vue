@@ -86,10 +86,6 @@ onUnmounted(() => {
   position: relative;
   outline: none;
 }
-.button:focus {
-  outline: 3px solid #35BBF0;
-  outline-offset: 2px;
-}
 .button-text {
   position: absolute;
   bottom: 8px;
@@ -100,12 +96,13 @@ onUnmounted(() => {
   font-weight: 400;
   line-height: normal;
   display: inline-flex;
+  width: max-content;
   padding: 16px 32px;
   justify-content: center;
   align-items: center;
   gap: 16px;
   border-radius: 24px;
-  background: #35BBF0;
+  background: #EFA348;
   margin-top: 46px;
   transition: bottom 0.18s cubic-bezier(.4, 1.6, .6, 1);
 }
@@ -129,7 +126,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
   border-radius: 24px;
-  background: #2F9BC5;
+  background: #BC7F36;
   margin-top: 46px;
 }
 p {

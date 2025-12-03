@@ -13,6 +13,12 @@ export class GameOver extends Scene {
     }
 
     create() {
+        setTimeout(() => {
+                    if (this.scene.isActive()) {
+                        this.scene.start('MainMenu');
+                        
+                    }
+                }, 30000);
         // Sfeer progression bar (zelfde stijl als in Tutorial)
         const progressBarWidth = this.scale.width * 0.6;
         const progressBarHeight = 32;
