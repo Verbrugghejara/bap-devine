@@ -14,6 +14,7 @@ import { Scene } from 'phaser';
 import { sfeerProgress } from '../utils/sfeerProgressStore';
 
 export class Game extends Scene {
+            private isVictorySwiping: boolean = false;
         private gameStartTime: number = 0;
         private gameEndTime: number = 0;
         private countdownDone: boolean = false;
@@ -56,13 +57,47 @@ export class Game extends Scene {
     private isGameActive: boolean = true;
     private pauseStartTime: number | null = null;
 
+    private isVictorySequence: boolean = false;
+    private isBalloonLeaving: boolean = false;
+    private isExosphereSwiping: boolean = false;
+    private victorySwipeStartY: number = 0;
+    private victorySwipeTargetY: number = 0;
+    private victorySwipeProgress: number = 0;
+    private victorySwipeDuration: number = 1000; // ms
+    private victorySwipeStartTime: number = 0;
+
     constructor() {
         super('Game');
-        // Start countdown overlay zodra Game scene wordt aangemaakt
         EventBus.emit('show-countdown');
-        // Luister naar pause/resume events vanuit EventBus
         EventBus.on('pause-game-scene', this.handlePauseGameScene, this);
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
+        EventBus.on('victory-swipe-in', () => this.handleVictorySwipeIn());
+        
+    }
+
+    handleVictorySwipeIn() {
+        if (this.isVictorySwiping) return;
+        this.isVictorySwiping = true;
+        const swipeDistance = this.scale.height-25; // swipe 1 schermhoogte naar beneden
+        const camera = this.cameras.main;
+        const startY = camera.scrollY;
+        const targetY = startY - swipeDistance;
+        const VICTORY_SWIPE_DURATION = 1400;
+        const duration = VICTORY_SWIPE_DURATION;
+        const startTime = Date.now();
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const t = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - t, 3);
+            camera.scrollY = startY + (targetY - startY) * ease;
+            console.log('camera.scrollY', camera.scrollY);
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                this.isVictorySwiping = false;
+            }
+        };
+        animate();
     }
 
     handleResumeGameScene() {
@@ -81,7 +116,6 @@ export class Game extends Scene {
 
 
 
-    // Checkt overlap tussen twee game objects
     checkOverlap(a: any, b: any): boolean {
         if (!a || !b) return false;
         const ab = (a.getBounds) ? a.getBounds() : a.body.getBounds();
@@ -113,7 +147,6 @@ export class Game extends Scene {
         if (this.ballonHealth <= 0) {
             this.time.delayedCall(1000, () => {
                 EventBus.emit('hide-gameui'); // Laat GameUI verdwijnen
-                // this.scene.pause();
                 this.scene.start('GameOver');
             });
         }
@@ -121,20 +154,19 @@ export class Game extends Scene {
 
 
     create() {
-        // Reset alle relevante game state bij elke start van de Game scene
         this.ballonHealth = 3;
         this.sfeerOffsetY = 0;
         this.huidigeSfeerIndex = 0;
         this.isGamePaused = false;
         this.pauseStartTime = null;
         this.countdownDone = false;
+        this.isVictorySequence = false;
+        this.isBalloonLeaving = false;
+        this.isExosphereSwiping = false;
         
         sfeerProgress.value = 0;
-        // Toon countdown overlay bij elke nieuwe game
         EventBus.emit('show-countdown');
-        // GameUI altijd tonen bij start van Game scene
         EventBus.emit('show-gameui');
-        // Start timer NA countdown (5s) zonder Phaser's time.delayedCall
         setTimeout(() => {
             console.log('start timer');
             this.gameStartTime = Date.now();
@@ -144,11 +176,8 @@ export class Game extends Scene {
         if (this.physics && this.physics.world) {
             this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
         }
-        // Zet de achtergrondkleur van de scene op transparant
         this.cameras.main.setBackgroundColor(0x00000000);
-        // Troposfeer = eerste sfeer, 3x zo hoog, met achtergrond
         const standaardHoogte = this.scale.height;
-        // Troposfeer: 3 schermen hoog, Stratosfeer: 4 schermen hoog, Mesosfeer: 5 schermen hoog, Thermosfeer: 6 schermen hoog, Exosfeer: 7 schermen hoog
         this.sfeerHoogtes = [
             standaardHoogte * 3, // troposfeer
             standaardHoogte * 4, // stratosfeer
@@ -156,27 +185,28 @@ export class Game extends Scene {
             standaardHoogte * 6, // thermosfeer
             standaardHoogte * 7, // exosfeer
         ];
-        // Voeg de achtergrondafbeelding toe voor de exosfeer (vijfde sfeer)
         const bgHoogteExosfeer = this.sfeerHoogtes[4];
         if (this.textures.exists('bg-exosfeer')) {
             this.bgExosfeer = this.add.image(
                 this.scale.width / 2,
-                0, // tijdelijke y, wordt in update gezet
+                0,
                 'bg-exosfeer'
             ).setOrigin(0.5, 1)
-                .setDepth(-204); // achter thermosfeer
+                .setDepth(-204); 
             const texE = this.textures.get('bg-exosfeer').getSourceImage();
             const scaleYE = bgHoogteExosfeer / texE.height;
             this.bgExosfeer.setScale(this.scale.width / texE.width, scaleYE);
+            if (this.bgThermosfeer) {
+                this.bgExosfeer.setOrigin(this.bgThermosfeer.originX, this.bgThermosfeer.originY);
+                this.bgExosfeer.setScale(this.bgThermosfeer.scaleX, this.bgThermosfeer.scaleY);
+            }
             console.log("[Game] Exosfeer achtergrond toegevoegd.");
         } else {
             this.bgExosfeer = null;
         }
         this.sfeerRects = [];
         this.sfeerBaseY = [];
-        // Voeg de achtergrondafbeelding toe voor de troposfeer (eerste sfeer)
         const bgHoogte = this.sfeerHoogtes[0];
-        // Startpositie: onderkant van het canvas, zodat je direct de troposfeer ziet
         if (this.textures.exists('bg-troposfeer')) {
             this.bgTroposfeer = this.add.image(
                 this.scale.width / 2,
@@ -184,7 +214,6 @@ export class Game extends Scene {
                 'bg-troposfeer'
             ).setOrigin(0.5, 1)
                 .setDepth(-200);
-            // Schaal de afbeelding zodat de hoogte exact bgHoogte is, breedte wordt automatisch geschaald
             const tex = this.textures.get('bg-troposfeer').getSourceImage();
             const scaleY = bgHoogte / tex.height;
             this.bgTroposfeer.setScale(this.scale.width / tex.width, scaleY);
@@ -193,15 +222,14 @@ export class Game extends Scene {
         } else {
             this.bgTroposfeer = null;
         }
-        // Voeg de achtergrondafbeelding toe voor de stratosfeer (tweede sfeer)
         const bgHoogteStratosfeer = this.sfeerHoogtes[1];
         if (this.textures.exists('bg-stratosfeer')) {
             this.bgStratosfeer = this.add.image(
                 this.scale.width / 2,
-                0, // tijdelijke y, wordt in update gezet
+                0, 
                 'bg-stratosfeer'
             ).setOrigin(0.5, 1)
-                .setDepth(-201); // achter troposfeer
+                .setDepth(-201); 
             const texS = this.textures.get('bg-stratosfeer').getSourceImage();
             const scaleYS = bgHoogteStratosfeer / texS.height;
             this.bgStratosfeer.setScale(this.scale.width / texS.width, scaleYS);
@@ -210,15 +238,14 @@ export class Game extends Scene {
             this.bgStratosfeer = null;
         }
 
-        // Voeg de achtergrondafbeelding toe voor de mesosfeer (derde sfeer)
         const bgHoogteMesosfeer = this.sfeerHoogtes[2];
         if (this.textures.exists('bg-mesosfeer')) {
             this.bgMesosfeer = this.add.image(
                 this.scale.width / 2,
-                0, // tijdelijke y, wordt in update gezet
+                0, 
                 'bg-mesosfeer'
             ).setOrigin(0.5, 1)
-                .setDepth(-202); // achter stratosfeer
+                .setDepth(-202);
             const texM = this.textures.get('bg-mesosfeer').getSourceImage();
             const scaleYM = bgHoogteMesosfeer / texM.height;
             this.bgMesosfeer.setScale(this.scale.width / texM.width, scaleYM);
@@ -230,10 +257,10 @@ export class Game extends Scene {
         if (this.textures.exists('bg-thermosfeer')) {
             this.bgThermosfeer = this.add.image(
                 this.scale.width / 2,
-                0, // tijdelijke y, wordt in update gezet
+                0, 
                 'bg-thermosfeer'
             ).setOrigin(0.5, 1)
-                .setDepth(-203); // achter mesosfeer
+                .setDepth(-203); 
             const texT = this.textures.get('bg-thermosfeer').getSourceImage();
             const scaleYT = bgHoogteThermosfeer / texT.height;
             this.bgThermosfeer.setScale(this.scale.width / texT.width, scaleYT);
@@ -241,11 +268,9 @@ export class Game extends Scene {
         } else {
             this.bgThermosfeer = null;
         }
-        // Sferen tekenen: eerste sfeer is troposfeer, rest standaard
         let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
         for (let i = 0; i < this.sfeerHoogtes.length; i++) {
             const hoogte = this.sfeerHoogtes[i];
-            // Eerste sfeer: troposfeer-kleur, rest: SFEER_LABELS[i-1] (want troposfeer is apart)
             const kleur = SFEER_LABELS[i]?.colors?.a ?? 0xffffff;
             const kleurInt = typeof kleur === 'number' ? kleur : 0xffffff;
             const baseCenterY = worldY;
@@ -257,7 +282,6 @@ export class Game extends Scene {
                 hoogte,
                 kleurInt
             ).setDepth(-100);
-            // Maak de eerste t/m vijfde sfeer-rectangle transparant zodat de achtergrond zichtbaar is
             if (i === 0 || i === 1 || i === 2 || i === 3 || i === 4) rect.setFillStyle(kleurInt, 0);
             rect.width = this.scale.width;
             rect.height = hoogte;
@@ -268,19 +292,16 @@ export class Game extends Scene {
         }
         this.sfeerOffsetY = 0;
         try {
-            // Maak de ballon sprite
             this.ballon = this.add.sprite(
                 0,
                 0,
                 "balloon"
             ).setScale(0.5).setDepth(50);
-            // Maak de propellors aan, met offset t.o.v. ballon
             this.propellorBlauw = this.add.sprite(
                 this.propellorOffsetXBlauw,
                 this.propellorOffsetY,
                 'propellor-blauw'
             ).setScale(0.5).setDepth(1002);
-            // Zet animatie op eerste frame en pauzeer, speel niet automatisch
             if (this.anims.exists('propellor-blauw')) {
                 this.propellorBlauw.setFrame(0);
                 this.propellorBlauw.anims.stop();
@@ -290,14 +311,12 @@ export class Game extends Scene {
                 this.propellorOffsetY,
                 'propellor-rood'
             ).setScale(0.5).setDepth(1002);
-            // Zet animatie op eerste frame en pauzeer, speel niet automatisch
             if (this.anims.exists('propellor-rood')) {
                 this.propellorRood.setFrame(0);
                 this.propellorRood.anims.stop();
             }
             this.windBlauw = null;
             this.windRood = null;
-            // Zet alles in een container, ballon als laatste zodat hij niet achter de propellors zit
             this.ballonContainer = this.add.container(
                 this.scale.width / 2,
                 this.scale.height * 0.85,
@@ -358,12 +377,10 @@ export class Game extends Scene {
             (bird as any).speed = speed;
             this.birds.push(bird);
         } catch (e) {
-            // Silent fail
         }
     }
 
     update() {
-        // Enter pauzeert/hervat het spel alleen als de game actief is
         if (this.enterKey) {
             if (this.enterKey.isDown && !this.wasEnterDown) {
                 if (!this.isGamePaused) {
@@ -372,51 +389,67 @@ export class Game extends Scene {
                     this.pauseStartTime = Date.now();
                     EventBus.emit('show-pauseui');
                 } else {
-                    // Als al gepauzeerd, doe niets
                     console.log('Enter pressed, maar game is al gepauzeerd.');
                 }
             }
             this.wasEnterDown = this.enterKey.isDown;
         }
-        // Game-logica alleen uitvoeren als niet gepauzeerd
         if (this.isGamePaused) {
-            // Debug: laat weten dat game gepauzeerd is
-            // Na 30 seconden op pauze: terug naar MainMenu
             if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
+                console.log('30 seconden pauze verstreken, terug naar MainMenu');
+                EventBus.emit('hide-pauseui');
                 this.scene.start('MainMenu');
                 this.isGamePaused = false;
                 this.pauseStartTime = null;
             }
             return;
         }
-        // Laat de exosfeer-achtergrond direct aansluiten op de bovenkant van de thermosfeer-bg
+
+        if (this.isVictorySequence) {
+            if (this.isBalloonLeaving && this.ballonContainer) {
+                this.ballonContainer.y -= 12; 
+                if (this.ballonContainer.y + (this.ballon?.height ?? 100) < -50) {
+                    this.isBalloonLeaving = false;
+                    this.isExosphereSwiping = true;
+                    this.victorySwipeStartY = this.sfeerOffsetY;
+                    this.victorySwipeTargetY = this.sfeerOffsetY + (this.sfeerHoogtes[4] ?? 1000);
+                    this.victorySwipeProgress = 0;
+                    this.victorySwipeStartTime = Date.now();
+                }
+            }
+            if (this.isExosphereSwiping) {
+                const elapsed = Date.now() - this.victorySwipeStartTime;
+                const t = Math.min(elapsed / this.victorySwipeDuration, 1);
+                const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+                this.sfeerOffsetY = this.victorySwipeStartY + (this.victorySwipeTargetY - this.victorySwipeStartY) * ease;
+                if (t >= 1) {
+                    this.isExosphereSwiping = false;
+                    this.isVictorySequence = false;
+                    EventBus.emit('hide-gameui');
+                    this.scene.launch('GameVictory');
+                }
+            }
+            return;
+        }
         if (this.bgExosfeer && this.bgThermosfeer) {
             this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
         }
-        // Laat de thermosfeer-achtergrond direct aansluiten op de bovenkant van de mesosfeer-bg
 
-        // Houd de container op de juiste plek
-
-        // Scrollsnelheid per sfeer instellen
         const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        // const scrollSpeeds = [150, 150, 150, 150, 150]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        // const scrollSpeeds = [100, 100, 100, 100, 100]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
-        // Vloeiend interpoleren naar de nieuwe snelheid
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
         for (let i = 0; i < this.sfeerRects.length; i++) {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
         }
-        // Laat de troposfeer-achtergrond meescrollen met de eerste sfeer
         if (this.bgTroposfeer) {
             this.bgTroposfeer.y = this.sfeerBaseY[0] + this.sfeerOffsetY + this.sfeerHoogtes[0] / 2;
         }
-        // Laat de stratosfeer-achtergrond direct aansluiten op de bovenkant van de troposfeer-bg
         if (this.bgStratosfeer && this.bgTroposfeer) {
             this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
         }
-        // Laat de mesosfeer-achtergrond direct aansluiten op de bovenkant van de stratosfeer-bg
         if (this.bgMesosfeer && this.bgStratosfeer) {
             this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
         }
@@ -450,19 +483,19 @@ export class Game extends Scene {
         const scrolled = Math.min(this.sfeerOffsetY, safeTotal);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
         EventBus.emit('update-sfeer-progress', progress);
-        // Sla de actuele progressie op in window zodat GameOver deze kan tonen
         if (typeof window !== 'undefined') {
             (window as any).sfeerProgress = progress;
         }
-        if (progress >= 1 && this.countdownDone) {
-            // Stop timer en sla op
+        if (progress >= 1 && this.countdownDone && !this.isVictorySequence) {
             this.gameEndTime = Date.now();
             const duration = this.gameEndTime - this.gameStartTime;
             if (typeof window !== 'undefined') {
-                (window as any).gameDurationMs = duration;
+                if ((window as any).gameDurationMs === undefined) {
+                    (window as any).gameDurationMs = duration;
+                }
             }
-            EventBus.emit('hide-gameui'); // Laat GameUI verdwijnen
-            this.scene.start('GameVictory');
+            this.isVictorySequence = true;
+            this.isBalloonLeaving = true;
         }
         if (this.ballonContainer) {
             let rotaryEdge = false;
@@ -488,7 +521,6 @@ export class Game extends Scene {
                     if (!this._lastDiffs) this._lastDiffs = [0, 0];
                     const diff1 = angleDiff(angles[0], prevs[0]);
                     const diff2 = angleDiff(angles[1], prevs[1]);
-                    // Detecteer edge: rotary net bewogen
                     if ((Math.abs(diff1) > threshold && Math.abs(this._lastRotaryDiffs[0]) <= threshold) ||
                         (Math.abs(diff2) > threshold && Math.abs(this._lastRotaryDiffs[1]) <= threshold)) {
                         rotaryEdge = true;
@@ -531,8 +563,6 @@ export class Game extends Scene {
                     }
                 }
             }
-            // Propellor animatie logica
-            // PropellorBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
             if (this.propellorBlauw) {
                 if (sensor1Active) {
                     if (!this.propellorBlauw.anims.isPlaying) {
@@ -549,7 +579,6 @@ export class Game extends Scene {
                     }
                 }
             }
-            // PropellorRood: speel altijd 1x af bij nieuwe draai (en alleen dan)
             if (this.propellorRood) {
                 if (sensor2Active) {
                     if (!this.propellorRood.anims.isPlaying) {
@@ -567,7 +596,6 @@ export class Game extends Scene {
                 }
             }
 
-            // WindBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
             if (sensor1Active) {
                 if (!this.windBlauw) {
                     if (this.ballonContainer) {
@@ -591,7 +619,6 @@ export class Game extends Scene {
                     this.windBlauw = null;
                 }
             }
-            // WindRood: speel altijd 1x af bij nieuwe draai (en alleen dan)
             if (sensor2Active) {
                 if (!this.windRood) {
                     if (this.ballonContainer) {
@@ -627,14 +654,10 @@ export class Game extends Scene {
             if (deltaX !== 0) {
                 this.ballonContainer.x += deltaX;
             }
-            // if (rotaryEdge || leftEdge || rightEdge) {
-            //     this.resetInactivityTimeout();
-            // }
             const bounds = this.ballonContainer.getBounds();
             if (bounds.left < 0) this.ballonContainer.x += -bounds.left;
             if (bounds.right > this.scale.width) this.ballonContainer.x -= (bounds.right - this.scale.width);
         }
-        // WindBlauw/Rood positie updaten als ze bestaan
         if (this.windBlauw && this.ballonContainer) {
             this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
             this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY;

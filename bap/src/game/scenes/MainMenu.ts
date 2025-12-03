@@ -2,7 +2,6 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { getRotaryClient } from '../utils/rotaryClientSingleton';
-// import { transform } from "typescript"; // Niet gebruikt, dus verwijderd
 import { SFEER_LABELS } from "../utils/sfeerLabels";
 
 
@@ -19,9 +18,7 @@ export class MainMenu extends Scene {
 
 
     create() {
-            // Zet direct de WebSocket connectie op
             this.rotary = getRotaryClient();
-        // this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase());
         const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'home-animation')
             .setOrigin(0.5)
             .setDepth(1000)
@@ -64,24 +61,20 @@ export class MainMenu extends Scene {
         // Padding instellen
         const paddingX = 24;
         const paddingY = 16;
-        // Maak eerst de tekst om breedte/hoogte te meten
         const startText = this.add.text(0, 0, 'Start', {
             fontFamily: 'Bungee',
             fontSize: '54px',
             color: '#ffffff',
         }).setOrigin(0.5, 0.5).setDepth(1001);
 
-        // Rocket icon afmetingen
         const circleSize = 44;
         const iconMargin = 12;
 
-        // Totale breedte: rocket + margin + tekst + padding
         const btnContentWidth = circleSize + iconMargin + startText.width;
         const btnWidth = btnContentWidth + 2 * paddingX;
         const btnHeight = startText.height + 2 * paddingY;
 
 
-        // Shadow onder de knop tekenen
             const shadowOffsetY = 8;
             const shadow = this.add.graphics();
             shadow.fillStyle(0xBC7F36, 1);
@@ -93,18 +86,13 @@ export class MainMenu extends Scene {
                 16
             );
 
-        // Achtergrond tekenen met padding
         const bg = this.add.graphics();
         bg.fillStyle(Number('0x' + SFEER_LABELS[0].colors.c.toString(16).padStart(6, '0')), 1);
         bg.fillRoundedRect(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight, 16);
 
-        // Zet rocket en tekst netjes naast elkaar gecentreerd
         const circleRadius = circleSize / 3;
-        // Bepaal totale content breedte (cirkel + margin + tekst)
         const contentWidth = circleRadius * 2 + iconMargin + startText.width;
-        // Startpositie zodat geheel gecentreerd is
         const contentStartX = -contentWidth / 2;
-        // Verticaal centreren: y=0 is het midden van de button-container
         const circleY = 0;
         const circleX = contentStartX + circleRadius;
         const textX = circleX + circleRadius + iconMargin + startText.width / 2;
@@ -114,7 +102,6 @@ export class MainMenu extends Scene {
         startText.setX(textX);
         startText.setY(0);
 
-        // Container als button
         this.startButton = this.add.container(this.scale.width / 2, this.scale.height - 200, [
             shadow,
             bg,
@@ -122,10 +109,9 @@ export class MainMenu extends Scene {
             startText
         ]);
         this.startButton.setSize(btnWidth, btnHeight);
-        this.startButton.setDepth(1100); // Zorg dat de button boven de video staat
+        this.startButton.setDepth(1100); 
         this.startButton.setInteractive({ useHandCursor: true });
 
-        // Button animatie en scene-wissel functie
         const triggerButton = () => {
             const bg = this.startButton.list[1];
             const circle = this.startButton.list[2];
@@ -143,14 +129,12 @@ export class MainMenu extends Scene {
 
         this.startButton.on('pointerdown', triggerButton);
 
-        // Keyboard: Enter of Space activeert ook de knop
             this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
                 if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
                     triggerButton();
                 }
             });
         window.addEventListener('keydown', (event) => {
-//   console.log('GLOBAL KEY:', event.code, event.key, event);
 });
 
         if (this.physics && this.physics.world) {
