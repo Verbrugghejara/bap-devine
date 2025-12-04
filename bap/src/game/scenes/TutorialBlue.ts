@@ -74,6 +74,154 @@ export class Tutorial extends Scene {
     }
 
     create() {
+                // ...existing code...
+
+                // Overslaan button
+                const buttonWidth = 500;
+                const buttonHeight = 100;
+                    // Shadow onder de Overslaan-button
+                    const skipShadowOffsetY = 8;
+                    const skipShadow = this.add.graphics();
+                    skipShadow.fillStyle(0x246E8B, 1);
+                    skipShadow.fillRoundedRect(
+                        -buttonWidth / 2,
+                        -buttonHeight / 2 + skipShadowOffsetY,
+                        buttonWidth,
+                        buttonHeight,
+                        16
+                    );
+                    skipShadow.setDepth(1999);
+                // buttonPaddingX niet gebruikt, padding zit in skipTextPadding
+                const buttonX = this.scale.width - buttonWidth / 2 - 54;
+                const buttonY = this.scale.height - 200;
+                const circleRadius = 20;
+                const gap = 32;
+                const skipTextPadding = 12;
+
+                // Button background
+                const skipBg = this.add.graphics();
+                skipBg.fillStyle(0x35BBF0, 1);
+                skipBg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16);
+                skipBg.setDepth(2000);
+
+                // Button text
+                const skipText = this.add.text(0, 0, 'OVERSLAAN', {
+                    fontFamily: 'Bungee',
+                    fontSize: 50,
+                    color: '#ffffff',
+                }).setOrigin(0, 0.5).setDepth(2001);
+
+                // Cirkel (outline)
+                const skipCircle = this.add.graphics();
+                skipCircle.lineStyle(4, 0xffffff, 1);
+                skipCircle.strokeCircle(0, 0, circleRadius);
+                skipCircle.setDepth(2002);
+
+                // Cirkel (fill, dynamisch)
+                const skipFill = this.add.graphics();
+                skipFill.setDepth(2003);
+
+                // Horizontale uitlijning: eerst breedte bepalen
+                const skipTotalWidth = circleRadius * 2 + gap + skipText.width + skipTextPadding * 2;
+                // Zet cirkel links, tekst rechts met gap en padding
+                skipCircle.x = -skipTotalWidth / 2 + circleRadius + skipTextPadding;
+                skipCircle.y = 0;
+                skipFill.x = skipCircle.x;
+                skipFill.y = 0;
+                skipText.x = skipCircle.x + circleRadius + gap;
+                skipText.y = 0;
+
+                // Button container
+                const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg, skipCircle, skipFill, skipText]);
+                skipButton.setSize(buttonWidth, buttonHeight);
+                skipButton.setDepth(2000);
+                skipButton.setInteractive({ useHandCursor: true });
+
+
+                // Enter-hold state and animation
+                let skipHoldStart: number | null = null;
+                let skipHoldProgress = 0;
+                let skipButtonTween: Phaser.Tweens.Tween | null = null;
+                let skipButtonIsDown = false;
+                // For animation: get references to animatable elements
+                const animTargets = [skipBg, skipCircle, skipFill, skipText];
+
+                // Update fill on each frame (always draw at 0,0 in container)
+                this.events.on('update', () => {
+                    skipFill.clear();
+                    if (skipHoldProgress > 0) {
+                        skipFill.beginPath();
+                        skipFill.arc(0, 0, circleRadius - 2, -Math.PI/2, -Math.PI/2 + 2 * Math.PI * skipHoldProgress, false);
+                        skipFill.lineTo(0, 0);
+                        skipFill.closePath();
+                        skipFill.fillStyle(0xffffff, 1);
+                        skipFill.fillPath();
+                    }
+                });
+
+                // Enter-hold logic with animation (animate only non-shadow elements)
+                if (this.input.keyboard) {
+                    this.input.keyboard.on('keydown-ENTER', () => {
+                        if (!skipButtonIsDown) {
+                            skipButtonIsDown = true;
+                            if (skipHoldStart === null) {
+                                skipHoldStart = Date.now();
+                            }
+                            // Animate only bg, circle, fill, text down
+                            if (skipButtonTween) skipButtonTween.stop();
+                            skipButtonTween = this.tweens.add({
+                                targets: animTargets,
+                                y: 8,
+                                duration: 80,
+                                yoyo: false
+                            });
+                        }
+                    });
+                    this.input.keyboard.on('keyup-ENTER', () => {
+                        skipButtonIsDown = false;
+                        skipHoldStart = null;
+                        skipHoldProgress = 0;
+                        // Animate only bg, circle, fill, text up
+                        if (skipButtonTween) skipButtonTween.stop();
+                        skipButtonTween = this.tweens.add({
+                            targets: animTargets,
+                            y: 0,
+                            duration: 80,
+                            yoyo: false
+                        });
+                    });
+                }
+
+                // In update: check hold progress and handle completion
+                this.events.on('update', () => {
+                    if (skipHoldStart !== null) {
+                        const elapsed = Date.now() - skipHoldStart;
+                        // Use 2800ms for a snappier 3s feel
+                        skipHoldProgress = Math.min(1, elapsed / 2800);
+                        if (skipHoldProgress >= 1) {
+                            // Play press effect and transition (animate only non-shadow elements)
+                            if (skipButtonTween) skipButtonTween.stop();
+                            this.tweens.add({
+                                targets: animTargets,
+                                y: 16,
+                                duration: 80,
+                                yoyo: true,
+                                onComplete: () => {
+                                    this.scene.start('TutorialRed');
+                                }
+                            });
+                            skipHoldStart = null;
+                            skipButtonIsDown = false;
+                        }
+                    } else {
+                        skipHoldProgress = 0;
+                    }
+                });
+
+                // Button click
+                skipButton.on('pointerdown', () => {
+                    this.scene.start('Game');
+                });
         // ...
         // this.balloon = this.add.image(280, 820, 'balloon').setDepth(1000).setScale(0.5);
         // Voeg de actieve propellor toe als image (PNG)
@@ -231,12 +379,12 @@ export class Tutorial extends Scene {
         text2.y = descY;
 
         // Keyboard input expliciet activeren en Enter-key toevoegen
-        if (this.input.keyboard) {
-            this.input.keyboard.enabled = true;
-            this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-            console.log('Enter key:', this.enterKey);
-        }
-        this.enterHoldStart = null;
+        // if (this.input.keyboard) {
+        //     this.input.keyboard.enabled = true;
+        //     this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        //     console.log('Enter key:', this.enterKey);
+        // }
+        // this.enterHoldStart = null;
     }
     update() {
                 // Opruimen windBlauw als animatie klaar is (failsafe)

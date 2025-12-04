@@ -5,9 +5,9 @@ import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 export class Tutorial extends Scene {
-        private inactiveShakeTimer: number = 0;
-        private inactiveShakeDirection: number = 1;
-        private lastAngle2: number | undefined = undefined;
+    private inactiveShakeTimer: number = 0;
+    private inactiveShakeDirection: number = 1;
+    private lastAngle2: number | undefined = undefined;
     private _changeSceneHandler?: (sceneKey: string) => void;
     balloon: Phaser.GameObjects.Image;
     propellorBlauw: Phaser.GameObjects.Sprite;
@@ -32,8 +32,8 @@ export class Tutorial extends Scene {
         this.rotary = getRotaryClient(); // Rotary client direct initialiseren
         // Progress bar wordt pas in create() aangemaakt
     }
-        // ...existing code...
-        // ...existing code...
+    // ...existing code...
+    // ...existing code...
     drawProgressBar() {
         if (!this.progressBar) return;
         // Draw a horizontal bar at the bottom of the screen
@@ -56,10 +56,10 @@ export class Tutorial extends Scene {
             const fillX = barX + barWidth - (fillWidth + 30);
             this.progressBar.fillRoundedRect(fillX, barY, fillWidth + 30, barHeight, { tl: radius, tr: radius, bl: radius, br: radius });
         }
-        if (this.progress >= 1){
-                // EventBus.emit('change-scene', 'Game');
-                // Game-scene wordt gestart, App.vue vangt dit op en toont countdown
-                this.scene.start('Game');
+        if (this.progress >= 1) {
+            // EventBus.emit('change-scene', 'Game');
+            // Game-scene wordt gestart, App.vue vangt dit op en toont countdown
+            this.scene.start('Game');
         }
         // geen fillWidth >= check meer nodig
         // Border
@@ -68,18 +68,162 @@ export class Tutorial extends Scene {
     }
 
     create() {
-        // ...
-        // this.balloon = this.add.image(280, 820, 'balloon').setDepth(1000).setScale(0.5);
-        // Voeg de actieve propellor toe als image (PNG)
+        // ...existing code...
+
+        // Overslaan button
+        const buttonWidth = 500;
+        const buttonHeight = 100;
+        // Shadow onder de Overslaan-button
+        const skipShadowOffsetY = 8;
+        const skipShadow = this.add.graphics();
+        skipShadow.fillStyle(0x87302B, 1);
+        skipShadow.fillRoundedRect(
+            -buttonWidth / 2,
+            -buttonHeight / 2 + skipShadowOffsetY,
+            buttonWidth,
+            buttonHeight,
+            16
+        );
+        skipShadow.setDepth(1999);
+        // buttonPaddingX niet gebruikt, padding zit in skipTextPadding
+        const buttonX = this.scale.width - buttonWidth / 2 - 54;
+        const buttonY = this.scale.height - 200;
+        const circleRadius = 20;
+        const gap = 32;
+        const skipTextPadding = 12;
+
+        // Button background
+        const skipBg = this.add.graphics();
+        skipBg.fillStyle(0xF25C54, 1);
+        skipBg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16);
+        skipBg.setDepth(2000);
+
+        // Button text
+        const skipText = this.add.text(0, 0, 'OVERSLAAN', {
+            fontFamily: 'Bungee',
+            fontSize: 50,
+            color: '#ffffff',
+        }).setOrigin(0, 0.5).setDepth(2001);
+
+        // Cirkel (outline)
+        const skipCircle = this.add.graphics();
+        skipCircle.lineStyle(4, 0xffffff, 1);
+        skipCircle.strokeCircle(0, 0, circleRadius);
+        skipCircle.setDepth(2002);
+
+        // Cirkel (fill, dynamisch)
+        const skipFill = this.add.graphics();
+        skipFill.setDepth(2003);
+
+        // Horizontale uitlijning: eerst breedte bepalen
+        const skipTotalWidth = circleRadius * 2 + gap + skipText.width + skipTextPadding * 2;
+        // Zet cirkel links, tekst rechts met gap en padding
+        skipCircle.x = -skipTotalWidth / 2 + circleRadius + skipTextPadding;
+        skipCircle.y = 0;
+        skipFill.x = skipCircle.x;
+        skipFill.y = 0;
+        skipText.x = skipCircle.x + circleRadius + gap;
+        skipText.y = 0;
+
+        // Button container
+        const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg, skipCircle, skipFill, skipText]);
+        skipButton.setSize(buttonWidth, buttonHeight);
+        skipButton.setDepth(2000);
+        skipButton.setInteractive({ useHandCursor: true });
+
+
+        // Enter-hold state and animation
+        let skipHoldStart: number | null = null;
+        let skipHoldProgress = 0;
+        let skipButtonTween: Phaser.Tweens.Tween | null = null;
+        let skipButtonIsDown = false;
+        // For animation: get references to animatable elements
+        const animTargets = [skipBg, skipCircle, skipFill, skipText];
+
+        // Update fill on each frame (always draw at 0,0 in container)
+        this.events.on('update', () => {
+            skipFill.clear();
+            if (skipHoldProgress > 0) {
+                skipFill.beginPath();
+                skipFill.arc(0, 0, circleRadius - 2, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * skipHoldProgress, false);
+                skipFill.lineTo(0, 0);
+                skipFill.closePath();
+                skipFill.fillStyle(0xffffff, 1);
+                skipFill.fillPath();
+            }
+        });
+
+        // Enter-hold logic with animation (animate only non-shadow elements)
+        if (this.input.keyboard) {
+            this.input.keyboard.on('keydown-ENTER', () => {
+                if (!skipButtonIsDown) {
+                    skipButtonIsDown = true;
+                    if (skipHoldStart === null) {
+                        skipHoldStart = Date.now();
+                    }
+                    // Animate only bg, circle, fill, text down
+                    if (skipButtonTween) skipButtonTween.stop();
+                    skipButtonTween = this.tweens.add({
+                        targets: animTargets,
+                        y: 8,
+                        duration: 80,
+                        yoyo: false
+                    });
+                }
+            });
+            this.input.keyboard.on('keyup-ENTER', () => {
+                skipButtonIsDown = false;
+                skipHoldStart = null;
+                skipHoldProgress = 0;
+                // Animate only bg, circle, fill, text up
+                if (skipButtonTween) skipButtonTween.stop();
+                skipButtonTween = this.tweens.add({
+                    targets: animTargets,
+                    y: 0,
+                    duration: 80,
+                    yoyo: false
+                });
+            });
+        }
+
+        // In update: check hold progress and handle completion
+        this.events.on('update', () => {
+            if (skipHoldStart !== null) {
+                const elapsed = Date.now() - skipHoldStart;
+                skipHoldProgress = Math.min(1, elapsed / 2800);
+                if (skipHoldProgress >= 1) {
+                    // Play press effect and transition (animate only non-shadow elements)
+                    if (skipButtonTween) skipButtonTween.stop();
+                    this.tweens.add({
+                        targets: animTargets,
+                        y: 16,
+                        duration: 80,
+                        yoyo: true,
+                        onComplete: () => {
+                            this.scene.start('TutorialRed');
+                        }
+                    });
+                    skipHoldStart = null;
+                    skipButtonIsDown = false;
+                }
+            } else {
+                skipHoldProgress = 0;
+            }
+        });
+
+        // Button click
+        skipButton.on('pointerdown', () => {
+            this.scene.start('Game');
+        });
         const propellorX = this.scale.width / 2;
         const propellorY = this.scale.height / 2 + 350;
         this.inactivePropellor = this.add.image(
-            propellorX-150,
+            propellorX - 150,
             propellorY,
             'inactive'
         ).setDepth(1001).setScale(0.60);
         this.activePropellor = this.add.image(
-            propellorX+150,
+            propellorX + 150,
             propellorY,
             'active-rood'
         ).setDepth(1003).setScale(0.60);
@@ -134,7 +278,7 @@ export class Tutorial extends Scene {
         }
         this.windRood = null;
         // Eerst de tekstobject aanmaken (zonder achtergrond)
-        
+
         // Graphics achtergrond met border radius tekenen
         const paddingX = 32;
         const paddingY = 24;
@@ -225,48 +369,48 @@ export class Tutorial extends Scene {
         text2.y = descY;
     }
     update() {
-                        // Shake inactivePropellor als angle2 draait
-                        let angle2Delta = 0;
-                        if (this.rotary && this.rotary.lastAngles && this.rotary.lastAngles.length > 1) {
-                            const angle2 = this.rotary.lastAngles[0];
-                            if (typeof angle2 === 'number' && this.lastAngle2 !== undefined) {
-                                angle2Delta = angle2 - this.lastAngle2;
-                                if (Math.abs(angle2Delta) >= 2) {
-                                    this.inactiveShakeTimer = 10; // aantal frames schudden
-                                    this.inactiveShakeDirection = Math.sign(angle2Delta) || 1;
-                                }
-                            }
-                            this.lastAngle2 = angle2;
-                        }
-
-                        // Shake animatie uitvoeren
-                        if (this.inactivePropellor) {
-                            if (this.inactiveShakeTimer > 0) {
-                                // Shake: roteer snel heen en weer
-                                this.inactivePropellor.rotation = Math.sin(this.inactiveShakeTimer * 0.7) * 0.25 * this.inactiveShakeDirection;
-                                this.inactiveShakeTimer--;
-                            } else {
-                                this.inactivePropellor.rotation = 0;
-                            }
-                        }
-                // Laat de arrows constant naar links roteren
-                if (this.arrows) {
-                    this.arrows.rotation -= 0.05;
+        // Shake inactivePropellor als angle2 draait
+        let angle2Delta = 0;
+        if (this.rotary && this.rotary.lastAngles && this.rotary.lastAngles.length > 1) {
+            const angle2 = this.rotary.lastAngles[0];
+            if (typeof angle2 === 'number' && this.lastAngle2 !== undefined) {
+                angle2Delta = angle2 - this.lastAngle2;
+                if (Math.abs(angle2Delta) >= 2) {
+                    this.inactiveShakeTimer = 10; // aantal frames schudden
+                    this.inactiveShakeDirection = Math.sign(angle2Delta) || 1;
                 }
+            }
+            this.lastAngle2 = angle2;
+        }
 
-                // Active propellor draait alleen als de sensor beweegt, in beide richtingen, met een stap van minimaal 2 graden
-                if (this.activePropellor) {
-                    if (this.rotary && this.rotary.lastAngles && Array.isArray(this.rotary.lastAngles)) {
-                        const angle1 = this.rotary.lastAngles[1];
-                        if (typeof angle1 === 'number' && this.lastAngle1 !== null && angle1 !== this.lastAngle1) {
-                            const deltaStep = angle1 - this.lastAngle1;
-                            if (Math.abs(deltaStep) >= 2) {
-                                // Draai naar links of rechts afhankelijk van deltaStep
-                                this.activePropellor.rotation += Math.sign(deltaStep) * 0.15;
-                            }
-                        }
+        // Shake animatie uitvoeren
+        if (this.inactivePropellor) {
+            if (this.inactiveShakeTimer > 0) {
+                // Shake: roteer snel heen en weer
+                this.inactivePropellor.rotation = Math.sin(this.inactiveShakeTimer * 0.7) * 0.25 * this.inactiveShakeDirection;
+                this.inactiveShakeTimer--;
+            } else {
+                this.inactivePropellor.rotation = 0;
+            }
+        }
+        // Laat de arrows constant naar links roteren
+        if (this.arrows) {
+            this.arrows.rotation -= 0.05;
+        }
+
+        // Active propellor draait alleen als de sensor beweegt, in beide richtingen, met een stap van minimaal 2 graden
+        if (this.activePropellor) {
+            if (this.rotary && this.rotary.lastAngles && Array.isArray(this.rotary.lastAngles)) {
+                const angle1 = this.rotary.lastAngles[1];
+                if (typeof angle1 === 'number' && this.lastAngle1 !== null && angle1 !== this.lastAngle1) {
+                    const deltaStep = angle1 - this.lastAngle1;
+                    if (Math.abs(deltaStep) >= 2) {
+                        // Draai naar links of rechts afhankelijk van deltaStep
+                        this.activePropellor.rotation += Math.sign(deltaStep) * 0.15;
                     }
                 }
+            }
+        }
         // Rotary sensor uitlezen en ballon bewegen + progress
         let propellorShouldSpin = false;
         if (this.rotary && this.rotary.lastAngles && Array.isArray(this.rotary.lastAngles)) {

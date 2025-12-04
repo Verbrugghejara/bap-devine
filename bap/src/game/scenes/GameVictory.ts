@@ -123,7 +123,7 @@ export class GameVictory extends Scene {
             fontFamily: 'Bungee',
             fontSize: '54px',
             color: '#ffffff',
-        }).setOrigin(0.5, 0.5).setDepth(1001);
+        }).setOrigin(0.5, 0.5).setDepth(50);
 
         const circleSize = 44;
         const iconMargin = 12;
@@ -160,26 +160,22 @@ export class GameVictory extends Scene {
         startText.setX(textX);
         startText.setY(0);
 
-        this.againButton = this.add.container(this.scale.width / 2, this.scale.height / 2 - 100, [
+        // Button en tekst positie onderaan victoryContainer
+        const buttonY = this.scale.height / 2 - 200;
+        this.againButton = this.add.container(this.scale.width / 2, buttonY +100, [
             shadow,
             bg,
             circle,
             startText
         ]);
         this.againButton.setSize(btnWidth, btnHeight);
-        this.againButton.setDepth(1100); 
+        this.againButton.setDepth(1100);
         this.againButton.setInteractive({ useHandCursor: true });
-        this.againButton.on('pointerdown', () => {
-            this.scene.start('Game');
-        });
-        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-            if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
-                this.scene.start('Game');
-            }
-        });
+        victoryContainer.add(this.againButton);
+
         this.againText = this.add.text(
             this.scale.width / 2,
-            this.scale.height / 2 - 200,
+            buttonY,
             'Opnieuw proberen?',
             {
                 fontFamily: 'Space Grotesk',
@@ -189,7 +185,9 @@ export class GameVictory extends Scene {
             }
         )
             .setOrigin(0.5)
-            .setDepth(10)
+            .setDepth(50);
+        victoryContainer.add(this.againText);
+
         const triggerButton = () => {
             const bg = this.againButton.list[1];
             const circle = this.againButton.list[2];
@@ -209,6 +207,9 @@ export class GameVictory extends Scene {
                 }
             });
         };
+        this.againButton.on('pointerdown', () => {
+            triggerButton();
+        });
         this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
             if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
                 triggerButton();
