@@ -143,6 +143,7 @@ export class Tutorial extends Scene {
                 let skipHoldProgress = 0;
                 let skipButtonTween: Phaser.Tweens.Tween | null = null;
                 let skipButtonIsDown = false;
+                let isTransitioning = false;
                 // For animation: get references to animatable elements
                 const animTargets = [skipBg, skipCircle, skipFill, skipText];
 
@@ -162,7 +163,7 @@ export class Tutorial extends Scene {
                 // Enter-hold logic with animation (animate only non-shadow elements)
                 if (this.input.keyboard) {
                     this.input.keyboard.on('keydown-ENTER', () => {
-                        if (!skipButtonIsDown) {
+                        if (!skipButtonIsDown && !isTransitioning) {
                             skipButtonIsDown = true;
                             if (skipHoldStart === null) {
                                 skipHoldStart = Date.now();
@@ -178,42 +179,37 @@ export class Tutorial extends Scene {
                         }
                     });
                     this.input.keyboard.on('keyup-ENTER', () => {
-                        skipButtonIsDown = false;
-                        skipHoldStart = null;
-                        skipHoldProgress = 0;
-                        // Animate only bg, circle, fill, text up
-                        if (skipButtonTween) skipButtonTween.stop();
-                        skipButtonTween = this.tweens.add({
-                            targets: animTargets,
-                            y: 0,
-                            duration: 80,
-                            yoyo: false
-                        });
+                        if (!isTransitioning) {
+                            skipButtonIsDown = false;
+                            skipHoldStart = null;
+                            skipHoldProgress = 0;
+                            // Animate only bg, circle, fill, text up
+                            if (skipButtonTween) skipButtonTween.stop();
+                            skipButtonTween = this.tweens.add({
+                                targets: animTargets,
+                                y: 0,
+                                duration: 80,
+                                yoyo: false
+                            });
+                        }
                     });
                 }
 
                 // In update: check hold progress and handle completion
                 this.events.on('update', () => {
-                    if (skipHoldStart !== null) {
+                    if (skipHoldStart !== null && !isTransitioning) {
                         const elapsed = Date.now() - skipHoldStart;
                         // Use 2800ms for a snappier 3s feel
                         skipHoldProgress = Math.min(1, elapsed / 2800);
                         if (skipHoldProgress >= 1) {
-                            // Play press effect and transition (animate only non-shadow elements)
-                            if (skipButtonTween) skipButtonTween.stop();
-                            this.tweens.add({
-                                targets: animTargets,
-                                y: 16,
-                                duration: 80,
-                                yoyo: true,
-                                onComplete: () => {
-                                    this.scene.start('TutorialRed');
-                                }
-                            });
+                            // Transition without extra animation
+                            isTransitioning = true;
                             skipHoldStart = null;
                             skipButtonIsDown = false;
+                            if (skipButtonTween) skipButtonTween.stop();
+                            this.scene.start('Game');
                         }
-                    } else {
+                    } else if (!isTransitioning) {
                         skipHoldProgress = 0;
                     }
                 });

@@ -22,7 +22,6 @@ export class Game extends Scene {
     private _lastLeftDown: boolean = false;
     private _lastRightDown: boolean = false;
     private _lastRotaryDiffs: [number, number] = [0, 0];
-
     private inactivityTimeout: any = null;
     huidigeSfeerIndex: number = 0;
     sfeerRects: Phaser.GameObjects.Rectangle[] = [];
@@ -37,7 +36,6 @@ export class Game extends Scene {
     rotary: any = null;
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private sfeerOffsetY: number = 0;
-    private _lastDiffs: [number, number] = [0, 0];
     propellorRood: Phaser.GameObjects.Sprite | null;
     propellorBlauw: Phaser.GameObjects.Sprite | null;
     windBlauw: Phaser.GameObjects.Sprite | null = null;
@@ -54,17 +52,10 @@ export class Game extends Scene {
     private enterKey: Phaser.Input.Keyboard.Key | null = null;
     private wasEnterDown: boolean = false;
     private isGamePaused: boolean = false;
-    private isGameActive: boolean = true;
     private pauseStartTime: number | null = null;
 
     private isVictorySequence: boolean = false;
     private isBalloonLeaving: boolean = false;
-    private isExosphereSwiping: boolean = false;
-    private victorySwipeStartY: number = 0;
-    private victorySwipeTargetY: number = 0;
-    private victorySwipeProgress: number = 0;
-    private victorySwipeDuration: number = 1000; // ms
-    private victorySwipeStartTime: number = 0;
 
     constructor() {
         super('Game');
@@ -78,10 +69,10 @@ export class Game extends Scene {
     handleVictorySwipeIn() {
         if (this.isVictorySwiping) return;
         this.isVictorySwiping = true;
-        const swipeDistance = this.scale.height-25; // swipe 1 schermhoogte naar beneden
+        const swipeDistance = this.scale.height - 25;
         const camera = this.cameras.main;
         const startY = camera.scrollY;
-        const targetY = startY - swipeDistance;
+        const targetY = startY + swipeDistance; // Scroll naar beneden (positieve richting)
         const VICTORY_SWIPE_DURATION = 1400;
         const duration = VICTORY_SWIPE_DURATION;
         const startTime = Date.now();
@@ -162,7 +153,6 @@ export class Game extends Scene {
         this.countdownDone = false;
         this.isVictorySequence = false;
         this.isBalloonLeaving = false;
-        this.isExosphereSwiping = false;
         
         sfeerProgress.value = 0;
         EventBus.emit('show-countdown');
@@ -179,33 +169,18 @@ export class Game extends Scene {
         this.cameras.main.setBackgroundColor(0x00000000);
         const standaardHoogte = this.scale.height;
         this.sfeerHoogtes = [
-            standaardHoogte * 3, // troposfeer
-            standaardHoogte * 4, // stratosfeer
-            standaardHoogte * 5, // mesosfeer
-            standaardHoogte * 6, // thermosfeer
-            standaardHoogte * 7, // exosfeer
+            standaardHoogte * 3, // troposfeer (3 schermhoogtes)
+            standaardHoogte * 4, // stratosfeer (4 schermhoogtes)
+            standaardHoogte * 5, // mesosfeer (5 schermhoogtes)
+            standaardHoogte * 6, // thermosfeer (6 schermhoogtes)
+            standaardHoogte * 7, // exosfeer (7 schermhoogtes)
         ];
-        const bgHoogteExosfeer = this.sfeerHoogtes[4];
-        if (this.textures.exists('bg-exosfeer')) {
-            this.bgExosfeer = this.add.image(
-                this.scale.width / 2,
-                0,
-                'bg-exosfeer'
-            ).setOrigin(0.5, 1)
-                .setDepth(-204); 
-            const texE = this.textures.get('bg-exosfeer').getSourceImage();
-            const scaleYE = bgHoogteExosfeer / texE.height;
-            this.bgExosfeer.setScale(this.scale.width / texE.width, scaleYE);
-            if (this.bgThermosfeer) {
-                this.bgExosfeer.setOrigin(this.bgThermosfeer.originX, this.bgThermosfeer.originY);
-                this.bgExosfeer.setScale(this.bgThermosfeer.scaleX, this.bgThermosfeer.scaleY);
-            }
-            console.log("[Game] Exosfeer achtergrond toegevoegd.");
-        } else {
-            this.bgExosfeer = null;
-        }
+        
+        // Maak atmosphere layer rectangles
         this.sfeerRects = [];
         this.sfeerBaseY = [];
+        
+        // Create background images with correct heights
         const bgHoogte = this.sfeerHoogtes[0];
         if (this.textures.exists('bg-troposfeer')) {
             this.bgTroposfeer = this.add.image(
@@ -268,6 +243,23 @@ export class Game extends Scene {
         } else {
             this.bgThermosfeer = null;
         }
+        
+        const bgHoogteExosfeer = this.sfeerHoogtes[4];
+        if (this.textures.exists('bg-exosfeer')) {
+            this.bgExosfeer = this.add.image(
+                this.scale.width / 2,
+                0,
+                'bg-exosfeer'
+            ).setOrigin(0.5, 1)
+                .setDepth(-204);
+            const texE = this.textures.get('bg-exosfeer').getSourceImage();
+            const scaleYE = bgHoogteExosfeer / texE.height;
+            this.bgExosfeer.setScale(this.scale.width / texE.width, scaleYE);
+            console.log("[Game] Exosfeer achtergrond toegevoegd.");
+        } else {
+            this.bgExosfeer = null;
+        }
+        
         let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
         for (let i = 0; i < this.sfeerHoogtes.length; i++) {
             const hoogte = this.sfeerHoogtes[i];
@@ -407,36 +399,59 @@ export class Game extends Scene {
 
         if (this.isVictorySequence) {
             if (this.isBalloonLeaving && this.ballonContainer) {
-                this.ballonContainer.y -= 12; 
+                this.ballonContainer.y -= 12;
+                
                 if (this.ballonContainer.y + (this.ballon?.height ?? 100) < -50) {
+                    // Ballon is uit beeld, start nu de scroll animatie
                     this.isBalloonLeaving = false;
-                    this.isExosphereSwiping = true;
-                    this.victorySwipeStartY = this.sfeerOffsetY;
-                    this.victorySwipeTargetY = this.sfeerOffsetY + (this.sfeerHoogtes[4] ?? 1000);
-                    this.victorySwipeProgress = 0;
-                    this.victorySwipeStartTime = Date.now();
-                }
-            }
-            if (this.isExosphereSwiping) {
-                const elapsed = Date.now() - this.victorySwipeStartTime;
-                const t = Math.min(elapsed / this.victorySwipeDuration, 1);
-                const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-                this.sfeerOffsetY = this.victorySwipeStartY + (this.victorySwipeTargetY - this.victorySwipeStartY) * ease;
-                if (t >= 1) {
-                    this.isExosphereSwiping = false;
-                    this.isVictorySequence = false;
-                    EventBus.emit('hide-gameui');
+                    
+                    // Launch GameVictory scene eerst
                     this.scene.launch('GameVictory');
+                    
+                    // Start beide swipes direct tegelijk zonder timeout
+                    EventBus.emit('victory-swipe-in'); // Start GameVictory swipe
+                    
+                    // Start ook de game scene camera scroll naar beneden
+                    const scrollDuration = 1400; // Zelfde timing als GameVictory swipe
+                    const camera = this.cameras.main;
+                    const cameraStartY = camera.scrollY;
+                    const cameraTargetY = cameraStartY - (this.scale.height - 25); // Negatief = scene gaat naar beneden
+                    
+                    this.tweens.add({
+                        targets: camera,
+                        scrollY: cameraTargetY,
+                        duration: scrollDuration,
+                        ease: 'Cubic.easeOut',
+                        onUpdate: () => {
+                            // Update background positions tijdens scroll
+                            if (this.bgTroposfeer) {
+                                this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
+                            }
+                            if (this.bgStratosfeer && this.bgTroposfeer) {
+                                this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
+                            }
+                            if (this.bgMesosfeer && this.bgStratosfeer) {
+                                this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
+                            }
+                            if (this.bgThermosfeer && this.bgMesosfeer) {
+                                this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
+                            }
+                            if (this.bgExosfeer && this.bgThermosfeer) {
+                                this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
+                            }
+                        },
+                        onComplete: () => {
+                            this.isVictorySequence = false;
+                            EventBus.emit('hide-gameui');
+                        }
+                    });
                 }
             }
             return;
         }
-        if (this.bgExosfeer && this.bgThermosfeer) {
-            this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
-        }
 
         // const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        const scrollSpeeds = [100, 100, 100, 100, 100]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        const scrollSpeeds = [50, 50, 50, 50, 50]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
@@ -444,8 +459,10 @@ export class Game extends Scene {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
         }
+        
+        // Update background positions - chain them all together
         if (this.bgTroposfeer) {
-            this.bgTroposfeer.y = this.sfeerBaseY[0] + this.sfeerOffsetY + this.sfeerHoogtes[0] / 2;
+            this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
         }
         if (this.bgStratosfeer && this.bgTroposfeer) {
             this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
@@ -455,6 +472,9 @@ export class Game extends Scene {
         }
         if (this.bgThermosfeer && this.bgMesosfeer) {
             this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
+        }
+        if (this.bgExosfeer && this.bgThermosfeer) {
+            this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
         }
         for (const bird of this.birds) {
             bird.y += this.smoothScrollSpeed;
@@ -477,10 +497,11 @@ export class Game extends Scene {
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);
-        const totalHeight = this.sfeerHoogtes.reduce((a, b) => a + b, 0);
-        const totalScrollable = totalHeight - this.scale.height;
-        const safeTotal = Math.max(1, totalScrollable);
-        const scrolled = Math.min(this.sfeerOffsetY, safeTotal);
+        
+        // Bereken totale hoogte van alle lagen minus 1 schermhoogte
+        const totalHeight = this.sfeerHoogtes.reduce((a, b) => a + b, 0) - this.scale.height -75;
+        const safeTotal = Math.max(1, totalHeight);
+        const scrolled = Math.min(this.sfeerOffsetY, totalHeight);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
         EventBus.emit('update-sfeer-progress', progress);
         if (typeof window !== 'undefined') {
@@ -498,7 +519,6 @@ export class Game extends Scene {
             this.isBalloonLeaving = true;
         }
         if (this.ballonContainer) {
-            let rotaryEdge = false;
             let deltaX = 0;
             let sensor1Active = false;
             let sensor2Active = false;
@@ -518,16 +538,10 @@ export class Game extends Scene {
                     typeof angles[0] === 'number' && typeof prevs[0] === 'number' &&
                     typeof angles[1] === 'number' && typeof prevs[1] === 'number'
                 ) {
-                    if (!this._lastDiffs) this._lastDiffs = [0, 0];
                     const diff1 = angleDiff(angles[0], prevs[0]);
                     const diff2 = angleDiff(angles[1], prevs[1]);
-                    if ((Math.abs(diff1) > threshold && Math.abs(this._lastRotaryDiffs[0]) <= threshold) ||
-                        (Math.abs(diff2) > threshold && Math.abs(this._lastRotaryDiffs[1]) <= threshold)) {
-                        rotaryEdge = true;
-                    }
                     this._lastRotaryDiffs = [diff1, diff2];
-                    if (diff1 !== this._lastDiffs[0] || diff2 !== this._lastDiffs[1]) {
-                        this._lastDiffs = [diff1, diff2];
+                    if (diff1 !== this._lastRotaryDiffs[0] || diff2 !== this._lastRotaryDiffs[1]) {
                         sensor1Active = Math.abs(diff1) > threshold;
                         sensor2Active = Math.abs(diff2) > threshold;
                         const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
@@ -642,10 +656,14 @@ export class Game extends Scene {
                     this.windRood = null;
                 }
             }
-            let leftEdge = false, rightEdge = false;
+            
             if (this.cursors) {
-                if (this.cursors.left?.isDown && !this._lastLeftDown) leftEdge = true;
-                if (this.cursors.right?.isDown && !this._lastRightDown) rightEdge = true;
+                if (this.cursors.left?.isDown && !this._lastLeftDown) {
+                    // Left edge detected
+                }
+                if (this.cursors.right?.isDown && !this._lastRightDown) {
+                    // Right edge detected
+                }
                 this._lastLeftDown = !!this.cursors.left?.isDown;
                 this._lastRightDown = !!this.cursors.right?.isDown;
                 if (this.cursors.left?.isDown) deltaX -= 10;

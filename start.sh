@@ -1,7 +1,8 @@
 #!/bin/bash
 # Startscript voor dual rotary game setup
 # Zet deze file als 'start.sh' in je hoofdmap en maak uitvoerbaar met: chmod +x start.sh
-
+pkill chromium
+pkill python3
 # 1. Activeer Python virtual environment (pas pad aan indien nodig)
 echo "[1/4] Activating Python venv..."
 source sensors/venv/bin/activate || { echo "Kon venv niet activeren"; exit 1; }

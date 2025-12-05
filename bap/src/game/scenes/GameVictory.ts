@@ -12,19 +12,33 @@ export class GameVictory extends Scene {
     againButton: GameObjects.Container;
     againText: GameObjects.Text;
     private hasSwipedIn: boolean = false;
+    private autoNavigateTimeout: ReturnType<typeof setTimeout> | null = null;
+    private timeoutStarted: boolean = false;
 
     constructor() {
         super('GameVictory');
     }
 
     create() {
-                setTimeout(() => {
-                    if (this.scene.isActive()) {
-                        console.log('Auto-navigating to MainMenu after 30 seconds');
+                console.log('GameVictory create() called, timeoutStarted:', this.timeoutStarted);
+                // Only set timeout once
+                if (!this.timeoutStarted) {
+                    this.timeoutStarted = true;
+                    console.log('Setting up 30s timeout for first time');
+                    
+                    this.autoNavigateTimeout = setTimeout(() => {
+                        console.log('30 seconds passed! Navigating to MainMenu now...');
+                        if (this.autoNavigateTimeout) {
+                            clearTimeout(this.autoNavigateTimeout);
+                            this.autoNavigateTimeout = null;
+                        }
+                        this.timeoutStarted = false;
+                        console.log('Stopping GameVictory and starting MainMenu');
+                        this.scene.stop('Game');
+                        this.scene.stop('GameVictory');
                         this.scene.start('MainMenu');
-                        
-                    }
-                }, 30000);
+                    }, 30000);
+                }
         const victoryContainer = this.add.container(0, -this.scale.height);
         victoryContainer.setDepth(9999);
         if (this.hasSwipedIn) {
@@ -189,6 +203,13 @@ export class GameVictory extends Scene {
         victoryContainer.add(this.againText);
 
         const triggerButton = () => {
+            // Clear the auto-navigate timeout
+            if (this.autoNavigateTimeout) {
+                clearTimeout(this.autoNavigateTimeout);
+                this.autoNavigateTimeout = null;
+            }
+            this.timeoutStarted = false;
+            
             const bg = this.againButton.list[1];
             const circle = this.againButton.list[2];
             const startText = this.againButton.list[3];
@@ -203,6 +224,7 @@ export class GameVictory extends Scene {
                     }
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
+                    this.scene.stop('GameVictory');
                     this.scene.start('Game');
                 }
             });
@@ -215,5 +237,14 @@ export class GameVictory extends Scene {
                 triggerButton();
             }
         });
+    }
+
+    shutdown() {
+        console.log('GameVictory shutdown() called');
+        if (this.autoNavigateTimeout) {
+            clearTimeout(this.autoNavigateTimeout);
+            this.autoNavigateTimeout = null;
+        }
+        this.timeoutStarted = false;
     }
 }
