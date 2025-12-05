@@ -53,6 +53,20 @@ export class Preloader extends Scene
         this.load.image('arrows', 'arrows.png');
         this.load.image('progress-indicator', 'progressIndicator.png');
         this.load.image('timer', 'timer.png');
+        
+        // Obstacle images (will be replaced with spritesheets later)
+        this.load.image('bird', 'bird.png');
+        this.load.image('meteor', 'meteor.png');
+        this.load.image('sattelite', 'sattelite.png');
+        this.load.image('ufo', 'ufo.png');
+        this.load.image('plane', 'plane.png');
+        
+        // When spritesheets are ready, replace the above image loads with:
+        // this.load.spritesheet('plane', 'plane/fly.png', { frameWidth: 32, frameHeight: 32 });
+        // this.load.spritesheet('meteor', 'meteor/spin.png', { frameWidth: 32, frameHeight: 32 });
+        // this.load.spritesheet('sattelite', 'sattelite/spin.png', { frameWidth: 32, frameHeight: 32 });
+        // this.load.spritesheet('ufo', 'ufo/fly.png', { frameWidth: 32, frameHeight: 32 });
+        
         this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
@@ -105,6 +119,41 @@ export class Preloader extends Scene
                 frameRate: 8,
                 repeat: 0
             });
+
+            // Future obstacle animations - uncomment when spritesheets are ready
+            // if (this.textures.exists('plane')) {
+            //     this.anims.create({
+            //         key: 'plane-fly',
+            //         frames: this.anims.generateFrameNumbers('plane', { start: 0, end: 3 }),
+            //         frameRate: 10,
+            //         repeat: -1
+            //     });
+            // }
+            // if (this.textures.exists('meteor')) {
+            //     this.anims.create({
+            //         key: 'meteor-spin',
+            //         frames: this.anims.generateFrameNumbers('meteor', { start: 0, end: 3 }),
+            //         frameRate: 10,
+            //         repeat: -1
+            //     });
+            // }
+            // if (this.textures.exists('sattelite')) {
+            //     this.anims.create({
+            //         key: 'sattelite-spin',
+            //         frames: this.anims.generateFrameNumbers('sattelite', { start: 0, end: 3 }),
+            //         frameRate: 10,
+            //         repeat: -1
+            //     });
+            // }
+            // if (this.textures.exists('ufo')) {
+            //     this.anims.create({
+            //         key: 'ufo-fly',
+            //         frames: this.anims.generateFrameNumbers('ufo', { start: 0, end: 3 }),
+            //         frameRate: 10,
+            //         repeat: -1
+            //     });
+            // }
+            
             this.scene.start('MainMenu');
 
             // Animatie van home-animation PNGs

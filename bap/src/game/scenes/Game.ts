@@ -31,8 +31,8 @@ export class Game extends Scene {
     ballonContainer: Phaser.GameObjects.Container | null = null;
     ballonHealth: number = 3;
     ballonInvulnerable: boolean = false;
-    birds: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
-    birdSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
+    obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
     rotary: any = null;
     cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private sfeerOffsetY: number = 0;
@@ -318,12 +318,18 @@ export class Game extends Scene {
         } catch (e) {
             console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
         }
-        this.birds = [];
-        this.spawnBird();
-        this.birdSpawnTimer = this.time.addEvent({
-            delay: Phaser.Math.Between(4000, 7000),
+        this.obstacles = [];
+        this.spawnObstacle();
+        this.obstacleSpawnTimer = this.time.addEvent({
+            delay: this.getObstacleSpawnDelay(),
             loop: true,
-            callback: () => this.spawnBird()
+            callback: () => {
+                this.spawnObstacle();
+                // Update spawn delay based on current sfeer
+                if (this.obstacleSpawnTimer) {
+                    this.obstacleSpawnTimer.delay = this.getObstacleSpawnDelay();
+                }
+            }
         });
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
         if (this.input && this.input.keyboard) {
@@ -351,24 +357,75 @@ export class Game extends Scene {
     }
 
 
-    spawnBird() {
-        if (!this.textures.exists('bird-walk')) return;
+    getObstacleSpawnDelay() {
+        // Meteors spawn faster than other obstacles
+        const delays = [
+            Phaser.Math.Between(4000, 7000),  // Troposfeer - birds
+            Phaser.Math.Between(4000, 7000),  // Stratosfeer - planes
+            Phaser.Math.Between(1500, 3000),  // Mesosfeer - meteors (faster!)
+            Phaser.Math.Between(4000, 7000),  // Thermosfeer - satellites
+            Phaser.Math.Between(4000, 7000)   // Exosfeer - ufos
+        ];
+        return delays[this.huidigeSfeerIndex] || 5000;
+    }
+
+    getObstacleConfig() {
+        // Returns config based on current sfeer: { texture, animKey, scale, hasAnimation, movementType }
+        const configs = [
+            { texture: 'bird-walk', animKey: 'bird-walk', scale: 3, hasAnimation: true, movementType: 'horizontal' },      // Troposfeer
+            { texture: 'plane', animKey: 'plane-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },       // Stratosfeer
+            { texture: 'meteor', animKey: 'meteor-spin', scale: 0.5, hasAnimation: false, movementType: 'vertical' },      // Mesosfeer
+            { texture: 'sattelite', animKey: 'sattelite-spin', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },// Thermosfeer
+            { texture: 'ufo', animKey: 'ufo-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' }            // Exosfeer
+        ];
+        return configs[this.huidigeSfeerIndex] || configs[0];
+    }
+
+    spawnObstacle() {
+        const config = this.getObstacleConfig();
+        if (!this.textures.exists(config.texture)) return;
+        
         try {
-            const fromLeft = Math.random() < 0.5;
-            const x = fromLeft ? -50 : this.scale.width + 50;
-            const y = -40;
-            const bird = this.physics.add.sprite(
+            let x, y, direction, speed;
+            
+            if (config.movementType === 'vertical') {
+                // Meteors spawn from top and fall down
+                x = Phaser.Math.Between(50, this.scale.width - 50);
+                y = -100;
+                direction = 0; // No horizontal direction
+                speed = Phaser.Math.Between(8, 12); // Faster falling speed
+            } else {
+                // Horizontal movement (birds, planes, satellites, ufos)
+                const fromLeft = Math.random() < 0.5;
+                x = fromLeft ? -50 : this.scale.width + 50;
+                y = -40;
+                direction = fromLeft ? 1 : -1;
+                speed = Phaser.Math.Between(2, 3);
+            }
+            
+            const obstacle = this.physics.add.sprite(
                 x,
                 y,
-                "bird-walk"
-            ).setScale(fromLeft ? 3 : -3, 3).setDepth(50).setOrigin(0.5);
-            (bird.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-            bird.play("bird-walk");
-            const speed = Phaser.Math.Between(2, 3);
-            (bird as any).direction = fromLeft ? 1 : -1;
-            (bird as any).speed = speed;
-            this.birds.push(bird);
+                config.texture
+            ).setScale(config.movementType === 'horizontal' && direction === -1 ? -config.scale : config.scale, config.scale)
+             .setDepth(50)
+             .setOrigin(0.5);
+            
+            (obstacle.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+            
+            // Play animation if it exists and is configured
+            if (config.hasAnimation && this.anims.exists(config.animKey)) {
+                obstacle.play(config.animKey);
+            }
+            
+            (obstacle as any).direction = direction;
+            (obstacle as any).speed = speed;
+            (obstacle as any).obstacleType = config.texture;
+            (obstacle as any).movementType = config.movementType;
+            
+            this.obstacles.push(obstacle);
         } catch (e) {
+            console.error('[Game] Failed to spawn obstacle:', e);
         }
     }
 
@@ -450,8 +507,8 @@ export class Game extends Scene {
             return;
         }
 
-        // const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        const scrollSpeeds = [50, 50, 50, 50, 50]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+        // const scrollSpeeds = [50, 50, 50, 50, 50]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
@@ -476,8 +533,8 @@ export class Game extends Scene {
         if (this.bgExosfeer && this.bgThermosfeer) {
             this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
         }
-        for (const bird of this.birds) {
-            bird.y += this.smoothScrollSpeed;
+        for (const obstacle of this.obstacles) {
+            obstacle.y += this.smoothScrollSpeed;
         }
         const centerScreenY = this.scale.height / 2;
         const centerWorldY = centerScreenY - this.sfeerOffsetY;
@@ -540,41 +597,39 @@ export class Game extends Scene {
                 ) {
                     const diff1 = angleDiff(angles[0], prevs[0]);
                     const diff2 = angleDiff(angles[1], prevs[1]);
-                    this._lastRotaryDiffs = [diff1, diff2];
-                    if (diff1 !== this._lastRotaryDiffs[0] || diff2 !== this._lastRotaryDiffs[1]) {
-                        sensor1Active = Math.abs(diff1) > threshold;
-                        sensor2Active = Math.abs(diff2) > threshold;
-                        const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
-                        if (sensor1Active) {
-                            EventBus.emit('rotary1-move');
-                            if (activeCount === 1) {
-                                deltaX += 4;
-                            } else {
-                                if (diff1 < -threshold) {
-                                    deltaX -= 4;
-                                }
-                                if (diff1 > threshold) {
-                                    deltaX += 4;
-                                }
+                    
+                    sensor1Active = Math.abs(diff1) > threshold;
+                    sensor2Active = Math.abs(diff2) > threshold;
+                    
+                    const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
+                    if (sensor1Active) {
+                        EventBus.emit('rotary1-move');
+                        if (activeCount === 1) {
+                            deltaX += 8; // Verhoogd van 4 naar 8
+                        } else {
+                            if (diff1 < -threshold) {
+                                deltaX -= 8; // Verhoogd van 4 naar 8
+                            }
+                            if (diff1 > threshold) {
+                                deltaX += 8; // Verhoogd van 4 naar 8
                             }
                         }
-                        if (sensor2Active) {
-                            EventBus.emit('rotary2-move');
-                            if (activeCount === 1) {
-                                deltaX -= 4;
-                            } else {
-                                if (diff2 < -threshold) {
-                                    deltaX -= 4;
-                                }
-                                if (diff2 > threshold) {
-                                    deltaX += 4;
-                                }
-                            }
-                        }
-                    } else {
-                        sensor1Active = Math.abs(diff1) > threshold;
-                        sensor2Active = Math.abs(diff2) > threshold;
                     }
+                    if (sensor2Active) {
+                        EventBus.emit('rotary2-move');
+                        if (activeCount === 1) {
+                            deltaX -= 8; // Verhoogd van 4 naar 8
+                        } else {
+                            if (diff2 < -threshold) {
+                                deltaX -= 8; // Verhoogd van 4 naar 8
+                            }
+                            if (diff2 > threshold) {
+                                deltaX += 8; // Verhoogd van 4 naar 8
+                            }
+                        }
+                    }
+                    
+                    this._lastRotaryDiffs = [diff1, diff2];
                 }
             }
             if (this.propellorBlauw) {
@@ -685,55 +740,88 @@ export class Game extends Scene {
             this.windRood.y = this.ballonContainer.y + this.propellorOffsetY;
         }
         if (this.ballon) {
-            for (let i = this.birds.length - 1; i >= 0; i--) {
-                const bird = this.birds[i];
-                if (!(bird as any).direction) (bird as any).direction = 1;
-                const speed = (bird as any).speed || 5;
-                const direction = (bird as any).direction;
-                bird.x += speed * direction;
-                if ((direction === 1 && bird.x > this.scale.width + bird.displayWidth) ||
-                    (direction === -1 && bird.x < -bird.displayWidth)) {
-                    bird.destroy();
-                    this.birds.splice(i, 1);
-                    continue;
+            for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                const obstacle = this.obstacles[i];
+                const speed = (obstacle as any).speed || 5;
+                const direction = (obstacle as any).direction;
+                const movementType = (obstacle as any).movementType || 'horizontal';
+                
+                // Update position based on movement type
+                if (movementType === 'vertical') {
+                    // Meteors fall down (no scrollSpeed compensation needed as they already move with scene)
+                    obstacle.y += speed;
+                } else {
+                    // Horizontal movement
+                    if (!direction) (obstacle as any).direction = 1;
+                    obstacle.x += speed * direction;
                 }
-                if (!this.ballonInvulnerable && this.checkOverlap(bird, this.ballon)) {
+                
+                // Remove if off screen
+                if (movementType === 'vertical') {
+                    if (obstacle.y > this.scale.height + obstacle.displayHeight + 100) {
+                        obstacle.destroy();
+                        this.obstacles.splice(i, 1);
+                        continue;
+                    }
+                } else {
+                    if ((direction === 1 && obstacle.x > this.scale.width + obstacle.displayWidth) ||
+                        (direction === -1 && obstacle.x < -obstacle.displayWidth)) {
+                        obstacle.destroy();
+                        this.obstacles.splice(i, 1);
+                        continue;
+                    }
+                }
+                
+                // Check collision with balloon
+                if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
                     this.damageBallon();
                     this.ballonInvulnerable = true;
                     this.time.delayedCall(1000, () => {
                         this.ballonInvulnerable = false;
                     });
-                    const x = bird.x;
-                    const y = bird.y;
-                    const parent = bird.parentContainer;
-                    bird.destroy();
-                    const deadBird = this.physics.add.sprite(x, y, "bird-walk")
-                        .setScale(4)
-                        .setDepth(50)
-                        .setOrigin(0.5);
-                    if (parent) parent.add(deadBird);
-                    deadBird.play("bird-death");
-                    const body = deadBird.body as Phaser.Physics.Arcade.Body;
-                    body.setAllowGravity(true);
-                    body.setGravityY(800);
-                    body.setVelocityY(Phaser.Math.Between(250, 400));
-                    body.setVelocityX(Phaser.Math.Between(-50, 50));
-                    body.setBounce(0.2);
-                    this.time.addEvent({
-                        delay: 100,
-                        loop: true,
-                        callback: () => {
-                            if (deadBird && deadBird.y > this.scale.height + 100) {
-                                this.tweens.add({
-                                    targets: deadBird!,
-                                    alpha: 0,
-                                    duration: 400,
-                                    onComplete: () => deadBird?.destroy(),
-                                });
-                            }
+                    
+                    const x = obstacle.x;
+                    const y = obstacle.y;
+                    const parent = obstacle.parentContainer;
+                    const obstacleType = (obstacle as any).obstacleType;
+                    obstacle.destroy();
+                    
+                    // Only do death animation for birds (other obstacles just disappear)
+                    if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
+                        const deadObstacle = this.physics.add.sprite(x, y, "bird-walk")
+                            .setScale(4)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(deadObstacle);
+                        
+                        if (this.anims.exists('bird-death')) {
+                            deadObstacle.play("bird-death");
                         }
-                    });
-                    this.birds.splice(i, 1);
+                        
+                        const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(800);
+                        body.setVelocityY(Phaser.Math.Between(250, 400));
+                        body.setVelocityX(Phaser.Math.Between(-50, 50));
+                        body.setBounce(0.2);
+                        
+                        this.time.addEvent({
+                            delay: 100,
+                            loop: true,
+                            callback: () => {
+                                if (deadObstacle && deadObstacle.y > this.scale.height + 100) {
+                                    this.tweens.add({
+                                        targets: deadObstacle!,
+                                        alpha: 0,
+                                        duration: 400,
+                                        onComplete: () => deadObstacle?.destroy(),
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    
+                    this.obstacles.splice(i, 1);
                 }
             }
         }
