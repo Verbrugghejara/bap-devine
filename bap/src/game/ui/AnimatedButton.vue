@@ -32,6 +32,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { getRotaryClient } from '../utils/rotaryClientSingleton';
+
 const props = defineProps<{
   text: string,
   onClick?: () => void
@@ -40,6 +42,9 @@ const emit = defineEmits(['click']);
 
 const animating = ref(false);
 const animatingUp = ref(false);
+const rotary = getRotaryClient();
+let wasButtonPressed = ref(false);
+let buttonCheckEnabled = ref(false);
 
 
 function handleClick() {
@@ -64,7 +69,19 @@ function handleClick() {
   }, 180);
 }
 
+function checkButton() {
+  if (!buttonCheckEnabled.value) return;
+  
+  const buttonPressed = rotary?.buttonPressed || false;
+  
+  if (buttonPressed && !wasButtonPressed.value) {
+    handleClick();
+  }
+  
+  wasButtonPressed.value = buttonPressed;
+}
 
+let intervalId: number | null = null;
 
 // Global key handler for Enter/Space
 function globalKeyHandler(e: KeyboardEvent) {
@@ -75,9 +92,18 @@ function globalKeyHandler(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', globalKeyHandler);
+  intervalId = window.setInterval(checkButton, 16); // ~60fps
+  
+  // Enable button checking after a short delay to prevent immediate trigger
+  setTimeout(() => {
+    buttonCheckEnabled.value = true;
+  }, 300);
 });
 onUnmounted(() => {
   window.removeEventListener('keydown', globalKeyHandler);
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+  }
 });
 </script>
 

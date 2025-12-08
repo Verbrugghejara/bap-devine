@@ -3,9 +3,15 @@ import websockets
 import smbus2
 import json
 import time
+import RPi.GPIO as GPIO
 
 AS5600_ADDR = 0x36
 ANGLE_REG = 0x0E
+BUTTON_PIN = 22
+
+# GPIO setup
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 bus1 = smbus2.SMBus(1)  # Eerste sensor op i2c-1
 bus3 = smbus2.SMBus(3)  # Tweede sensor op i2c-3
@@ -29,6 +35,8 @@ async def rotary_sender(websocket):
         while True:
             angle1 = read_angle(bus1)
             angle2 = read_angle(bus3)
+            button_pressed = GPIO.input(BUTTON_PIN) == GPIO.LOW
+            
             if angle1 is not None:
                 # print(f"Angle1: {angle1:.2f}°", end=' ')
                 pass
@@ -39,7 +47,8 @@ async def rotary_sender(websocket):
                 pass
             else:
                 print("Angle2: ERROR")
-            msg = json.dumps({"angle1": angle1, "angle2": angle2})
+            
+            msg = json.dumps({"angle1": angle1, "angle2": angle2, "button": button_pressed})
             try:
                 await websocket.send(msg)
             except Exception as e:
@@ -64,3 +73,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Exiting...")
+    finally:
+        GPIO.cleanup()

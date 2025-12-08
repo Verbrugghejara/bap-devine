@@ -11,6 +11,7 @@ export class MainMenu extends Scene {
     title2: GameObjects.Text;
     balloon: GameObjects.Image;
     startButton: GameObjects.Container;
+    private wasButtonPressed: boolean = false;
 
     constructor() {
         super({ key: "MainMenu", physics: { arcade: {} } });
@@ -129,14 +130,6 @@ export class MainMenu extends Scene {
 
         this.startButton.on('pointerdown', triggerButton);
 
-            this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-                if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
-                    triggerButton();
-                }
-            });
-        window.addEventListener('keydown', (event) => {
-});
-
         if (this.physics && this.physics.world) {
             this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
         }
@@ -144,6 +137,25 @@ export class MainMenu extends Scene {
     }
 
     update() {
+        // Check hardware button press
+        const buttonPressed = this.rotary?.buttonPressed || false;
+        
+        if (buttonPressed && !this.wasButtonPressed) {
+            const bg = this.startButton.list[1];
+            const circle = this.startButton.list[2];
+            const startText = this.startButton.list[3];
+            this.tweens.add({
+                targets: [bg, circle, startText],
+                y: 8,
+                duration: 80,
+                yoyo: true,
+                onComplete: () => {
+                    this.changeScene();
+                }
+            });
+        }
+        
+        this.wasButtonPressed = buttonPressed;
     }
 
     changeScene() {

@@ -1,3 +1,9 @@
+import { Scene } from 'phaser';
+import { getRotaryClient, closeRotaryClient } from '../utils/rotaryClientSingleton';
+import { SFEER_LABELS } from '../utils/sfeerLabels';
+import { EventBus } from '../EventBus';
+import { sfeerProgress } from '../utils/sfeerProgressStore';
+
 // Helper voor hoekverschil
 function angleDiff(a: number, b: number): number {
     let diff = a - b;
@@ -6,122 +12,308 @@ function angleDiff(a: number, b: number): number {
     return diff;
 }
 
-
-import { getRotaryClient, closeRotaryClient } from '../utils/rotaryClientSingleton';
-import { SFEER_LABELS } from '../utils/sfeerLabels';
-import { EventBus } from '../EventBus';
-import { Scene } from 'phaser';
-import { sfeerProgress } from '../utils/sfeerProgressStore';
-
 export class Game extends Scene {
-            private isVictorySwiping: boolean = false;
-        private gameStartTime: number = 0;
-        private gameEndTime: number = 0;
-        private countdownDone: boolean = false;
-    private smoothScrollSpeed: number = 5;
-    private _lastLeftDown: boolean = false;
-    private _lastRightDown: boolean = false;
-    private _lastRotaryDiffs: [number, number] = [0, 0];
-    private inactivityTimeout: any = null;
-    huidigeSfeerIndex: number = 0;
-    sfeerRects: Phaser.GameObjects.Rectangle[] = [];
-    private sfeerBaseY: number[] = [];
-    sfeerHoogtes: number[] = [];
-    ballon: Phaser.GameObjects.Sprite | null = null;
-    ballonContainer: Phaser.GameObjects.Container | null = null;
-    ballonHealth: number = 3;
-    ballonInvulnerable: boolean = false;
-    obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
-    obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
-    rotary: any = null;
-    cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
-    private sfeerOffsetY: number = 0;
-    propellorRood: Phaser.GameObjects.Sprite | null;
-    propellorBlauw: Phaser.GameObjects.Sprite | null;
-    windBlauw: Phaser.GameObjects.Sprite | null = null;
-    windRood: Phaser.GameObjects.Sprite | null = null;
-    propellorOffsetXBlauw: number = -39;
-    propellorOffsetXRood: number = 39;
-    propellorOffsetY: number = 160;
-    bgTroposfeer: Phaser.GameObjects.Image | null = null;
-    bgStratosfeer: Phaser.GameObjects.Image | null = null;
-    bgMesosfeer: Phaser.GameObjects.Image | null = null;
-    bgThermosfeer: Phaser.GameObjects.Image | null = null;
-    bgExosfeer: Phaser.GameObjects.Image | null = null;
-
-    private enterKey: Phaser.Input.Keyboard.Key | null = null;
-    private wasEnterDown: boolean = false;
+    // ==================== PROPERTIES ====================
+    
+    // Game state
+    private gameStartTime: number = 0;
+    private gameEndTime: number = 0;
+    private countdownDone: boolean = false;
     private isGamePaused: boolean = false;
     private pauseStartTime: number | null = null;
-
     private isVictorySequence: boolean = false;
     private isBalloonLeaving: boolean = false;
+    private isVictorySwiping: boolean = false;
+
+    // Input state
+    private rotary: any = null;
+    private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
+    private enterKey: Phaser.Input.Keyboard.Key | null = null;
+    private wasEnterDown: boolean = false;
+    private wasButtonPressed: boolean = false;
+    private _lastLeftDown: boolean = false;
+    private _lastRightDown: boolean = false;
+    private inactivityTimeout: any = null;
+
+    // Sfeer (atmosphere) layers
+    private huidigeSfeerIndex: number = 0;
+    private sfeerRects: Phaser.GameObjects.Rectangle[] = [];
+    private sfeerBaseY: number[] = [];
+    private sfeerHoogtes: number[] = [];
+    private sfeerOffsetY: number = 0;
+    private smoothScrollSpeed: number = 5;
+
+    // Background images
+    private bgTroposfeer: Phaser.GameObjects.Image | null = null;
+    private bgStratosfeer: Phaser.GameObjects.Image | null = null;
+    private bgMesosfeer: Phaser.GameObjects.Image | null = null;
+    private bgThermosfeer: Phaser.GameObjects.Image | null = null;
+    private bgExosfeer: Phaser.GameObjects.Image | null = null;
+
+    // Balloon
+    private ballon: Phaser.GameObjects.Sprite | null = null;
+    private ballonContainer: Phaser.GameObjects.Container | null = null;
+    private ballonHealth: number = 3;
+    private ballonInvulnerable: boolean = false;
+
+    // Propellors
+    private propellorBlauw: Phaser.GameObjects.Sprite | null;
+    private propellorRood: Phaser.GameObjects.Sprite | null;
+    private propellorOffsetXBlauw: number = -39;
+    private propellorOffsetXRood: number = 39;
+    private propellorOffsetY: number = 160;
+
+    // Wind effects
+    private windBlauw: Phaser.GameObjects.Sprite | null = null;
+    private windRood: Phaser.GameObjects.Sprite | null = null;
+
+    // Obstacles
+    private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
+    private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
+
+    // ==================== LIFECYCLE METHODS ====================
 
     constructor() {
         super('Game');
         EventBus.emit('show-countdown');
         EventBus.on('pause-game-scene', this.handlePauseGameScene, this);
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
-        EventBus.on('victory-swipe-in', () => this.handleVictorySwipeIn());
+        EventBus.on('victory-swipe-in', this.handleVictorySwipeIn, this);
+    }
+
+    create() {
+        this.initializeGameState();
+        this.setupPhysics();
+        this.createSfeerLayers();
+        this.createBackgrounds();
+        this.createBalloon();
+        this.setupObstacles();
+        this.setupInput();
         
+        EventBus.emit('current-scene-ready', this);
     }
 
-    handleVictorySwipeIn() {
-        if (this.isVictorySwiping) return;
-        this.isVictorySwiping = true;
-        const swipeDistance = this.scale.height - 25;
-        const camera = this.cameras.main;
-        const startY = camera.scrollY;
-        const targetY = startY + swipeDistance; // Scroll naar beneden (positieve richting)
-        const VICTORY_SWIPE_DURATION = 1400;
-        const duration = VICTORY_SWIPE_DURATION;
-        const startTime = Date.now();
-        const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const t = Math.min(elapsed / duration, 1);
-            const ease = 1 - Math.pow(1 - t, 3);
-            camera.scrollY = startY + (targetY - startY) * ease;
-            console.log('camera.scrollY', camera.scrollY);
-            if (t < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                this.isVictorySwiping = false;
-            }
-        };
-        animate();
-    }
-
-    handleResumeGameScene() {
+    update() {
+        this.handlePauseInput();
+        
         if (this.isGamePaused) {
-            this.isGamePaused = false;
-            this.pauseStartTime = null;
-            EventBus.emit('hide-pauseui');
+            this.checkPauseTimeout();
+            return;
+        }
+
+        if (this.isVictorySequence) {
+            this.updateVictorySequence();
+            return;
+        }
+
+        this.updateScroll();
+        this.updateBackgrounds();
+        this.updateObstaclePositions();
+        this.updateSfeerIndex();
+        this.updateProgress();
+        this.updateBalloonMovement();
+        this.updateWindEffects();
+        this.checkObstacleCollisions();
+    }
+
+    shutdown() {
+        clearTimeout(this.inactivityTimeout);
+        this.inactivityTimeout = null;
+        EventBus.off('pause-game-scene', this.handlePauseGameScene, this);
+        EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
+        EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
+        closeRotaryClient();
+    }
+
+    // ==================== INITIALIZATION ====================
+
+    private initializeGameState() {
+        this.ballonHealth = 3;
+        this.sfeerOffsetY = 0;
+        this.huidigeSfeerIndex = 0;
+        this.isGamePaused = false;
+        this.pauseStartTime = null;
+        this.countdownDone = false;
+        this.isVictorySequence = false;
+        this.isBalloonLeaving = false;
+        
+        sfeerProgress.value = 0;
+        EventBus.emit('show-countdown');
+        EventBus.emit('show-gameui');
+        
+        setTimeout(() => {
+            console.log('start timer');
+            this.gameStartTime = Date.now();
+            this.countdownDone = true;
+        }, 5000);
+        
+        this.rotary = getRotaryClient();
+    }
+
+    private setupPhysics() {
+        if (this.physics && this.physics.world) {
+            this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
+        }
+        this.cameras.main.setBackgroundColor(0x00000000);
+    }
+
+    private setupInput() {
+        this.cursors = this.input.keyboard?.createCursorKeys() || null;
+        
+        if (this.input && this.input.keyboard) {
+            this.input.keyboard.enabled = true;
+            this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        }
+        
+        this.wasEnterDown = false;
+        this.wasButtonPressed = false;
+    }
+
+    // ==================== SFEER LAYERS ====================
+
+    private createSfeerLayers() {
+        const standaardHoogte = this.scale.height;
+        this.sfeerHoogtes = [
+            standaardHoogte * 3, // troposfeer
+            standaardHoogte * 4, // stratosfeer
+            standaardHoogte * 5, // mesosfeer
+            standaardHoogte * 6, // thermosfeer
+            standaardHoogte * 7, // exosfeer
+        ];
+        
+        this.sfeerRects = [];
+        this.sfeerBaseY = [];
+        
+        let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
+        
+        for (let i = 0; i < this.sfeerHoogtes.length; i++) {
+            const hoogte = this.sfeerHoogtes[i];
+            const kleur = SFEER_LABELS[i]?.colors?.a ?? 0xffffff;
+            const kleurInt = typeof kleur === 'number' ? kleur : 0xffffff;
+            const baseCenterY = worldY;
+            
+            this.sfeerBaseY.push(baseCenterY);
+            
+            const rect = this.add.rectangle(
+                this.scale.width / 2,
+                baseCenterY,
+                this.scale.width,
+                hoogte,
+                kleurInt
+            ).setDepth(-100);
+            
+            rect.setFillStyle(kleurInt, 0);
+            rect.width = this.scale.width;
+            rect.height = hoogte;
+            
+            this.sfeerRects.push(rect);
+            
+            if (i < this.sfeerHoogtes.length - 1) {
+                worldY -= (hoogte / 2) + (this.sfeerHoogtes[i + 1] / 2);
+            }
+        }
+        
+        this.sfeerOffsetY = 0;
+    }
+
+    // ==================== BACKGROUND CREATION ====================
+
+    private createBackgrounds() {
+        this.createBackground('bg-troposfeer', 0, (img, scale) => {
+            this.bgTroposfeer = img;
+            this.bgTroposfeer.y = this.scale.height;
+            this.bgTroposfeer.setOrigin(0.5, 1).setDepth(-200).setScale(scale.x, scale.y);
+        });
+
+        this.createBackground('bg-stratosfeer', 1, (img, scale) => {
+            this.bgStratosfeer = img;
+            this.bgStratosfeer.y = 0;
+            this.bgStratosfeer.setOrigin(0.5, 1).setDepth(-201).setScale(scale.x, scale.y);
+        });
+
+        this.createBackground('bg-mesosfeer', 2, (img, scale) => {
+            this.bgMesosfeer = img;
+            this.bgMesosfeer.y = 0;
+            this.bgMesosfeer.setOrigin(0.5, 1).setDepth(-202).setScale(scale.x, scale.y);
+        });
+
+        this.createBackground('bg-thermosfeer', 3, (img, scale) => {
+            this.bgThermosfeer = img;
+            this.bgThermosfeer.y = 0;
+            this.bgThermosfeer.setOrigin(0.5, 1).setDepth(-203).setScale(scale.x, scale.y);
+        });
+
+        this.createBackground('bg-exosfeer', 4, (img, scale) => {
+            this.bgExosfeer = img;
+            this.bgExosfeer.y = 0;
+            this.bgExosfeer.setOrigin(0.5, 1).setDepth(-204).setScale(scale.x, scale.y);
+        });
+    }
+
+    private createBackground(
+        textureKey: string, 
+        sfeerIndex: number, 
+        callback: (img: Phaser.GameObjects.Image, scale: { x: number; y: number }) => void
+    ) {
+        if (!this.textures.exists(textureKey)) return;
+
+        const img = this.add.image(this.scale.width / 2, 0, textureKey);
+        const tex = this.textures.get(textureKey).getSourceImage();
+        const bgHoogte = this.sfeerHoogtes[sfeerIndex];
+        const scaleX = this.scale.width / tex.width;
+        const scaleY = bgHoogte / tex.height;
+        
+        callback(img, { x: scaleX, y: scaleY });
+        console.log(`[Game] ${textureKey} achtergrond toegevoegd.`);
+    }
+
+    // ==================== BALLOON ====================
+
+    private createBalloon() {
+        try {
+            this.ballon = this.add.sprite(0, 0, "balloon").setScale(0.5).setDepth(50);
+
+            this.propellorBlauw = this.add.sprite(
+                this.propellorOffsetXBlauw,
+                this.propellorOffsetY,
+                'propellor-blauw'
+            ).setScale(0.5).setDepth(1002);
+            
+            if (this.anims.exists('propellor-blauw')) {
+                this.propellorBlauw.setFrame(0);
+                this.propellorBlauw.anims.stop();
+            }
+
+            this.propellorRood = this.add.sprite(
+                this.propellorOffsetXRood,
+                this.propellorOffsetY,
+                'propellor-rood'
+            ).setScale(0.5).setDepth(1002);
+            
+            if (this.anims.exists('propellor-rood')) {
+                this.propellorRood.setFrame(0);
+                this.propellorRood.anims.stop();
+            }
+
+            this.windBlauw = null;
+            this.windRood = null;
+
+            this.ballonContainer = this.add.container(
+                this.scale.width / 2,
+                this.scale.height * 0.85,
+                [this.propellorBlauw, this.propellorRood, this.ballon]
+            );
+            this.ballonContainer.setDepth(1002);
+        } catch (e) {
+            console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
         }
     }
 
-    handlePauseGameScene() {
-        if (this.scene.isActive() && !this.scene.isPaused()) {
-            this.scene.pause();
-        }
-    }
-
-
-
-    checkOverlap(a: any, b: any): boolean {
-        if (!a || !b) return false;
-        const ab = (a.getBounds) ? a.getBounds() : a.body.getBounds();
-        const bb = (b.getBounds) ? b.getBounds() : b.body.getBounds();
-        const marginA = 20, marginB = 20;
-        const abRect = new Phaser.Geom.Rectangle(ab.x + marginA, ab.y + marginA, ab.width - 2 * marginA, ab.height - 2 * marginA);
-        const bbRect = new Phaser.Geom.Rectangle(bb.x + marginB, bb.y + marginB, bb.width - 2 * marginB, bb.height - 2 * marginB);
-        return Phaser.Geom.Intersects.RectangleToRectangle(abRect, bbRect);
-    }
-
-
-    damageBallon() {
+    private damageBallon() {
         this.ballonHealth--;
         this.ballonInvulnerable = true;
         EventBus.emit('update-health', this.ballonHealth);
+        
         if (this.ballon) {
             this.tweens.add({
                 targets: this.ballon,
@@ -135,253 +327,53 @@ export class Game extends Scene {
                 }
             });
         }
+        
         if (this.ballonHealth <= 0) {
             this.time.delayedCall(1000, () => {
-                EventBus.emit('hide-gameui'); // Laat GameUI verdwijnen
+                EventBus.emit('hide-gameui');
                 this.scene.start('GameOver');
             });
         }
     }
 
+    // ==================== OBSTACLES ====================
 
-    create() {
-        this.ballonHealth = 3;
-        this.sfeerOffsetY = 0;
-        this.huidigeSfeerIndex = 0;
-        this.isGamePaused = false;
-        this.pauseStartTime = null;
-        this.countdownDone = false;
-        this.isVictorySequence = false;
-        this.isBalloonLeaving = false;
-        
-        sfeerProgress.value = 0;
-        EventBus.emit('show-countdown');
-        EventBus.emit('show-gameui');
-        setTimeout(() => {
-            console.log('start timer');
-            this.gameStartTime = Date.now();
-            this.countdownDone = true;
-        }, 5000);
-        this.rotary = getRotaryClient();
-        if (this.physics && this.physics.world) {
-            this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
-        }
-        this.cameras.main.setBackgroundColor(0x00000000);
-        const standaardHoogte = this.scale.height;
-        this.sfeerHoogtes = [
-            standaardHoogte * 3, // troposfeer (3 schermhoogtes)
-            standaardHoogte * 4, // stratosfeer (4 schermhoogtes)
-            standaardHoogte * 5, // mesosfeer (5 schermhoogtes)
-            standaardHoogte * 6, // thermosfeer (6 schermhoogtes)
-            standaardHoogte * 7, // exosfeer (7 schermhoogtes)
-        ];
-        
-        // Maak atmosphere layer rectangles
-        this.sfeerRects = [];
-        this.sfeerBaseY = [];
-        
-        // Create background images with correct heights
-        const bgHoogte = this.sfeerHoogtes[0];
-        if (this.textures.exists('bg-troposfeer')) {
-            this.bgTroposfeer = this.add.image(
-                this.scale.width / 2,
-                this.scale.height,
-                'bg-troposfeer'
-            ).setOrigin(0.5, 1)
-                .setDepth(-200);
-            const tex = this.textures.get('bg-troposfeer').getSourceImage();
-            const scaleY = bgHoogte / tex.height;
-            this.bgTroposfeer.setScale(this.scale.width / tex.width, scaleY);
-
-            console.log("[Game] Troposfeer achtergrond toegevoegd.");
-        } else {
-            this.bgTroposfeer = null;
-        }
-        const bgHoogteStratosfeer = this.sfeerHoogtes[1];
-        if (this.textures.exists('bg-stratosfeer')) {
-            this.bgStratosfeer = this.add.image(
-                this.scale.width / 2,
-                0, 
-                'bg-stratosfeer'
-            ).setOrigin(0.5, 1)
-                .setDepth(-201); 
-            const texS = this.textures.get('bg-stratosfeer').getSourceImage();
-            const scaleYS = bgHoogteStratosfeer / texS.height;
-            this.bgStratosfeer.setScale(this.scale.width / texS.width, scaleYS);
-            console.log("[Game] Stratosfeer achtergrond toegevoegd.");
-        } else {
-            this.bgStratosfeer = null;
-        }
-
-        const bgHoogteMesosfeer = this.sfeerHoogtes[2];
-        if (this.textures.exists('bg-mesosfeer')) {
-            this.bgMesosfeer = this.add.image(
-                this.scale.width / 2,
-                0, 
-                'bg-mesosfeer'
-            ).setOrigin(0.5, 1)
-                .setDepth(-202);
-            const texM = this.textures.get('bg-mesosfeer').getSourceImage();
-            const scaleYM = bgHoogteMesosfeer / texM.height;
-            this.bgMesosfeer.setScale(this.scale.width / texM.width, scaleYM);
-            console.log("[Game] Mesosfeer achtergrond toegevoegd.");
-        } else {
-            this.bgMesosfeer = null;
-        }
-        const bgHoogteThermosfeer = this.sfeerHoogtes[3];
-        if (this.textures.exists('bg-thermosfeer')) {
-            this.bgThermosfeer = this.add.image(
-                this.scale.width / 2,
-                0, 
-                'bg-thermosfeer'
-            ).setOrigin(0.5, 1)
-                .setDepth(-203); 
-            const texT = this.textures.get('bg-thermosfeer').getSourceImage();
-            const scaleYT = bgHoogteThermosfeer / texT.height;
-            this.bgThermosfeer.setScale(this.scale.width / texT.width, scaleYT);
-            console.log("[Game] Thermosfeer achtergrond toegevoegd.");
-        } else {
-            this.bgThermosfeer = null;
-        }
-        
-        const bgHoogteExosfeer = this.sfeerHoogtes[4];
-        if (this.textures.exists('bg-exosfeer')) {
-            this.bgExosfeer = this.add.image(
-                this.scale.width / 2,
-                0,
-                'bg-exosfeer'
-            ).setOrigin(0.5, 1)
-                .setDepth(-204);
-            const texE = this.textures.get('bg-exosfeer').getSourceImage();
-            const scaleYE = bgHoogteExosfeer / texE.height;
-            this.bgExosfeer.setScale(this.scale.width / texE.width, scaleYE);
-            console.log("[Game] Exosfeer achtergrond toegevoegd.");
-        } else {
-            this.bgExosfeer = null;
-        }
-        
-        let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
-        for (let i = 0; i < this.sfeerHoogtes.length; i++) {
-            const hoogte = this.sfeerHoogtes[i];
-            const kleur = SFEER_LABELS[i]?.colors?.a ?? 0xffffff;
-            const kleurInt = typeof kleur === 'number' ? kleur : 0xffffff;
-            const baseCenterY = worldY;
-            this.sfeerBaseY.push(baseCenterY);
-            const rect = this.add.rectangle(
-                this.scale.width / 2,
-                baseCenterY,
-                this.scale.width,
-                hoogte,
-                kleurInt
-            ).setDepth(-100);
-            if (i === 0 || i === 1 || i === 2 || i === 3 || i === 4) rect.setFillStyle(kleurInt, 0);
-            rect.width = this.scale.width;
-            rect.height = hoogte;
-            this.sfeerRects.push(rect);
-            if (i < this.sfeerHoogtes.length - 1) {
-                worldY -= (hoogte / 2) + (this.sfeerHoogtes[i + 1] / 2);
-            }
-        }
-        this.sfeerOffsetY = 0;
-        try {
-            this.ballon = this.add.sprite(
-                0,
-                0,
-                "balloon"
-            ).setScale(0.5).setDepth(50);
-            this.propellorBlauw = this.add.sprite(
-                this.propellorOffsetXBlauw,
-                this.propellorOffsetY,
-                'propellor-blauw'
-            ).setScale(0.5).setDepth(1002);
-            if (this.anims.exists('propellor-blauw')) {
-                this.propellorBlauw.setFrame(0);
-                this.propellorBlauw.anims.stop();
-            }
-            this.propellorRood = this.add.sprite(
-                this.propellorOffsetXRood,
-                this.propellorOffsetY,
-                'propellor-rood'
-            ).setScale(0.5).setDepth(1002);
-            if (this.anims.exists('propellor-rood')) {
-                this.propellorRood.setFrame(0);
-                this.propellorRood.anims.stop();
-            }
-            this.windBlauw = null;
-            this.windRood = null;
-            this.ballonContainer = this.add.container(
-                this.scale.width / 2,
-                this.scale.height * 0.85,
-                [this.propellorBlauw, this.propellorRood, this.ballon]
-            );
-            this.ballonContainer.setDepth(1002);
-        } catch (e) {
-            console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
-        }
+    private setupObstacles() {
         this.obstacles = [];
         this.spawnObstacle();
+        
         this.obstacleSpawnTimer = this.time.addEvent({
             delay: this.getObstacleSpawnDelay(),
             loop: true,
             callback: () => {
                 this.spawnObstacle();
-                // Update spawn delay based on current sfeer
-                if (this.obstacleSpawnTimer) {
-                    this.obstacleSpawnTimer.delay = this.getObstacleSpawnDelay();
-                }
             }
         });
-        this.cursors = this.input.keyboard?.createCursorKeys() || null;
-        if (this.input && this.input.keyboard) {
-            this.input.keyboard.enabled = true;
-            this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-            console.log('EnterKey initialized:', this.enterKey);
-        } else {
-            console.log('Keyboard input not available!');
-        }
-        this.wasEnterDown = false;
-        this.isGamePaused = false;
-        EventBus.emit('current-scene-ready', this);
     }
 
-
-    resetInactivityTimeout() {
-        if (this.inactivityTimeout) {
-            clearTimeout(this.inactivityTimeout);
-            this.inactivityTimeout = null;
-        }
-        this.inactivityTimeout = setTimeout(() => {
-            EventBus.emit('change-scene', 'MainMenu');
-            this.inactivityTimeout = null;
-        }, 10000);
-    }
-
-
-    getObstacleSpawnDelay() {
-        // Meteors spawn faster than other obstacles
+    private getObstacleSpawnDelay(): number {
         const delays = [
             Phaser.Math.Between(4000, 7000),  // Troposfeer - birds
             Phaser.Math.Between(4000, 7000),  // Stratosfeer - planes
-            Phaser.Math.Between(1500, 3000),  // Mesosfeer - meteors (faster!)
+            Phaser.Math.Between(1500, 3000),  // Mesosfeer - meteors
             Phaser.Math.Between(4000, 7000),  // Thermosfeer - satellites
             Phaser.Math.Between(4000, 7000)   // Exosfeer - ufos
         ];
         return delays[this.huidigeSfeerIndex] || 5000;
     }
 
-    getObstacleConfig() {
-        // Returns config based on current sfeer: { texture, animKey, scale, hasAnimation, movementType }
+    private getObstacleConfig() {
         const configs = [
-            { texture: 'bird-walk', animKey: 'bird-walk', scale: 3, hasAnimation: true, movementType: 'horizontal' },      // Troposfeer
-            { texture: 'plane', animKey: 'plane-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },       // Stratosfeer
-            { texture: 'meteor', animKey: 'meteor-spin', scale: 0.5, hasAnimation: false, movementType: 'vertical' },      // Mesosfeer
-            { texture: 'sattelite', animKey: 'sattelite-spin', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },// Thermosfeer
-            { texture: 'ufo', animKey: 'ufo-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' }            // Exosfeer
+            { texture: 'bird-walk', animKey: 'bird-walk', scale: 3, hasAnimation: true, movementType: 'horizontal' },
+            { texture: 'plane', animKey: 'plane-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
+            { texture: 'meteor', animKey: 'meteor-spin', scale: 0.5, hasAnimation: false, movementType: 'vertical' },
+            { texture: 'sattelite', animKey: 'sattelite-spin', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
+            { texture: 'ufo', animKey: 'ufo-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' }
         ];
         return configs[this.huidigeSfeerIndex] || configs[0];
     }
 
-    spawnObstacle() {
+    private spawnObstacle() {
         const config = this.getObstacleConfig();
         if (!this.textures.exists(config.texture)) return;
         
@@ -389,13 +381,11 @@ export class Game extends Scene {
             let x, y, direction, speed;
             
             if (config.movementType === 'vertical') {
-                // Meteors spawn from top and fall down
                 x = Phaser.Math.Between(50, this.scale.width - 50);
                 y = -100;
-                direction = 0; // No horizontal direction
-                speed = Phaser.Math.Between(8, 12); // Faster falling speed
+                direction = 0;
+                speed = Phaser.Math.Between(8, 12);
             } else {
-                // Horizontal movement (birds, planes, satellites, ufos)
                 const fromLeft = Math.random() < 0.5;
                 x = fromLeft ? -50 : this.scale.width + 50;
                 y = -40;
@@ -403,17 +393,13 @@ export class Game extends Scene {
                 speed = Phaser.Math.Between(2, 3);
             }
             
-            const obstacle = this.physics.add.sprite(
-                x,
-                y,
-                config.texture
-            ).setScale(config.movementType === 'horizontal' && direction === -1 ? -config.scale : config.scale, config.scale)
-             .setDepth(50)
-             .setOrigin(0.5);
+            const obstacle = this.physics.add.sprite(x, y, config.texture)
+                .setScale(config.movementType === 'horizontal' && direction === -1 ? -config.scale : config.scale, config.scale)
+                .setDepth(50)
+                .setOrigin(0.5);
             
             (obstacle.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
             
-            // Play animation if it exists and is configured
             if (config.hasAnimation && this.anims.exists(config.animKey)) {
                 obstacle.play(config.animKey);
             }
@@ -429,95 +415,124 @@ export class Game extends Scene {
         }
     }
 
-    update() {
+    private checkOverlap(a: any, b: any): boolean {
+        if (!a || !b) return false;
+        const ab = (a.getBounds) ? a.getBounds() : a.body.getBounds();
+        const bb = (b.getBounds) ? b.getBounds() : b.body.getBounds();
+        const marginA = 20, marginB = 20;
+        const abRect = new Phaser.Geom.Rectangle(ab.x + marginA, ab.y + marginA, ab.width - 2 * marginA, ab.height - 2 * marginA);
+        const bbRect = new Phaser.Geom.Rectangle(bb.x + marginB, bb.y + marginB, bb.width - 2 * marginB, bb.height - 2 * marginB);
+        return Phaser.Geom.Intersects.RectangleToRectangle(abRect, bbRect);
+    }
+
+    // ==================== EVENT HANDLERS ====================
+
+    private handleVictorySwipeIn() {
+        if (this.isVictorySwiping) return;
+        this.isVictorySwiping = true;
+        
+        const VICTORY_SWIPE_DURATION = 1400;
+        const allGameObjects = [
+            this.bgTroposfeer,
+            this.bgStratosfeer,
+            this.bgMesosfeer,
+            this.bgThermosfeer,
+            this.bgExosfeer,
+            this.ballonContainer,
+            ...this.sfeerRects,
+            ...this.obstacles
+        ].filter(obj => obj !== null);
+        
+        this.tweens.add({
+            targets: allGameObjects,
+            y: `+=${this.scale.height}`,
+            duration: VICTORY_SWIPE_DURATION,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                this.isVictorySwiping = false;
+                this.isVictorySequence = false;
+            }
+        });
+    }
+
+    private handleResumeGameScene() {
+        if (this.isGamePaused) {
+            this.isGamePaused = false;
+            this.pauseStartTime = null;
+            EventBus.emit('hide-pauseui');
+        }
+    }
+
+    private handlePauseGameScene() {
+        if (this.scene.isActive() && !this.scene.isPaused()) {
+            this.scene.pause();
+        }
+    }
+
+    // ==================== INPUT HANDLING ====================
+
+    private handlePauseInput() {
+        const buttonPressed = this.rotary?.buttonPressed || false;
+        
+        if (buttonPressed && !this.wasButtonPressed && this.countdownDone) {
+            if (!this.isGamePaused) {
+                this.isGamePaused = true;
+                this.pauseStartTime = Date.now();
+                EventBus.emit('show-pauseui');
+            }
+        }
+        this.wasButtonPressed = buttonPressed;
+        
+        // Fallback: Enter key voor debugging
         if (this.enterKey) {
             if (this.enterKey.isDown && !this.wasEnterDown) {
                 if (!this.isGamePaused) {
                     this.isGamePaused = true;
-                    console.log('Enter pressed. isGamePaused:', this.isGamePaused);
                     this.pauseStartTime = Date.now();
                     EventBus.emit('show-pauseui');
-                } else {
-                    console.log('Enter pressed, maar game is al gepauzeerd.');
                 }
             }
             this.wasEnterDown = this.enterKey.isDown;
         }
-        if (this.isGamePaused) {
-            if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
-                console.log('30 seconden pauze verstreken, terug naar MainMenu');
-                EventBus.emit('hide-pauseui');
-                this.scene.start('MainMenu');
-                this.isGamePaused = false;
-                this.pauseStartTime = null;
-            }
-            return;
-        }
+    }
 
-        if (this.isVictorySequence) {
-            if (this.isBalloonLeaving && this.ballonContainer) {
-                this.ballonContainer.y -= 12;
-                
-                if (this.ballonContainer.y + (this.ballon?.height ?? 100) < -50) {
-                    // Ballon is uit beeld, start nu de scroll animatie
-                    this.isBalloonLeaving = false;
-                    
-                    // Launch GameVictory scene eerst
-                    this.scene.launch('GameVictory');
-                    
-                    // Start beide swipes direct tegelijk zonder timeout
-                    EventBus.emit('victory-swipe-in'); // Start GameVictory swipe
-                    
-                    // Start ook de game scene camera scroll naar beneden
-                    const scrollDuration = 1400; // Zelfde timing als GameVictory swipe
-                    const camera = this.cameras.main;
-                    const cameraStartY = camera.scrollY;
-                    const cameraTargetY = cameraStartY - (this.scale.height - 25); // Negatief = scene gaat naar beneden
-                    
-                    this.tweens.add({
-                        targets: camera,
-                        scrollY: cameraTargetY,
-                        duration: scrollDuration,
-                        ease: 'Cubic.easeOut',
-                        onUpdate: () => {
-                            // Update background positions tijdens scroll
-                            if (this.bgTroposfeer) {
-                                this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
-                            }
-                            if (this.bgStratosfeer && this.bgTroposfeer) {
-                                this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
-                            }
-                            if (this.bgMesosfeer && this.bgStratosfeer) {
-                                this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
-                            }
-                            if (this.bgThermosfeer && this.bgMesosfeer) {
-                                this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
-                            }
-                            if (this.bgExosfeer && this.bgThermosfeer) {
-                                this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
-                            }
-                        },
-                        onComplete: () => {
-                            this.isVictorySequence = false;
-                            EventBus.emit('hide-gameui');
-                        }
-                    });
-                }
-            }
-            return;
+    private checkPauseTimeout() {
+        if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
+            console.log('30 seconden pauze verstreken, terug naar MainMenu');
+            EventBus.emit('hide-pauseui');
+            this.scene.start('MainMenu');
+            this.isGamePaused = false;
+            this.pauseStartTime = null;
         }
+    }
 
-        const scrollSpeeds = [5, 7, 9, 11, 13]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
-        // const scrollSpeeds = [50, 50, 50, 50, 50]; // Troposfeer, Stratosfeer, Mesosfeer, Thermosfeer, Exosfeer
+    // ==================== UPDATE METHODS ====================
+
+    private updateVictorySequence() {
+        if (this.isBalloonLeaving && this.ballonContainer) {
+            this.ballonContainer.y -= 12;
+            
+            if (this.ballonContainer.y + (this.ballon?.height ?? 100) < -50) {
+                this.isBalloonLeaving = false;
+                this.scene.launch('GameVictory');
+                EventBus.emit('victory-swipe-in');
+            }
+        }
+    }
+
+    private updateScroll() {
+        const scrollSpeeds = [100, 100, 100, 100, 100];
         const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
+        
         for (let i = 0; i < this.sfeerRects.length; i++) {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
         }
-        
-        // Update background positions - chain them all together
+    }
+
+    private updateBackgrounds() {
         if (this.bgTroposfeer) {
             this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
         }
@@ -532,13 +547,27 @@ export class Game extends Scene {
         }
         if (this.bgExosfeer && this.bgThermosfeer) {
             this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
+            
+            // Extend exosfeer upwards if needed
+            const cameraTop = this.cameras.main.scrollY;
+            const exosfeerTop = this.bgExosfeer.y - this.bgExosfeer.displayHeight;
+            if (cameraTop < exosfeerTop) {
+                this.bgExosfeer.y = cameraTop + this.bgExosfeer.displayHeight;
+            }
         }
+    }
+
+    private updateObstaclePositions() {
         for (const obstacle of this.obstacles) {
             obstacle.y += this.smoothScrollSpeed;
         }
+    }
+
+    private updateSfeerIndex() {
         const centerScreenY = this.scale.height / 2;
         const centerWorldY = centerScreenY - this.sfeerOffsetY;
         let sfeerIndex = this.sfeerBaseY.length - 1;
+        
         for (let i = 0; i < this.sfeerBaseY.length; i++) {
             const baseCenterY = this.sfeerBaseY[i];
             const hoogte = this.sfeerHoogtes[i];
@@ -549,21 +578,25 @@ export class Game extends Scene {
                 break;
             }
         }
+        
         if (this.huidigeSfeerIndex !== sfeerIndex) {
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);
-        
-        // Bereken totale hoogte van alle lagen minus 1 schermhoogte
-        const totalHeight = this.sfeerHoogtes.reduce((a, b) => a + b, 0) - this.scale.height -75;
+    }
+
+    private updateProgress() {
+        const totalHeight = this.sfeerHoogtes.reduce((a, b) => a + b, 0) - this.scale.height;
         const safeTotal = Math.max(1, totalHeight);
         const scrolled = Math.min(this.sfeerOffsetY, totalHeight);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
+        
         EventBus.emit('update-sfeer-progress', progress);
         if (typeof window !== 'undefined') {
             (window as any).sfeerProgress = progress;
         }
+        
         if (progress >= 1 && this.countdownDone && !this.isVictorySequence) {
             this.gameEndTime = Date.now();
             const duration = this.gameEndTime - this.gameStartTime;
@@ -574,163 +607,167 @@ export class Game extends Scene {
             }
             this.isVictorySequence = true;
             this.isBalloonLeaving = true;
+            EventBus.emit('hide-gameui');
         }
-        if (this.ballonContainer) {
-            let deltaX = 0;
-            let sensor1Active = false;
-            let sensor2Active = false;
-            if (this.rotary && Array.isArray(this.rotary.lastAngles) && Array.isArray(this.rotary.prevAngles)) {
-                if (
-                    typeof this.rotary.lastAngles[0] === 'number' &&
-                    typeof this.rotary.lastAngles[1] === 'number' &&
-                    (typeof this.rotary.prevAngles[0] !== 'number' || typeof this.rotary.prevAngles[1] !== 'number')
-                ) {
-                    this.rotary.prevAngles = [...this.rotary.lastAngles];
-                }
-                const angles = this.rotary.lastAngles;
-                const prevs = this.rotary.prevAngles;
-                const threshold = 3;
-                if (
-                    angles.length >= 2 && prevs.length >= 2 &&
-                    typeof angles[0] === 'number' && typeof prevs[0] === 'number' &&
-                    typeof angles[1] === 'number' && typeof prevs[1] === 'number'
-                ) {
-                    const diff1 = angleDiff(angles[0], prevs[0]);
-                    const diff2 = angleDiff(angles[1], prevs[1]);
-                    
-                    sensor1Active = Math.abs(diff1) > threshold;
-                    sensor2Active = Math.abs(diff2) > threshold;
-                    
-                    const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
-                    if (sensor1Active) {
-                        EventBus.emit('rotary1-move');
-                        if (activeCount === 1) {
-                            deltaX += 8; // Verhoogd van 4 naar 8
-                        } else {
-                            if (diff1 < -threshold) {
-                                deltaX -= 8; // Verhoogd van 4 naar 8
-                            }
-                            if (diff1 > threshold) {
-                                deltaX += 8; // Verhoogd van 4 naar 8
-                            }
-                        }
-                    }
-                    if (sensor2Active) {
-                        EventBus.emit('rotary2-move');
-                        if (activeCount === 1) {
-                            deltaX -= 8; // Verhoogd van 4 naar 8
-                        } else {
-                            if (diff2 < -threshold) {
-                                deltaX -= 8; // Verhoogd van 4 naar 8
-                            }
-                            if (diff2 > threshold) {
-                                deltaX += 8; // Verhoogd van 4 naar 8
-                            }
-                        }
-                    }
-                    
-                    this._lastRotaryDiffs = [diff1, diff2];
-                }
-            }
-            if (this.propellorBlauw) {
-                if (sensor1Active) {
-                    if (!this.propellorBlauw.anims.isPlaying) {
-                        this.propellorBlauw.play({ key: 'propellor-blauw', repeat: 0 });
-                        this.propellorBlauw.once('animationcomplete', () => {
-                            if (this.propellorBlauw && this.propellorBlauw.anims.currentAnim && this.propellorBlauw.anims.currentAnim.frames.length > 0) {
-                                this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
-                            }
-                        });
-                    }
-                } else {
-                    if (!this.propellorBlauw.anims.isPlaying && this.propellorBlauw.anims.currentAnim && this.propellorBlauw.anims.currentAnim.frames.length > 0) {
-                        this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
-                    }
-                }
-            }
-            if (this.propellorRood) {
-                if (sensor2Active) {
-                    if (!this.propellorRood.anims.isPlaying) {
-                        this.propellorRood.play({ key: 'propellor-rood', repeat: 0 });
-                        this.propellorRood.once('animationcomplete', () => {
-                            if (this.propellorRood && this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
-                                this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
-                            }
-                        });
-                    }
-                } else {
-                    if (!this.propellorRood.anims.isPlaying && this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
-                        this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
-                    }
-                }
-            }
+    }
 
-            if (sensor1Active) {
-                if (!this.windBlauw) {
-                    if (this.ballonContainer) {
-                        this.windBlauw = this.add.sprite(
-                            this.ballonContainer.x + this.propellorOffsetXBlauw + 30,
-                            this.ballonContainer.y + this.propellorOffsetY,
-                            'wind-blauw'
-                        ).setDepth(1002).setScale(0.4);
-                        this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
-                        this.windBlauw.once('animationcomplete', () => {
-                            if (this.windBlauw) {
-                                this.windBlauw.destroy();
-                                this.windBlauw = null;
-                            }
-                        });
-                    }
-                }
-            } else {
-                if (this.windBlauw && !this.windBlauw.anims.isPlaying) {
-                    this.windBlauw.destroy();
-                    this.windBlauw = null;
-                }
-            }
-            if (sensor2Active) {
-                if (!this.windRood) {
-                    if (this.ballonContainer) {
-                        this.windRood = this.add.sprite(
-                            this.ballonContainer.x + this.propellorOffsetXRood - 30,
-                            this.ballonContainer.y + this.propellorOffsetY,
-                            'wind-rood'
-                        ).setDepth(1002).setScale(0.4);
-                        this.windRood.play({ key: 'wind-rood', repeat: 0 });
-                        this.windRood.once('animationcomplete', () => {
-                            if (this.windRood) {
-                                this.windRood.destroy();
-                                this.windRood = null;
-                            }
-                        });
-                    }
-                }
-            } else {
-                if (this.windRood && !this.windRood.anims.isPlaying) {
-                    this.windRood.destroy();
-                    this.windRood = null;
-                }
+    private updateBalloonMovement() {
+        if (!this.ballonContainer) return;
+        
+        let deltaX = 0;
+        let sensor1Active = false;
+        let sensor2Active = false;
+        
+        // Rotary input
+        if (this.rotary && Array.isArray(this.rotary.lastAngles) && Array.isArray(this.rotary.prevAngles)) {
+            if (
+                typeof this.rotary.lastAngles[0] === 'number' &&
+                typeof this.rotary.lastAngles[1] === 'number' &&
+                (typeof this.rotary.prevAngles[0] !== 'number' || typeof this.rotary.prevAngles[1] !== 'number')
+            ) {
+                this.rotary.prevAngles = [...this.rotary.lastAngles];
             }
             
-            if (this.cursors) {
-                if (this.cursors.left?.isDown && !this._lastLeftDown) {
-                    // Left edge detected
+            const angles = this.rotary.lastAngles;
+            const prevs = this.rotary.prevAngles;
+            const threshold = 3;
+            
+            if (
+                angles.length >= 2 && prevs.length >= 2 &&
+                typeof angles[0] === 'number' && typeof prevs[0] === 'number' &&
+                typeof angles[1] === 'number' && typeof prevs[1] === 'number'
+            ) {
+                const diff1 = angleDiff(angles[0], prevs[0]);
+                const diff2 = angleDiff(angles[1], prevs[1]);
+                
+                sensor1Active = Math.abs(diff1) > threshold;
+                sensor2Active = Math.abs(diff2) > threshold;
+                
+                const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
+                
+                if (sensor1Active) {
+                    EventBus.emit('rotary1-move');
+                    if (activeCount === 1) {
+                        deltaX += 8;
+                    } else {
+                        if (diff1 < -threshold) deltaX -= 8;
+                        if (diff1 > threshold) deltaX += 8;
+                    }
                 }
-                if (this.cursors.right?.isDown && !this._lastRightDown) {
-                    // Right edge detected
+                
+                if (sensor2Active) {
+                    EventBus.emit('rotary2-move');
+                    if (activeCount === 1) {
+                        deltaX -= 8;
+                    } else {
+                        if (diff2 < -threshold) deltaX -= 8;
+                        if (diff2 > threshold) deltaX += 8;
+                    }
                 }
-                this._lastLeftDown = !!this.cursors.left?.isDown;
-                this._lastRightDown = !!this.cursors.right?.isDown;
-                if (this.cursors.left?.isDown) deltaX -= 10;
-                if (this.cursors.right?.isDown) deltaX += 10;
+                
+                this._lastRotaryDiffs = [diff1, diff2];
             }
-            if (deltaX !== 0) {
-                this.ballonContainer.x += deltaX;
-            }
-            const bounds = this.ballonContainer.getBounds();
-            if (bounds.left < 0) this.ballonContainer.x += -bounds.left;
-            if (bounds.right > this.scale.width) this.ballonContainer.x -= (bounds.right - this.scale.width);
         }
+        
+        // Update propellor animations
+        this.updatePropellorAnimation(this.propellorBlauw, sensor1Active);
+        this.updatePropellorAnimation(this.propellorRood, sensor2Active);
+        
+        // Update wind effects
+        this.updateWindSprite(sensor1Active, sensor2Active);
+        
+        // Keyboard input (fallback)
+        if (this.cursors) {
+            if (this.cursors.left?.isDown && !this._lastLeftDown) {}
+            if (this.cursors.right?.isDown && !this._lastRightDown) {}
+            this._lastLeftDown = !!this.cursors.left?.isDown;
+            this._lastRightDown = !!this.cursors.right?.isDown;
+            if (this.cursors.left?.isDown) deltaX -= 10;
+            if (this.cursors.right?.isDown) deltaX += 10;
+        }
+        
+        // Apply movement
+        if (deltaX !== 0) {
+            this.ballonContainer.x += deltaX;
+        }
+        
+        // Keep balloon in bounds
+        const bounds = this.ballonContainer.getBounds();
+        if (bounds.left < 0) this.ballonContainer.x += -bounds.left;
+        if (bounds.right > this.scale.width) this.ballonContainer.x -= (bounds.right - this.scale.width);
+    }
+
+    private updatePropellorAnimation(propellor: Phaser.GameObjects.Sprite | null, isActive: boolean) {
+        if (!propellor) return;
+        
+        if (isActive) {
+            if (!propellor.anims.isPlaying) {
+                const animKey = propellor.texture.key === 'propellor-blauw' ? 'propellor-blauw' : 'propellor-rood';
+                propellor.play({ key: animKey, repeat: 0 });
+                propellor.once('animationcomplete', () => {
+                    if (propellor && propellor.anims.currentAnim && propellor.anims.currentAnim.frames.length > 0) {
+                        propellor.anims.pause(propellor.anims.currentAnim.frames[0]);
+                    }
+                });
+            }
+        } else {
+            if (!propellor.anims.isPlaying && propellor.anims.currentAnim && propellor.anims.currentAnim.frames.length > 0) {
+                propellor.anims.pause(propellor.anims.currentAnim.frames[0]);
+            }
+        }
+    }
+
+    private updateWindSprite(sensor1Active: boolean, sensor2Active: boolean) {
+        if (!this.ballonContainer) return;
+        
+        // Wind blauw
+        if (sensor1Active) {
+            if (!this.windBlauw) {
+                this.windBlauw = this.add.sprite(
+                    this.ballonContainer.x + this.propellorOffsetXBlauw + 30,
+                    this.ballonContainer.y + this.propellorOffsetY,
+                    'wind-blauw'
+                ).setDepth(1002).setScale(0.4);
+                this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
+                this.windBlauw.once('animationcomplete', () => {
+                    if (this.windBlauw) {
+                        this.windBlauw.destroy();
+                        this.windBlauw = null;
+                    }
+                });
+            }
+        } else {
+            if (this.windBlauw && !this.windBlauw.anims.isPlaying) {
+                this.windBlauw.destroy();
+                this.windBlauw = null;
+            }
+        }
+        
+        // Wind rood
+        if (sensor2Active) {
+            if (!this.windRood) {
+                this.windRood = this.add.sprite(
+                    this.ballonContainer.x + this.propellorOffsetXRood - 30,
+                    this.ballonContainer.y + this.propellorOffsetY,
+                    'wind-rood'
+                ).setDepth(1002).setScale(0.4);
+                this.windRood.play({ key: 'wind-rood', repeat: 0 });
+                this.windRood.once('animationcomplete', () => {
+                    if (this.windRood) {
+                        this.windRood.destroy();
+                        this.windRood = null;
+                    }
+                });
+            }
+        } else {
+            if (this.windRood && !this.windRood.anims.isPlaying) {
+                this.windRood.destroy();
+                this.windRood = null;
+            }
+        }
+    }
+
+    private updateWindEffects() {
         if (this.windBlauw && this.ballonContainer) {
             this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
             this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY;
@@ -739,98 +776,92 @@ export class Game extends Scene {
             this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 50;
             this.windRood.y = this.ballonContainer.y + this.propellorOffsetY;
         }
-        if (this.ballon) {
-            for (let i = this.obstacles.length - 1; i >= 0; i--) {
-                const obstacle = this.obstacles[i];
-                const speed = (obstacle as any).speed || 5;
-                const direction = (obstacle as any).direction;
-                const movementType = (obstacle as any).movementType || 'horizontal';
-                
-                // Update position based on movement type
-                if (movementType === 'vertical') {
-                    // Meteors fall down (no scrollSpeed compensation needed as they already move with scene)
-                    obstacle.y += speed;
-                } else {
-                    // Horizontal movement
-                    if (!direction) (obstacle as any).direction = 1;
-                    obstacle.x += speed * direction;
-                }
-                
-                // Remove if off screen
-                if (movementType === 'vertical') {
-                    if (obstacle.y > this.scale.height + obstacle.displayHeight + 100) {
-                        obstacle.destroy();
-                        this.obstacles.splice(i, 1);
-                        continue;
-                    }
-                } else {
-                    if ((direction === 1 && obstacle.x > this.scale.width + obstacle.displayWidth) ||
-                        (direction === -1 && obstacle.x < -obstacle.displayWidth)) {
-                        obstacle.destroy();
-                        this.obstacles.splice(i, 1);
-                        continue;
-                    }
-                }
-                
-                // Check collision with balloon
-                if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
-                    this.damageBallon();
-                    this.ballonInvulnerable = true;
-                    this.time.delayedCall(1000, () => {
-                        this.ballonInvulnerable = false;
-                    });
-                    
-                    const x = obstacle.x;
-                    const y = obstacle.y;
-                    const parent = obstacle.parentContainer;
-                    const obstacleType = (obstacle as any).obstacleType;
-                    obstacle.destroy();
-                    
-                    // Only do death animation for birds (other obstacles just disappear)
-                    if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
-                        const deadObstacle = this.physics.add.sprite(x, y, "bird-walk")
-                            .setScale(4)
-                            .setDepth(50)
-                            .setOrigin(0.5);
-                        if (parent) parent.add(deadObstacle);
-                        
-                        if (this.anims.exists('bird-death')) {
-                            deadObstacle.play("bird-death");
-                        }
-                        
-                        const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
-                        body.setAllowGravity(true);
-                        body.setGravityY(800);
-                        body.setVelocityY(Phaser.Math.Between(250, 400));
-                        body.setVelocityX(Phaser.Math.Between(-50, 50));
-                        body.setBounce(0.2);
-                        
-                        this.time.addEvent({
-                            delay: 100,
-                            loop: true,
-                            callback: () => {
-                                if (deadObstacle && deadObstacle.y > this.scale.height + 100) {
-                                    this.tweens.add({
-                                        targets: deadObstacle!,
-                                        alpha: 0,
-                                        duration: 400,
-                                        onComplete: () => deadObstacle?.destroy(),
-                                    });
-                                }
-                            }
-                        });
-                    }
-                    
-                    this.obstacles.splice(i, 1);
-                }
-            }
-        }
     }
 
-    shutdown() {
-        clearTimeout(this.inactivityTimeout);
-        this.inactivityTimeout = null;
-        EventBus.off('pause-game-scene', this.handlePauseGameScene, this);
-        closeRotaryClient();
+    private checkObstacleCollisions() {
+        if (!this.ballon) return;
+        
+        for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            const obstacle = this.obstacles[i];
+            const speed = (obstacle as any).speed || 5;
+            const direction = (obstacle as any).direction;
+            const movementType = (obstacle as any).movementType || 'horizontal';
+            
+            // Update obstacle position
+            if (movementType === 'vertical') {
+                obstacle.y += speed;
+            } else {
+                if (!direction) (obstacle as any).direction = 1;
+                obstacle.x += speed * direction;
+            }
+            
+            // Remove if off screen
+            if (movementType === 'vertical') {
+                if (obstacle.y > this.scale.height + obstacle.displayHeight + 100) {
+                    obstacle.destroy();
+                    this.obstacles.splice(i, 1);
+                    continue;
+                }
+            } else {
+                if ((direction === 1 && obstacle.x > this.scale.width + obstacle.displayWidth) ||
+                    (direction === -1 && obstacle.x < -obstacle.displayWidth)) {
+                    obstacle.destroy();
+                    this.obstacles.splice(i, 1);
+                    continue;
+                }
+            }
+            
+            // Check collision
+            if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
+                this.damageBallon();
+                this.ballonInvulnerable = true;
+                this.time.delayedCall(1000, () => {
+                    this.ballonInvulnerable = false;
+                });
+                
+                const x = obstacle.x;
+                const y = obstacle.y;
+                const parent = obstacle.parentContainer;
+                const obstacleType = (obstacle as any).obstacleType;
+                obstacle.destroy();
+                
+                // Bird death animation
+                if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
+                    const deadObstacle = this.physics.add.sprite(x, y, "bird-walk")
+                        .setScale(4)
+                        .setDepth(50)
+                        .setOrigin(0.5);
+                    if (parent) parent.add(deadObstacle);
+                    
+                    if (this.anims.exists('bird-death')) {
+                        deadObstacle.play("bird-death");
+                    }
+                    
+                    const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
+                    body.setAllowGravity(true);
+                    body.setGravityY(800);
+                    body.setVelocityY(Phaser.Math.Between(250, 400));
+                    body.setVelocityX(Phaser.Math.Between(-50, 50));
+                    body.setBounce(0.2);
+                    
+                    this.time.addEvent({
+                        delay: 100,
+                        loop: true,
+                        callback: () => {
+                            if (deadObstacle && deadObstacle.y > this.scale.height + 100) {
+                                this.tweens.add({
+                                    targets: deadObstacle!,
+                                    alpha: 0,
+                                    duration: 400,
+                                    onComplete: () => deadObstacle?.destroy(),
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                this.obstacles.splice(i, 1);
+            }
+        }
     }
 }

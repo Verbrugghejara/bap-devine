@@ -1,18 +1,22 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
+import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 export class GameOver extends Scene {
     title: GameObjects.Text;
     description: GameObjects.Text;
     againButton: GameObjects.Container;
     againText: GameObjects.Text;
+    private rotary: any = null;
+    private wasButtonPressed: boolean = false;
 
     constructor() {
         super('GameOver');
     }
 
     create() {
+        this.rotary = getRotaryClient();
         setTimeout(() => {
                     if (this.scene.isActive()) {
                         this.scene.start('MainMenu');
@@ -185,10 +189,33 @@ export class GameOver extends Scene {
                 }
             });
         };
-        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-            if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
-                triggerButton();
-            }
-        });
+        this.againButton.on('pointerdown', triggerButton);
+    }
+
+    update() {
+        // Check hardware button press
+        const buttonPressed = this.rotary?.buttonPressed || false;
+        
+        if (buttonPressed && !this.wasButtonPressed) {
+            const bg = this.againButton.list[1];
+            const circle = this.againButton.list[2];
+            const startText = this.againButton.list[3];
+            this.tweens.add({
+                targets: [bg, circle, startText],
+                y: 8,
+                duration: 80,
+                yoyo: true,
+                onComplete: () => {
+                    if (typeof window !== 'undefined') {
+                        (window as any).sfeerProgress = 0;
+                    }
+                    EventBus.emit('update-health', 3);
+                    EventBus.emit('show-gameui');
+                    this.scene.start('Game');
+                }
+            });
+        }
+        
+        this.wasButtonPressed = buttonPressed;
     }
 }

@@ -2,6 +2,7 @@ export class DualRotaryWSClient {
     ws: WebSocket | null = null;
     lastAngles: [number | null, number | null] = [null, null];
     prevAngles: [number | null, number | null] = [null, null];
+    buttonPressed: boolean = false;
 
     constructor(url?: string) {
         const wsUrl = url || "ws://localhost:8765";
@@ -29,6 +30,10 @@ export class DualRotaryWSClient {
                 if (typeof data.angle2 === "number") {
                     this.prevAngles[1] = this.lastAngles[1];
                     this.lastAngles[1] = data.angle2;
+                }
+
+                if (typeof data.button === "boolean") {
+                    this.buttonPressed = data.button;
                 }
 
                 // console.log('[DualRotaryWSClient] lastAngles:', this.lastAngles, 'prevAngles:', this.prevAngles);

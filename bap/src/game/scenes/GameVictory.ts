@@ -4,6 +4,7 @@ import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { emit } from "process";
 import { sfeerProgress } from "../utils/sfeerProgressStore";
+import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 
 export class GameVictory extends Scene {
@@ -14,12 +15,15 @@ export class GameVictory extends Scene {
     private hasSwipedIn: boolean = false;
     private autoNavigateTimeout: ReturnType<typeof setTimeout> | null = null;
     private timeoutStarted: boolean = false;
+    private rotary: any = null;
+    private wasButtonPressed: boolean = false;
 
     constructor() {
         super('GameVictory');
     }
 
     create() {
+                this.rotary = getRotaryClient();
                 console.log('GameVictory create() called, timeoutStarted:', this.timeoutStarted);
                 // Only set timeout once
                 if (!this.timeoutStarted) {
@@ -44,7 +48,10 @@ export class GameVictory extends Scene {
         if (this.hasSwipedIn) {
             victoryContainer.y = 0;
         }
-        const bgVictory = this.add.image(this.scale.width / 2, 0, 'bg-gamevictory').setOrigin(0.5, 0).setDepth(1);
+        const bgVictory = this.add.image(this.scale.width / 2, this.scale.height / 2, 'bg-gamevictory')
+            .setOrigin(0.5, 0.5)
+            .setDisplaySize(this.scale.width, this.scale.height)
+            .setDepth(1);
         victoryContainer.add(bgVictory);
         this.title = this.add.text(
             this.scale.width / 2,
@@ -232,11 +239,41 @@ export class GameVictory extends Scene {
         this.againButton.on('pointerdown', () => {
             triggerButton();
         });
-        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-            if (event.code === 'Enter' || event.code === 'NumpadEnter' || event.code === 'Space') {
-                triggerButton();
+    }
+
+    update() {
+        // Check hardware button press
+        const buttonPressed = this.rotary?.buttonPressed || false;
+        
+        if (buttonPressed && !this.wasButtonPressed) {
+            // Clear the auto-navigate timeout
+            if (this.autoNavigateTimeout) {
+                clearTimeout(this.autoNavigateTimeout);
+                this.autoNavigateTimeout = null;
             }
-        });
+            this.timeoutStarted = false;
+            
+            const bg = this.againButton.list[1];
+            const circle = this.againButton.list[2];
+            const startText = this.againButton.list[3];
+            this.tweens.add({
+                targets: [bg, circle, startText],
+                y: 8,
+                duration: 80,
+                yoyo: true,
+                onComplete: () => {
+                    if (typeof window !== 'undefined') {
+                        (window as any).sfeerProgress = 0;
+                    }
+                    EventBus.emit('update-health', 3);
+                    EventBus.emit('show-gameui');
+                    this.scene.stop('GameVictory');
+                    this.scene.start('Game');
+                }
+            });
+        }
+        
+        this.wasButtonPressed = buttonPressed;
     }
 
     shutdown() {

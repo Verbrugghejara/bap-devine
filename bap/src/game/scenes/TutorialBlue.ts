@@ -4,293 +4,148 @@ import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 export class Tutorial extends Scene {
-        private lastWindTrigger: number = 0;
+    // ==================== PROPERTIES ====================
+    
+    // Rotary input
+    private rotary: any;
+    private lastAngle1: number | null = null;
+    private lastAngle2: number | undefined = undefined;
+    private startAngle1: number | null = null;
+    private totalDelta: number = 0;
+    
+    // Button state
+    private wasButtonPressed: boolean = false;
+    private skipHoldStart: number | null = null;
+    private skipHoldProgress: number = 0;
+    private skipButtonTween: Phaser.Tweens.Tween | null = null;
+    private skipButtonIsDown: boolean = false;
+    private isTransitioning: boolean = false;
+    
+    // UI elements
+    private progressBar: Phaser.GameObjects.Graphics | null = null;
+    private skipFill: Phaser.GameObjects.Graphics | null = null;
+    private skipCircleRadius: number = 20;
+    private animTargets: Phaser.GameObjects.GameObject[] = [];
+    
+    // Balloon & propellors
+    private balloon: Phaser.GameObjects.Image;
+    private propellorBlauw: Phaser.GameObjects.Sprite | null;
+    private propellorRood: Phaser.GameObjects.Sprite;
+    private windBlauw: Phaser.GameObjects.Sprite | null;
+    private windRood: Phaser.GameObjects.Sprite;
+    private propellorOffsetX: number = -38;
+    private propellorOffsetY: number = 165;
+    
+    // Tutorial elements
+    private activePropellor: Phaser.GameObjects.Image;
+    private inactivePropellor: Phaser.GameObjects.Image;
+    private arrows: Phaser.GameObjects.Image;
     private inactiveShakeTimer: number = 0;
     private inactiveShakeDirection: number = 1;
-    private lastAngle2: number | undefined = undefined;
+    
+    // Progress
+    private progress: number = 0;
+    private didRotateThisFrame: boolean = false;
+    
+    // Event handlers
     private _changeSceneHandler?: (sceneKey: string) => void;
-    balloon: Phaser.GameObjects.Image;
-    propellorBlauw: Phaser.GameObjects.Sprite | null;
-    propellorRood: Phaser.GameObjects.Sprite;
-    windBlauw: Phaser.GameObjects.Sprite | null;
-    windRood: Phaser.GameObjects.Sprite;
-    propellorOffsetX: number = -38; // pas aan voor horizontale positie
-    propellorOffsetY: number = 165; // pas aan voor verticale positie
-    rotary: any;
-    lastAngle1: number | null = null;
-    title: Phaser.GameObjects.Text;
-    description: Phaser.GameObjects.Text;
-    progressBar: Phaser.GameObjects.Graphics | null = null;
-    progress: number = 0;
-    startAngle1: number | null = null;
-    totalDelta: number = 0;
-    activePropellor: Phaser.GameObjects.Image;
-    inactivePropellor: Phaser.GameObjects.Image;
-    arrows: Phaser.GameObjects.Image;
-    private enterKey: Phaser.Input.Keyboard.Key | null = null;
-    private enterHoldStart: number | null = null;
+
+    // ==================== LIFECYCLE METHODS ====================
 
     constructor() {
         super('TutorialBlue');
-        this.rotary = getRotaryClient(); // Rotary client direct initialiseren
-        // Progress bar wordt pas in create() aangemaakt
-    }
-    // ...existing code...
-    // ...existing code...
-    drawProgressBar() {
-        if (!this.progressBar) return;
-        // Draw a horizontal bar at the bottom of the screen
-        const barWidth = 600;
-        const barHeight = 32;
-        const barX = this.scale.width / 2 - barWidth / 2;
-        const barY = 1050;
-        this.progressBar.clear();
-        // Background
-        this.progressBar.fillStyle(0xffffff, 0.25);
-        // console.log(this.progress)
-        this.progressBar.fillRoundedRect(barX, barY, barWidth, barHeight, 16);
-        // Fill (altijd binnen de lijnen, radius alleen rechts bij voldoende breedte)
-        let fillWidth = (barWidth - 30) * this.progress;
-        // console.log('fillWidth:', fillWidth)
-        if (this.progress > 0) {
-            const radius = 16;
-            // Bij te smal voor radius: gewone rechthoek
-            this.progressBar.fillStyle(0x35BBF0, 1);
-
-            // this.progressBar.fillRect(barX, barY, fillWidth, barHeight);
-
-            // fillRoundedRect met alleen rechts radius
-            this.progressBar.fillRoundedRect(barX, barY, fillWidth + 30, barHeight, { tl: radius, tr: radius, bl: radius, br: radius });
-
-        }
-        if (this.progress >= 1) {
-            console.log('Progress complete, changing scene');
-            // EventBus.emit('change-scene', 'TutorialRed')
-            this.scene.start('TutorialRed');
-        }
-        // Border
-        // this.progressBar.lineStyle(4, 0x35BBF0, 1);
-        this.progressBar.strokeRoundedRect(barX, barY, barWidth, barHeight, 16);
+        this.rotary = getRotaryClient();
     }
 
     create() {
-                // ...existing code...
+        this.initializeState();
+        this.createBackground();
+        this.createTitle();
+        this.createDescription();
+        this.createTutorialElements();
+        this.createBalloonAndPropellors();
+        this.createProgressBar();
+        this.createSkipButton();
+        this.setupEventListeners();
+    }
 
-                // Overslaan button
-                const buttonWidth = 500;
-                const buttonHeight = 100;
-                    // Shadow onder de Overslaan-button
-                    const skipShadowOffsetY = 8;
-                    const skipShadow = this.add.graphics();
-                    skipShadow.fillStyle(0x246E8B, 1);
-                    skipShadow.fillRoundedRect(
-                        -buttonWidth / 2,
-                        -buttonHeight / 2 + skipShadowOffsetY,
-                        buttonWidth,
-                        buttonHeight,
-                        16
-                    );
-                    skipShadow.setDepth(1999);
-                // buttonPaddingX niet gebruikt, padding zit in skipTextPadding
-                const buttonX = this.scale.width - buttonWidth / 2 - 54;
-                const buttonY = this.scale.height - 200;
-                const circleRadius = 20;
-                const gap = 32;
-                const skipTextPadding = 12;
+    update() {
+        this.updateSkipButton();
+        this.handleButtonInput();
+        this.updateInactivePropellorShake();
+        this.updateArrowsRotation();
+        this.updateActivePropellorRotation();
+        this.updateBalloonMovement(); // MUST come before updatePropellorAnimations!
+        this.updatePropellorAnimations();
+        this.updateWindEffect();
+        this.updatePropellorPositions();
+    }
 
-                // Button background
-                const skipBg = this.add.graphics();
-                skipBg.fillStyle(0x35BBF0, 1);
-                skipBg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16);
-                skipBg.setDepth(2000);
+    shutdown() {
+        if (this._changeSceneHandler) {
+            EventBus.off('change-scene', this._changeSceneHandler);
+        }
+    }
 
-                // Button text
-                const skipText = this.add.text(0, 0, 'OVERSLAAN', {
-                    fontFamily: 'Bungee',
-                    fontSize: 50,
-                    color: '#ffffff',
-                }).setOrigin(0, 0.5).setDepth(2001);
+    // ==================== INITIALIZATION ====================
 
-                // Cirkel (outline)
-                const skipCircle = this.add.graphics();
-                skipCircle.lineStyle(4, 0xffffff, 1);
-                skipCircle.strokeCircle(0, 0, circleRadius);
-                skipCircle.setDepth(2002);
-
-                // Cirkel (fill, dynamisch)
-                const skipFill = this.add.graphics();
-                skipFill.setDepth(2003);
-
-                // Horizontale uitlijning: eerst breedte bepalen
-                const skipTotalWidth = circleRadius * 2 + gap + skipText.width + skipTextPadding * 2;
-                // Zet cirkel links, tekst rechts met gap en padding
-                skipCircle.x = -skipTotalWidth / 2 + circleRadius + skipTextPadding;
-                skipCircle.y = 0;
-                skipFill.x = skipCircle.x;
-                skipFill.y = 0;
-                skipText.x = skipCircle.x + circleRadius + gap;
-                skipText.y = 0;
-
-                // Button container
-                const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg, skipCircle, skipFill, skipText]);
-                skipButton.setSize(buttonWidth, buttonHeight);
-                skipButton.setDepth(2000);
-                skipButton.setInteractive({ useHandCursor: true });
-
-
-                // Enter-hold state and animation
-                let skipHoldStart: number | null = null;
-                let skipHoldProgress = 0;
-                let skipButtonTween: Phaser.Tweens.Tween | null = null;
-                let skipButtonIsDown = false;
-                let isTransitioning = false;
-                // For animation: get references to animatable elements
-                const animTargets = [skipBg, skipCircle, skipFill, skipText];
-
-                // Update fill on each frame (always draw at 0,0 in container)
-                this.events.on('update', () => {
-                    skipFill.clear();
-                    if (skipHoldProgress > 0) {
-                        skipFill.beginPath();
-                        skipFill.arc(0, 0, circleRadius - 2, -Math.PI/2, -Math.PI/2 + 2 * Math.PI * skipHoldProgress, false);
-                        skipFill.lineTo(0, 0);
-                        skipFill.closePath();
-                        skipFill.fillStyle(0xffffff, 1);
-                        skipFill.fillPath();
-                    }
-                });
-
-                // Enter-hold logic with animation (animate only non-shadow elements)
-                if (this.input.keyboard) {
-                    this.input.keyboard.on('keydown-ENTER', () => {
-                        if (!skipButtonIsDown && !isTransitioning) {
-                            skipButtonIsDown = true;
-                            if (skipHoldStart === null) {
-                                skipHoldStart = Date.now();
-                            }
-                            // Animate only bg, circle, fill, text down
-                            if (skipButtonTween) skipButtonTween.stop();
-                            skipButtonTween = this.tweens.add({
-                                targets: animTargets,
-                                y: 8,
-                                duration: 80,
-                                yoyo: false
-                            });
-                        }
-                    });
-                    this.input.keyboard.on('keyup-ENTER', () => {
-                        if (!isTransitioning) {
-                            skipButtonIsDown = false;
-                            skipHoldStart = null;
-                            skipHoldProgress = 0;
-                            // Animate only bg, circle, fill, text up
-                            if (skipButtonTween) skipButtonTween.stop();
-                            skipButtonTween = this.tweens.add({
-                                targets: animTargets,
-                                y: 0,
-                                duration: 80,
-                                yoyo: false
-                            });
-                        }
-                    });
-                }
-
-                // In update: check hold progress and handle completion
-                this.events.on('update', () => {
-                    if (skipHoldStart !== null && !isTransitioning) {
-                        const elapsed = Date.now() - skipHoldStart;
-                        // Use 2800ms for a snappier 3s feel
-                        skipHoldProgress = Math.min(1, elapsed / 2800);
-                        if (skipHoldProgress >= 1) {
-                            // Transition without extra animation
-                            isTransitioning = true;
-                            skipHoldStart = null;
-                            skipButtonIsDown = false;
-                            if (skipButtonTween) skipButtonTween.stop();
-                            this.scene.start('Game');
-                        }
-                    } else if (!isTransitioning) {
-                        skipHoldProgress = 0;
-                    }
-                });
-
-                // Button click
-                skipButton.on('pointerdown', () => {
-                    this.scene.start('Game');
-                });
-        // ...
-        // this.balloon = this.add.image(280, 820, 'balloon').setDepth(1000).setScale(0.5);
-        // Voeg de actieve propellor toe als image (PNG)
-        const propellorX = this.scale.width / 2;
-        const propellorY = this.scale.height / 2 + 350;
-        this.inactivePropellor = this.add.image(
-            propellorX + 150,
-            propellorY,
-            'inactive'
-        ).setDepth(1001).setScale(0.60);
-        this.activePropellor = this.add.image(
-            propellorX - 150,
-            propellorY,
-            'active-blauw'
-        ).setDepth(1003).setScale(0.60);
-        // Zet arrows exact gecentreerd op de activePropellor
-        this.arrows = this.add.image(
-            this.activePropellor.x,
-            this.activePropellor.y,
-            'arrows'
-        ).setDepth(1004).setScale(0.60);
-        // Progress bar initialisatie
-        this.progressBar = this.add.graphics();
-        this.progressBar.setDepth(20);
+    private initializeState() {
+        this.wasButtonPressed = false;
+        this.skipHoldStart = null;
+        this.skipHoldProgress = 0;
+        this.skipButtonTween = null;
+        this.skipButtonIsDown = false;
+        this.isTransitioning = false;
         this.progress = 0;
         this.startAngle1 = null;
         this.totalDelta = 0;
-        this.drawProgressBar();
+        this.windBlauw = null;
+        
+        this.cameras.main.setBackgroundColor(
+            '#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase()
+        );
+    }
 
-        this.cameras.main.setBackgroundColor('#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase());
-        // Notify Vue that the Tutorial scene is active
+    private setupEventListeners() {
         EventBus.emit('current-scene-ready', this);
-
-        // Luister naar change-scene event vanuit Vue
+        
         this._changeSceneHandler = (sceneKey: string) => {
             if (sceneKey === 'Game') {
-                // Clean up listener vóór scene-wissel
                 EventBus.off('change-scene', this._changeSceneHandler!);
-                // Alleen scene starten als deze nog actief is
                 if (this.scene && this.scene.isActive && this.scene.isActive('Tutorial')) {
                     this.scene.start('Game');
                 }
             }
         };
         EventBus.on('change-scene', this._changeSceneHandler);
-        this.balloon = this.add.image(280, 820, 'balloon').setDepth(1000).setScale(0.5);
-        // Plaats de blauwe propellor onder de ballon (relatief, met offset)
-        this.propellorBlauw = this.add.sprite(
-            this.balloon.x + this.propellorOffsetX,
-            this.balloon.y + this.propellorOffsetY,
-            'propellor-blauw'
-        ).setDepth(1002).setScale(0.5);
-        this.propellorBlauw.play('propellor-blauw');
-        if (this.propellorBlauw.anims.currentAnim && this.propellorBlauw.anims.currentAnim.frames.length > 0) {
-            this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
-        }
-        this.windBlauw = null;
+    }
 
-        // Plaats de rode propellor onder de ballon (andere offset)
-        this.propellorRood = this.add.sprite(
-            this.balloon.x + this.propellorOffsetX + 150,
-            this.balloon.y + this.propellorOffsetY,
-            'propellor-rood'
-        ).setDepth(1002).setScale(0.5);
-        this.propellorRood.play && this.propellorRood.play('propellor-rood');
-        // Eerst de tekstobject aanmaken (zonder achtergrond)
+    // ==================== UI CREATION ====================
 
-        // Graphics achtergrond met border radius tekenen
+    private createBackground() {
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.25);
+        
+        const rectWidth = 800;
+        const rectHeight = 1100;
+        const rectRadius = 20;
+        const rectX = (this.scale.width - rectWidth) / 2;
+        const rectY = (this.scale.height - rectHeight) / 2;
+        
+        bg.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
+        bg.lineStyle(6, 0x35BBF0, 1);
+        bg.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
+        bg.setDepth(1);
+    }
+
+    private createTitle() {
         const paddingX = 32;
         const paddingY = 24;
         const borderRadius = 16;
-        // Eerst de tekstgrootte bepalen zodat de graphics correct gepositioneerd zijn
-        const titleY = 380; // Lager zetten (verhoog deze waarde voor lager)
+        const titleY = 380;
+        const shadowOffset = 8;
+        
+        // Temp title voor afmetingen
         const tempTitle = this.add.text(0, 0, 'Hoe werkt het?', {
             fontFamily: 'Bungee',
             fontSize: 40,
@@ -298,11 +153,12 @@ export class Tutorial extends Scene {
             padding: { x: 20, y: 10 },
             align: 'center',
         }).setOrigin(0.5).setDepth(11);
+        
         const titleWidth = tempTitle.width + paddingX * 2;
         const titleHeight = tempTitle.height + paddingY * 2;
-        const shadowOffset = 8;
+        
+        // Background met shadow
         const titleBg = this.add.graphics();
-        // Schaduw tekenen (eerst, zodat de kleur er bovenop komt)
         titleBg.fillStyle(0x2192BF, 1);
         titleBg.fillRoundedRect(
             this.scale.width / 2 - titleWidth / 2,
@@ -311,7 +167,6 @@ export class Tutorial extends Scene {
             titleHeight,
             borderRadius
         );
-        // Hoofdvlak tekenen
         titleBg.fillStyle(0x35BBF0, 1);
         titleBg.fillRoundedRect(
             this.scale.width / 2 - titleWidth / 2,
@@ -321,8 +176,9 @@ export class Tutorial extends Scene {
             borderRadius
         );
         titleBg.setDepth(10);
-        // Nu de echte titeltekst bovenop de graphics plaatsen
-        this.title = this.add.text(
+        
+        // Echte title
+        this.add.text(
             this.scale.width / 2,
             titleY,
             'Hoe werkt het?',
@@ -334,68 +190,276 @@ export class Tutorial extends Scene {
                 align: 'center',
             }
         ).setOrigin(0.5).setDepth(10);
+        
         tempTitle.destroy();
+    }
 
-        const bg = this.add.graphics();
-        bg.fillStyle(0x000000, 0.25);
-        const rectWidth = 800;
-        const rectHeight = 1100;
-        const rectRadius = 20;
-        // Center the rectangle
-        const rectX = (this.scale.width - rectWidth) / 2;
-        const rectY = (this.scale.height - rectHeight) / 2;
-        // Draw filled rounded rect
-        bg.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
-        // Draw border (stroke) around the rect
-        bg.lineStyle(6, 0x35BBF0, 1); // 4px white border
-        bg.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
-        bg.setDepth(1);
-
-        // Maak "Draai aan " en "blauw" als losse tekstobjecten, samen gecentreerd
+    private createDescription() {
         const descFontSize = 32;
         const descY = this.scale.height / 2 - 450;
+        
         const text1 = this.add.text(0, 0, 'Draai aan ', {
             fontFamily: 'Space Grotesk',
             fontSize: descFontSize,
             color: '#ffffff',
             fontStyle: 'normal',
         }).setOrigin(0, 0.5).setDepth(10);
+        
         const text2 = this.add.text(0, 0, 'blauw', {
             fontFamily: 'Space Grotesk',
             fontSize: descFontSize,
             color: '#ffffff',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5).setDepth(10);
-        // Bepaal totale breedte en centreer
+        
         const totalWidth = text1.width + text2.width;
         const startX = this.scale.width / 2 - totalWidth / 2;
-        text1.x = startX;
-        text2.x = startX + text1.width;
-        text1.y = descY;
-        text2.y = descY;
-
-        // Keyboard input expliciet activeren en Enter-key toevoegen
-        // if (this.input.keyboard) {
-        //     this.input.keyboard.enabled = true;
-        //     this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-        //     console.log('Enter key:', this.enterKey);
-        // }
-        // this.enterHoldStart = null;
+        
+        text1.setPosition(startX, descY);
+        text2.setPosition(startX + text1.width, descY);
     }
-    update() {
-                // Opruimen windBlauw als animatie klaar is (failsafe)
-                if (this.windBlauw && !this.windBlauw.anims.isPlaying) {
-                    this.windBlauw.destroy();
-                    this.windBlauw = null;
-                }
-        // Shake inactivePropellor: trigger timer direct bij elke verandering van angle2
-        let angle2Delta = 0;
+
+    private createTutorialElements() {
+        const propellorX = this.scale.width / 2;
+        const propellorY = this.scale.height / 2 + 350;
+        
+        this.inactivePropellor = this.add.image(
+            propellorX + 150,
+            propellorY,
+            'inactive'
+        ).setDepth(1001).setScale(0.60);
+        
+        this.activePropellor = this.add.image(
+            propellorX - 150,
+            propellorY,
+            'active-blauw'
+        ).setDepth(1003).setScale(0.60);
+        
+        this.arrows = this.add.image(
+            this.activePropellor.x,
+            this.activePropellor.y,
+            'arrows'
+        ).setDepth(1004).setScale(0.60);
+    }
+
+    private createBalloonAndPropellors() {
+        this.balloon = this.add.image(280, 820, 'balloon')
+            .setDepth(1000)
+            .setScale(0.5);
+        
+        this.propellorBlauw = this.add.sprite(
+            this.balloon.x + this.propellorOffsetX,
+            this.balloon.y + this.propellorOffsetY,
+            'propellor-blauw'
+        ).setDepth(1002).setScale(0.5);
+        this.propellorBlauw.play('propellor-blauw');
+        if (this.propellorBlauw.anims.currentAnim && this.propellorBlauw.anims.currentAnim.frames.length > 0) {
+            this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
+        }
+        
+        this.propellorRood = this.add.sprite(
+            this.balloon.x + this.propellorOffsetX + 77,
+            this.balloon.y + this.propellorOffsetY,
+            'propellor-rood'
+        ).setDepth(1002).setScale(0.5);
+        this.propellorRood.play('propellor-rood');
+        if (this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
+            this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
+        }
+    }
+
+    private createProgressBar() {
+        this.progressBar = this.add.graphics();
+        this.progressBar.setDepth(20);
+        this.drawProgressBar();
+    }
+
+    private createSkipButton() {
+        const buttonWidth = 500;
+        const buttonHeight = 100;
+        const skipShadowOffsetY = 8;
+        const buttonX = this.scale.width - buttonWidth / 2 - 54;
+        const buttonY = this.scale.height - 200;
+        const circleRadius = 20;
+        const gap = 32;
+        const skipTextPadding = 12;
+        
+        // Shadow
+        const skipShadow = this.add.graphics();
+        skipShadow.fillStyle(0x246E8B, 1);
+        skipShadow.fillRoundedRect(
+            -buttonWidth / 2,
+            -buttonHeight / 2 + skipShadowOffsetY,
+            buttonWidth,
+            buttonHeight,
+            16
+        );
+        skipShadow.setDepth(1999);
+        
+        // Background
+        const skipBg = this.add.graphics();
+        skipBg.fillStyle(0x35BBF0, 1);
+        skipBg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16);
+        skipBg.setDepth(2000);
+        
+        // Text
+        const skipText = this.add.text(0, 0, 'OVERSLAAN', {
+            fontFamily: 'Bungee',
+            fontSize: 50,
+            color: '#ffffff',
+        }).setOrigin(0, 0.5).setDepth(2001);
+        
+        // Circle outline
+        const skipCircle = this.add.graphics();
+        skipCircle.lineStyle(4, 0xffffff, 1);
+        skipCircle.strokeCircle(0, 0, circleRadius);
+        skipCircle.setDepth(2002);
+        
+        // Circle fill
+        const skipFill = this.add.graphics();
+        skipFill.setDepth(2003);
+        
+        // Position elements
+        const skipTotalWidth = circleRadius * 2 + gap + skipText.width + skipTextPadding * 2;
+        skipCircle.x = -skipTotalWidth / 2 + circleRadius + skipTextPadding;
+        skipCircle.y = 0;
+        skipFill.x = skipCircle.x;
+        skipFill.y = 0;
+        skipText.x = skipCircle.x + circleRadius + gap;
+        skipText.y = 0;
+        
+        // Container
+        const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg, skipCircle, skipFill, skipText]);
+        skipButton.setSize(buttonWidth, buttonHeight);
+        skipButton.setDepth(2000);
+        skipButton.setInteractive({ useHandCursor: true });
+        
+        // Store references
+        this.skipFill = skipFill;
+        this.skipCircleRadius = circleRadius;
+        this.animTargets = [skipBg, skipCircle, skipFill, skipText];
+        
+        // Click handler
+        skipButton.on('pointerdown', () => {
+            this.scene.start('Game');
+        });
+    }
+
+    // ==================== PROGRESS BAR ====================
+
+    private drawProgressBar() {
+        if (!this.progressBar) return;
+        
+        const barWidth = 600;
+        const barHeight = 32;
+        const barX = this.scale.width / 2 - barWidth / 2;
+        const barY = 1050;
+        const radius = 16;
+        
+        this.progressBar.clear();
+        
+        // Background
+        this.progressBar.fillStyle(0xffffff, 0.25);
+        this.progressBar.fillRoundedRect(barX, barY, barWidth, barHeight, radius);
+        
+        // Fill
+        if (this.progress > 0) {
+            const fillWidth = (barWidth - 30) * this.progress;
+            this.progressBar.fillStyle(0x35BBF0, 1);
+            this.progressBar.fillRoundedRect(barX, barY, fillWidth + 30, barHeight, radius);
+        }
+        
+        // Border
+        this.progressBar.strokeRoundedRect(barX, barY, barWidth, barHeight, radius);
+        
+        // Check completion
+        if (this.progress >= 1) {
+            this.scene.start('TutorialRed');
+        }
+    }
+
+    // ==================== UPDATE METHODS ====================
+
+    private updateSkipButton() {
+        if (!this.skipFill) return;
+        
+        this.skipFill.clear();
+        if (this.skipHoldProgress > 0) {
+            this.skipFill.beginPath();
+            this.skipFill.arc(
+                0, 0, 
+                this.skipCircleRadius - 2, 
+                -Math.PI / 2, 
+                -Math.PI / 2 + 2 * Math.PI * this.skipHoldProgress, 
+                false
+            );
+            this.skipFill.lineTo(0, 0);
+            this.skipFill.closePath();
+            this.skipFill.fillStyle(0xffffff, 1);
+            this.skipFill.fillPath();
+        }
+    }
+
+    private handleButtonInput() {
+        const buttonPressed = this.rotary?.buttonPressed || false;
+        
+        // Button pressed
+        if (buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
+            this.skipButtonIsDown = true;
+            if (this.skipHoldStart === null) {
+                this.skipHoldStart = Date.now();
+            }
+            
+            if (this.skipButtonTween) this.skipButtonTween.stop();
+            this.skipButtonTween = this.tweens.add({
+                targets: this.animTargets,
+                y: 8,
+                duration: 80,
+                yoyo: false
+            });
+        }
+        
+        // Button released
+        if (!buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
+            this.skipButtonIsDown = false;
+            this.skipHoldStart = null;
+            this.skipHoldProgress = 0;
+            
+            if (this.skipButtonTween) this.skipButtonTween.stop();
+            this.skipButtonTween = this.tweens.add({
+                targets: this.animTargets,
+                y: 0,
+                duration: 80,
+                yoyo: false
+            });
+        }
+        
+        this.wasButtonPressed = buttonPressed;
+        
+        // Check hold progress
+        if (this.skipHoldStart !== null && !this.isTransitioning) {
+            const elapsed = Date.now() - this.skipHoldStart;
+            this.skipHoldProgress = Math.min(1, elapsed / 2800);
+            
+            if (this.skipHoldProgress >= 1) {
+                this.isTransitioning = true;
+                this.skipHoldStart = null;
+                this.skipButtonIsDown = false;
+                if (this.skipButtonTween) this.skipButtonTween.stop();
+                this.scene.start('Game');
+            }
+        } else if (!this.isTransitioning) {
+            this.skipHoldProgress = 0;
+        }
+    }
+
+    private updateInactivePropellorShake() {
+        // Check if inactive propellor should shake
         if (this.rotary && this.rotary.lastAngles && this.rotary.lastAngles.length > 1) {
             const angle2 = this.rotary.lastAngles[1];
             if (typeof angle2 === 'number' && this.lastAngle2 !== undefined) {
-                angle2Delta = angle2 - this.lastAngle2;
+                const angle2Delta = angle2 - this.lastAngle2;
                 if (Math.abs(angle2Delta) >= 2) {
-                    // Start shake alleen als deze niet bezig is
                     if (this.inactiveShakeTimer === 0) {
                         this.inactiveShakeTimer = 6;
                         this.inactiveShakeDirection = Math.sign(angle2Delta) || 1;
@@ -404,76 +468,82 @@ export class Tutorial extends Scene {
             }
             this.lastAngle2 = angle2;
         }
-
-        // Shake animatie uitvoeren
+        
+        // Apply shake animation
         if (this.inactivePropellor) {
             if (this.inactiveShakeTimer > 0) {
-                // Shake: roteer snel heen en weer
-                this.inactivePropellor.rotation = Math.sin(this.inactiveShakeTimer * 0.7) * 0.25 * this.inactiveShakeDirection;
+                this.inactivePropellor.rotation = 
+                    Math.sin(this.inactiveShakeTimer * 0.7) * 0.25 * this.inactiveShakeDirection;
                 this.inactiveShakeTimer--;
             } else {
                 this.inactivePropellor.rotation = 0;
             }
         }
-        // Laat de arrows constant naar links roteren
+    }
+
+    private updateArrowsRotation() {
         if (this.arrows) {
             this.arrows.rotation -= 0.05;
         }
+    }
 
-        // Active propellor draait alleen als de sensor beweegt, in beide richtingen, met een stap van minimaal 2 graden
-        if (this.activePropellor) {
-            if (this.rotary && this.rotary.lastAngles && Array.isArray(this.rotary.lastAngles)) {
-                const angle1 = this.rotary.lastAngles[0];
-                if (typeof angle1 === 'number' && this.lastAngle1 !== null && angle1 !== this.lastAngle1) {
-                    const deltaStep = angle1 - this.lastAngle1;
-                    if (Math.abs(deltaStep) >= 2) {
-                        // Draai naar links of rechts afhankelijk van deltaStep
-                        this.activePropellor.rotation += Math.sign(deltaStep) * 0.15;
-                    }
-                }
+    private updateActivePropellorRotation() {
+        if (!this.activePropellor || !this.rotary || !Array.isArray(this.rotary.lastAngles)) return;
+        
+        const angle1 = this.rotary.lastAngles[0];
+        if (typeof angle1 === 'number' && this.lastAngle1 !== null && angle1 !== this.lastAngle1) {
+            const deltaStep = angle1 - this.lastAngle1;
+            if (Math.abs(deltaStep) >= 2) {
+                this.activePropellor.rotation += Math.sign(deltaStep) * 0.15;
             }
         }
-        // Rotary sensor uitlezen en ballon bewegen + progress
-        let propellorShouldSpin = false;
-        let windShouldTrigger = false;
-        if (this.rotary && this.rotary.lastAngles && Array.isArray(this.rotary.lastAngles)) {
-            const angle1 = this.rotary.lastAngles[0];
-            if (typeof angle1 === 'number') {
-                if (this.startAngle1 === null) {
-                    this.startAngle1 = angle1;
-                    this.lastAngle1 = angle1;
-                } else if (this.lastAngle1 !== null) {
-                    if (angle1 !== this.lastAngle1) {
-                        const deltaStep = angle1 - this.lastAngle1;
-                        if (Math.abs(deltaStep) >= 2 && Math.abs(deltaStep) < 50) {
-                            propellorShouldSpin = true;
-                            windShouldTrigger = true;
-                            this.totalDelta += Math.abs(deltaStep);
-                            // Progress: 0..1 over 2000 rotary delta
-                            this.progress = Math.min(1, this.totalDelta / 2000);
-                            // Balloon moves right as progress increases
-                            const balloonStartX = 280;
-                            const balloonEndX = this.scale.width - 280;
-                            this.balloon.x = balloonStartX + (balloonEndX - balloonStartX) * this.progress;
-                            this.drawProgressBar();
-                        }
-                    }
-                    this.lastAngle1 = angle1;
-                }
-            }
+    }
+
+    private updateBalloonMovement() {
+        if (!this.rotary || !Array.isArray(this.rotary.lastAngles)) {
+            return;
         }
-        // Propellor animatie aan/uit (blauw: alleen bij beweging, rood: altijd stil)
+        
+        const angle1 = this.rotary.lastAngles[0];
+        if (typeof angle1 !== 'number') {
+            return;
+        }
+        
+        if (this.startAngle1 === null) {
+            this.startAngle1 = angle1;
+            this.lastAngle1 = angle1;
+            return;
+        }
+        
+        if (this.lastAngle1 === null || angle1 === this.lastAngle1) {
+            this.didRotateThisFrame = false;
+            return;
+        }
+        
+        const deltaStep = angle1 - this.lastAngle1;
+        if (Math.abs(deltaStep) >= 2 && Math.abs(deltaStep) < 50) {
+            this.didRotateThisFrame = true;
+            this.totalDelta += Math.abs(deltaStep);
+            this.progress = Math.min(1, this.totalDelta / 2000);
+            
+            // Move balloon
+            const balloonStartX = 280;
+            const balloonEndX = this.scale.width - 280;
+            this.balloon.x = balloonStartX + (balloonEndX - balloonStartX) * this.progress;
+            
+            this.drawProgressBar();
+        } else {
+            this.didRotateThisFrame = false;
+        }
+        
+        this.lastAngle1 = angle1;
+    }
+
+    private updatePropellorAnimations() {
+        const shouldSpin = this.didRotateThisFrame;
+        
         // PropellorBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
-        if (propellorShouldSpin) {
-            if (!this.propellorBlauw) {
-                if (this.balloon) {
-                    this.propellorBlauw = this.add.sprite(
-                        this.balloon.x + this.propellorOffsetX,
-                        this.balloon.y + this.propellorOffsetY,
-                        'propellor-blauw'
-                    ).setDepth(1002).setScale(0.5);
-                }
-            }
+        if (shouldSpin) {
             if (this.propellorBlauw && !this.propellorBlauw.anims.isPlaying) {
                 this.propellorBlauw.play({ key: 'propellor-blauw', repeat: 0 });
                 this.propellorBlauw.once('animationcomplete', () => {
@@ -487,68 +557,50 @@ export class Tutorial extends Scene {
                 this.propellorBlauw.anims.pause(this.propellorBlauw.anims.currentAnim.frames[0]);
             }
         }
-        // WindBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
-        if (windShouldTrigger) {
-            if (!this.windBlauw) {
-                if (this.balloon) {
-                    this.windBlauw = this.add.sprite(
-                        this.balloon.x + this.propellorOffsetX - 50,
-                        this.balloon.y + this.propellorOffsetY,
-                        'wind-blauw'
-                    ).setDepth(1002).setScale(0.4);
-                    this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
-                    this.windBlauw.once('animationcomplete', () => {
-                        if (this.windBlauw) {
-                            this.windBlauw.destroy();
-                            this.windBlauw = null;
-                        }
-                    });
-                }
-            } else if (this.windBlauw.anims && this.windBlauw.anims.isPlaying) {
-                // Already animating, do nothing
-            }
-            // windShouldTrigger = false; // not needed, local var
-        }
+        
+        // PropellorRood: altijd gepauzeerd
         if (this.propellorRood) {
             if (this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
                 this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
             }
         }
-        // Zorg dat de propellor en wind altijd onder de ballon blijven hangen
-        if (this.balloon && this.propellorBlauw && this.propellorRood) {
-            this.propellorBlauw.x = this.balloon.x + this.propellorOffsetX;
-            this.propellorBlauw.y = this.balloon.y + this.propellorOffsetY;
-            // Gebruik dezelfde offset als in create()
-            this.propellorRood.x = this.balloon.x + this.propellorOffsetX + 77;
-            this.propellorRood.y = this.balloon.y + this.propellorOffsetY;
+    }
+
+    private updateWindEffect() {
+        const shouldTrigger = this.didRotateThisFrame;
+        
+        if (shouldTrigger && !this.windBlauw && this.balloon) {
+            this.windBlauw = this.add.sprite(
+                this.balloon.x + this.propellorOffsetX - 50,
+                this.balloon.y + this.propellorOffsetY,
+                'wind-blauw'
+            ).setDepth(1002).setScale(0.4);
+            
+            this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
+            this.windBlauw.once('animationcomplete', () => {
+                if (this.windBlauw) {
+                    this.windBlauw.destroy();
+                    this.windBlauw = null;
+                }
+            });
         }
-        // WindBlauw positie updaten als hij bestaat
-        if (this.windBlauw) {
+        
+        // Update wind position if it exists
+        if (this.windBlauw && this.windBlauw.active) {
             this.windBlauw.x = this.balloon.x + this.propellorOffsetX - 50;
             this.windBlauw.y = this.balloon.y + this.propellorOffsetY;
         }
-
-        // Check of Enter 3 seconden wordt ingedrukt
-        if (this.enterKey) {
-            if (this.enterKey.isDown) {
-                if (this.enterHoldStart === null) {
-                    this.enterHoldStart = Date.now();
-                } else {
-                    if (Date.now() - this.enterHoldStart >= 3000) {
-                        this.scene.start('Game');
-                        this.enterHoldStart = null;
-                    }
-                }
-            } else {
-                this.enterHoldStart = null;
-            }
-        }
     }
 
-    shutdown() {
-        if (this._changeSceneHandler) {
-            EventBus.off('change-scene', this._changeSceneHandler);
-        }
+    private updatePropellorPositions() {
+        if (!this.balloon || !this.propellorBlauw || !this.propellorRood) return;
+        
+        this.propellorBlauw.x = this.balloon.x + this.propellorOffsetX;
+        this.propellorBlauw.y = this.balloon.y + this.propellorOffsetY;
+        
+        this.propellorRood.x = this.balloon.x + this.propellorOffsetX + 77;
+        this.propellorRood.y = this.balloon.y + this.propellorOffsetY;
     }
 
+    // ==================== HELPER METHODS ====================
 }
