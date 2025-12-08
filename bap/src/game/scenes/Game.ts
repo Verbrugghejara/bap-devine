@@ -97,7 +97,7 @@ export class Game extends Scene {
         this.handlePauseInput();
         
         if (this.isGamePaused) {
-            this.checkPauseTimeout();
+            // this.checkPauseTimeout();
             return;
         }
 
@@ -111,6 +111,7 @@ export class Game extends Scene {
         this.updateObstaclePositions();
         this.updateSfeerIndex();
         this.updateProgress();
+        this.updateTimer();
         this.updateBalloonMovement();
         this.updateWindEffects();
         this.checkObstacleCollisions();
@@ -609,6 +610,18 @@ export class Game extends Scene {
             this.isBalloonLeaving = true;
             EventBus.emit('hide-gameui');
         }
+    }
+
+    private updateTimer() {
+        if (!this.countdownDone || this.gameStartTime === 0) return;
+        
+        const elapsed = Date.now() - this.gameStartTime;
+        const seconds = Math.floor(elapsed / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        
+        const timeString = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        EventBus.emit('update-timer', timeString);
     }
 
     private updateBalloonMovement() {
