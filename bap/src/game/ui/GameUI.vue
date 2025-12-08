@@ -45,7 +45,9 @@
     </svg>
     <p :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">{{ timerText }}</p>
           </div>
-          <p class="timer-update" :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">-10</p>
+          <Transition name="timer-bonus">
+            <p v-if="showTimerUpdate" class="timer-update" :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">-10</p>
+          </Transition>
         </div>
       </div>
       <div class="right-ui">
@@ -53,27 +55,28 @@
         <div class="healthbar">
           <div class="healthbar-bg">
             <div class="hearts">
-              <span v-for="n in 3" :key="n">
-                <svg v-if="n <= health" class="heart active" xmlns="http://www.w3.org/2000/svg" width="74" height="64" viewBox="0 0 74 64" fill="none">
-                  <path d="M36.5557 6.22754C44.9126 -2.08832 58.4283 -2.07549 66.7695 6.26563C75.1235 14.6196 75.1235 28.1636 66.7695 36.5176C66.4639 36.8232 66.1501 37.1162 65.8311 37.3994L42.1836 61.0469C39.0594 64.171 33.9943 64.171 30.8701 61.0469L7.3584 37.5361C6.98556 37.2114 6.62053 36.8725 6.26562 36.5176C-2.08832 28.1636 -2.08832 14.6196 6.26562 6.26563C14.61 -2.0786 28.1321 -2.08781 36.4883 6.23731L36.5273 6.19922L36.5557 6.22754Z" fill="#E73228"/>
-                  <circle cx="13.7715" cy="13.499" r="4.3524" transform="rotate(45 13.7715 13.499)" fill="white" fill-opacity="0.25"/>
-                </svg>
-                <svg v-else class="heart" xmlns="http://www.w3.org/2000/svg" width="74" height="64" viewBox="0 0 74 64" fill="none">
+              <span v-for="n in 3" :key="n" class="heart-slot">
+                <svg class="heart heart-empty" xmlns="http://www.w3.org/2000/svg" width="74" height="64" viewBox="0 0 74 64" fill="none">
                   <path d="M36.5557 6.22754C44.9126 -2.08832 58.4283 -2.07549 66.7695 6.26563C75.1235 14.6196 75.1235 28.1636 66.7695 36.5176C66.4639 36.8232 66.1501 37.1162 65.8311 37.3994L42.1836 61.0469C39.0594 64.171 33.9943 64.171 30.8701 61.0469L7.3584 37.5361C6.98556 37.2114 6.62053 36.8725 6.26562 36.5176C-2.08832 28.1636 -2.08832 14.6196 6.26562 6.26563C14.61 -2.0786 28.1321 -2.08781 36.4883 6.23731L36.5273 6.19922L36.5557 6.22754Z" fill="#EDEDED"/>
                 </svg>
+                <Transition name="heart-pop">
+                  <svg v-if="n <= health" :key="'full'" class="heart active heart-full" xmlns="http://www.w3.org/2000/svg" width="74" height="64" viewBox="0 0 74 64" fill="none">
+                    <path d="M36.5557 6.22754C44.9126 -2.08832 58.4283 -2.07549 66.7695 6.26563C75.1235 14.6196 75.1235 28.1636 66.7695 36.5176C66.4639 36.8232 66.1501 37.1162 65.8311 37.3994L42.1836 61.0469C39.0594 64.171 33.9943 64.171 30.8701 61.0469L7.3584 37.5361C6.98556 37.2114 6.62053 36.8725 6.26562 36.5176C-2.08832 28.1636 -2.08832 14.6196 6.26562 6.26563C14.61 -2.0786 28.1321 -2.08781 36.4883 6.23731L36.5273 6.19922L36.5557 6.22754Z" fill="#E73228"/>
+                    <circle cx="13.7715" cy="13.499" r="4.3524" transform="rotate(45 13.7715 13.499)" fill="white" fill-opacity="0.25"/>
+                  </svg>
+                </Transition>
               </span>
             </div>
           </div>
         </div>
-        <div class="powerup-container">
+        <div class="powerup-container" v-if="activePowerUp">
           <div class="powerup-icon">
-
+            <img v-if="activePowerUp === 'freeze'" src="/assets/powerUps/freeze.png" alt="Freeze" />
+            <img v-if="activePowerUp === 'shield'" src="/assets/powerUps/shield.png" alt="Shield" />
           </div>
           <div class="powerup-progress">
-            <div class="powerup-bar">
-              <div class="powerup-bar-highlight">
-
-              </div>
+            <div class="powerup-bar" :style="{ width: (powerUpProgress * 100) + '%' }">
+              <div class="powerup-bar-highlight"></div>
             </div>
           </div>
         </div>
@@ -93,6 +96,9 @@ const sfeerText = ref('TROPOSFEER');
 const sfeerIndex = ref(0);
 const visible = ref(true);
 const timerText = ref('0:00');
+const activePowerUp = ref<string | null>(null);
+const powerUpProgress = ref(0);
+const showTimerUpdate = ref(false);
 function hideGameUI() {
   visible.value = false;
 }
@@ -127,6 +133,34 @@ function updateTimer(time: string) {
   timerText.value = time;
 }
 
+function updateTimerBonus() {
+  showTimerUpdate.value = true;
+  setTimeout(() => {
+    showTimerUpdate.value = false;
+  }, 2000);
+}
+
+function updatePowerUp(powerUp: string | null) {
+  activePowerUp.value = powerUp;
+  if (powerUp) {
+    // Start progress countdown
+    powerUpProgress.value = 1;
+    const startTime = Date.now();
+    const duration = 10000; // 10 seconds
+    
+    const updateProgress = () => {
+      const elapsed = Date.now() - startTime;
+      powerUpProgress.value = Math.max(0, 1 - (elapsed / duration));
+      
+      if (powerUpProgress.value > 0 && activePowerUp.value === powerUp) {
+        requestAnimationFrame(updateProgress);
+      }
+    };
+    
+    requestAnimationFrame(updateProgress);
+  }
+}
+
 onMounted(() => {
   EventBus.on('hide-gameui', hideGameUI);
   EventBus.on('show-gameui', showGameUI);
@@ -135,6 +169,8 @@ onMounted(() => {
   EventBus.on('update-sfeer-index', updateSfeerIndex);
   EventBus.on('update-sfeer-progress', updateSfeerProgress);
   EventBus.on('update-timer', updateTimer);
+  EventBus.on('timer-update', updateTimerBonus);
+  EventBus.on('update-powerup', updatePowerUp);
 });
 
 onUnmounted(() => {
@@ -145,6 +181,8 @@ onUnmounted(() => {
   EventBus.off('update-sfeer-index', updateSfeerIndex);
   EventBus.off('update-sfeer-progress', updateSfeerProgress);
   EventBus.off('update-timer', updateTimer);
+  EventBus.off('timer-update', updateTimerBonus);
+  EventBus.off('update-powerup', updatePowerUp);
 });
 </script>
 
@@ -274,6 +312,76 @@ font-weight: 400;
 line-height: normal;
 margin: 0;
 }
+
+/* Timer bonus animation */
+.timer-bonus-enter-active {
+  animation: timer-bonus-in 0.3s ease-out;
+}
+
+.timer-bonus-leave-active {
+  animation: timer-bonus-out 0.5s ease-in;
+}
+
+@keyframes timer-bonus-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes timer-bonus-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.8);
+  }
+}
+
+/* Heart animation */
+.heart-pop-enter-active {
+  animation: heart-pop-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.heart-pop-leave-active {
+  animation: heart-pop-out 0.3s ease-in;
+}
+
+.heart-pop-move {
+  transition: transform 0.3s ease;
+}
+
+@keyframes heart-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heart-pop-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
 .healthbar {
   position: relative;
   width: 330px;
@@ -305,11 +413,30 @@ margin: 0;
   width: 100%;
 }
 
+.heart-slot {
+  position: relative;
+  width: 74px;
+  height: 64px;
+}
+
 .heart {
   /* width: 55px; */
   height: auto;
   opacity: 1;
   transition: opacity 0.2s;
+}
+
+.heart-empty {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.heart-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
 .heart.active {
@@ -356,45 +483,55 @@ margin: 0;
 .powerup-container {
   display: inline-flex;
   width: 325px;
-  height: 65px;
-  padding: 16px 32px;
+  height: 80px;
   align-items: center;
   gap: 24px;
-  border-radius: 32px;
+  border-radius: 80px;
   background: #fff;
+  padding: 16px 32px;
+  position: relative;
 }
 
 .powerup-icon {
-  width: 64px;
-height: 64px;
-aspect-ratio: 1/1;
-  background:#EDEDED ;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
+
+.powerup-icon img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
 .powerup-progress {
   border-radius: 80px;
-  background:#EDEDED ;
+  background: #EDEDED;
   width: 100%;
   height: 40px;
+  position: relative;
 }
 
 .powerup-bar {
   position: relative;
   background: #26B31F;
-  
-  border-radius: 80px;
+  border-radius: 100px;
   height: 100%;
-  width: 50%;
+  transition: width 0.6s cubic-bezier(.4, 1.4, .6, 1);
 }
-.powerup-bar-highlight{
+
+.powerup-bar-highlight {
   position: absolute;
   top: 8px;
   left: 16px;
+  width: calc(100% - 40px);
+  height: 8px;
   background: rgba(255, 255, 255, 0.25);
-  border-radius: 80px;
-  padding-left: 16px;
-  height: 6px;
-  width: 40%;
+  border-radius: 25px;
 }
 
 .sfeer-progress-alien {

@@ -61,6 +61,15 @@ export class Preloader extends Scene
         this.load.image('ufo', 'ufo.png');
         this.load.image('plane', 'plane.png');
         
+        // Power ups
+        this.load.image('heart-outline', 'powerUps/healthOutline.png');
+        this.load.image('freeze-outline', 'powerUps/freezeOutline.png');
+        this.load.image('shield-outline', 'powerUps/shieldOutline.png');
+        this.load.image('time-outline', 'powerUps/timeOutline.png');
+        this.load.image('freeze', 'powerUps/freeze.png');
+        this.load.image('shield', 'powerUps/shield.png');
+
+        
         // When spritesheets are ready, replace the above image loads with:
         // this.load.spritesheet('plane', 'plane/fly.png', { frameWidth: 32, frameHeight: 32 });
         // this.load.spritesheet('meteor', 'meteor/spin.png', { frameWidth: 32, frameHeight: 32 });

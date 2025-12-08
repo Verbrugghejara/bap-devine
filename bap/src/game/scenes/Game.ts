@@ -71,6 +71,15 @@ export class Game extends Scene {
     private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
 
+    // Power-ups
+    private powerUps: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
+    private powerUpsSpawned: Set<string> = new Set();
+    private activePowerUp: string | null = null;
+    private powerUpEndTime: number = 0;
+    private freezeActive: boolean = false;
+    private shieldActive: boolean = false;
+    private baseScrollSpeed: number = 100;
+
     // ==================== LIFECYCLE METHODS ====================
 
     constructor() {
@@ -97,7 +106,7 @@ export class Game extends Scene {
         this.handlePauseInput();
         
         if (this.isGamePaused) {
-            // this.checkPauseTimeout();
+            this.checkPauseTimeout();
             return;
         }
 
@@ -112,6 +121,9 @@ export class Game extends Scene {
         this.updateSfeerIndex();
         this.updateProgress();
         this.updateTimer();
+        this.updatePowerUpPositions();
+        this.checkPowerUpCollection();
+        this.updateActivePowerUp();
         this.updateBalloonMovement();
         this.updateWindEffects();
         this.checkObstacleCollisions();
@@ -137,15 +149,24 @@ export class Game extends Scene {
         this.countdownDone = false;
         this.isVictorySequence = false;
         this.isBalloonLeaving = false;
+        this.powerUps = [];
+        this.powerUpsSpawned = new Set();
+        this.activePowerUp = null;
+        this.powerUpEndTime = 0;
+        this.freezeActive = false;
+        this.shieldActive = false;
+        this.baseScrollSpeed = 100;
         
         sfeerProgress.value = 0;
         EventBus.emit('show-countdown');
         EventBus.emit('show-gameui');
         
         setTimeout(() => {
-            console.log('start timer');
             this.gameStartTime = Date.now();
             this.countdownDone = true;
+            
+            // Spawn initial power-up for troposfeer
+            this.checkPowerUpSpawn(0);
         }, 5000);
         
         this.rotary = getRotaryClient();
@@ -265,7 +286,6 @@ export class Game extends Scene {
         const scaleY = bgHoogte / tex.height;
         
         callback(img, { x: scaleX, y: scaleY });
-        console.log(`[Game] ${textureKey} achtergrond toegevoegd.`);
     }
 
     // ==================== BALLOON ====================
@@ -499,7 +519,6 @@ export class Game extends Scene {
 
     private checkPauseTimeout() {
         if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
-            console.log('30 seconden pauze verstreken, terug naar MainMenu');
             EventBus.emit('hide-pauseui');
             this.scene.start('MainMenu');
             this.isGamePaused = false;
@@ -522,8 +541,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [100, 100, 100, 100, 100];
-        const targetScrollSpeed = scrollSpeeds[this.huidigeSfeerIndex] ?? 15;
+        const scrollSpeeds = [5, 7, 9, 11, 13];
+        const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * (this.shieldActive ? 1.5 : 1);
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
         
@@ -583,6 +602,7 @@ export class Game extends Scene {
         if (this.huidigeSfeerIndex !== sfeerIndex) {
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
+            this.checkPowerUpSpawn(sfeerIndex);
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);
     }
@@ -792,7 +812,7 @@ export class Game extends Scene {
     }
 
     private checkObstacleCollisions() {
-        if (!this.ballon) return;
+        if (!this.ballon || !this.ballonContainer) return;
         
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obstacle = this.obstacles[i];
@@ -800,12 +820,36 @@ export class Game extends Scene {
             const direction = (obstacle as any).direction;
             const movementType = (obstacle as any).movementType || 'horizontal';
             
-            // Update obstacle position
-            if (movementType === 'vertical') {
-                obstacle.y += speed;
+            // Check if obstacle should be frozen
+            const distanceToBalloon = Phaser.Math.Distance.Between(
+                obstacle.x, obstacle.y,
+                this.ballonContainer.x, this.ballonContainer.y
+            );
+            const shouldFreeze = this.freezeActive && distanceToBalloon < 700;
+            
+            // const screenMiddleY = this.scale.height / 2;
+            // const reachedMiddle = obstacle.y >= screenMiddleY - 50 && obstacle.y <= screenMiddleY + 50;
+            // const shouldFreeze = this.freezeActive && reachedMiddle;
+            // Update obstacle position only if not frozen
+            if (!shouldFreeze) {
+                if (movementType === 'vertical') {
+                    obstacle.y += speed;
+                } else {
+                    if (!direction) (obstacle as any).direction = 1;
+                    obstacle.x += speed * direction;
+                }
             } else {
-                if (!direction) (obstacle as any).direction = 1;
-                obstacle.x += speed * direction;
+                // Visual feedback for frozen obstacles
+                if (!obstacle.getData('frozen')) {
+                    obstacle.setTint(0x88ccff);
+                    obstacle.setData('frozen', true);
+                }
+            }
+            
+            // Remove freeze tint if no longer frozen
+            if (!shouldFreeze && obstacle.getData('frozen')) {
+                obstacle.clearTint();
+                obstacle.setData('frozen', false);
             }
             
             // Remove if off screen
@@ -825,7 +869,7 @@ export class Game extends Scene {
             }
             
             // Check collision
-            if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
+            if (!this.ballonInvulnerable && !this.shieldActive && this.checkOverlap(obstacle, this.ballon)) {
                 this.damageBallon();
                 this.ballonInvulnerable = true;
                 this.time.delayedCall(1000, () => {
@@ -875,6 +919,166 @@ export class Game extends Scene {
                 
                 this.obstacles.splice(i, 1);
             }
+        }
+    }
+
+    // ==================== POWER-UP SYSTEM ====================
+
+    private checkPowerUpSpawn(sfeerIndex: number) {
+        const powerUpConfigs = [
+            { sfeer: 0, type: 'timer', key: 'timer-troposfeer' },
+            { sfeer: 1, type: 'freeze', key: 'freeze-stratosfeer' },
+            { sfeer: 2, type: 'health', key: 'health-mesosfeer' },
+            { sfeer: 2, type: 'timer', key: 'timer-mesosfeer' },
+            { sfeer: 3, type: 'shield', key: 'shield-thermosfeer' },
+            { sfeer: 4, type: 'timer', key: 'timer-exosfeer' }
+        ];
+
+        for (const config of powerUpConfigs) {
+            if (config.sfeer === sfeerIndex && !this.powerUpsSpawned.has(config.key)) {
+                this.spawnPowerUp(config.type, config.key, sfeerIndex);
+                this.powerUpsSpawned.add(config.key);
+            }
+        }
+    }
+
+    private spawnPowerUp(type: string, uniqueKey: string, sfeerIndex: number) {
+        const textureMap: { [key: string]: string } = {
+            'health': 'heart-outline',
+            'freeze': 'freeze-outline',
+            'shield': 'shield-outline',
+            'timer': 'time-outline'
+        };
+
+        const texture = textureMap[type];
+        
+        if (!this.textures.exists(texture)) {
+            return;
+        }
+
+        // Calculate spawn position based on sfeer's actual position and height
+        const x = Phaser.Math.Between(150, this.scale.width - 150);
+        const sfeerCenterY = this.sfeerBaseY[sfeerIndex] + this.sfeerOffsetY;
+        const sfeerHeight = this.sfeerHoogtes[sfeerIndex];
+        
+        // Spawn in upper 30-60% of the sfeer (random position)
+        const minOffset = sfeerHeight * 0.3;
+        const maxOffset = sfeerHeight * 0.6;
+        const randomOffset = Phaser.Math.Between(minOffset, maxOffset);
+        const y = sfeerCenterY - (sfeerHeight / 2) + randomOffset;
+
+        try {
+            const powerUp = this.physics.add.sprite(x, y, texture)
+                .setScale(1.5)
+                .setDepth(100)
+                .setOrigin(0.5);
+
+            (powerUp.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+            (powerUp as any).powerUpType = type;
+            (powerUp as any).uniqueKey = uniqueKey;
+
+            this.powerUps.push(powerUp);
+            
+            // Add glow effect
+            this.tweens.add({
+                targets: powerUp,
+                alpha: 0.7,
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+        } catch (e) {
+            console.error('[Game] Failed to spawn power-up:', e);
+        }
+    }
+
+    private updatePowerUpPositions() {
+        for (const powerUp of this.powerUps) {
+            powerUp.y += this.smoothScrollSpeed;
+        }
+
+        // Remove power-ups that are off screen
+        for (let i = this.powerUps.length - 1; i >= 0; i--) {
+            if (this.powerUps[i].y > this.scale.height + 200) {
+                this.powerUps[i].destroy();
+                this.powerUps.splice(i, 1);
+            }
+        }
+    }
+
+    private checkPowerUpCollection() {
+        if (!this.ballon) return;
+
+        for (let i = this.powerUps.length - 1; i >= 0; i--) {
+            const powerUp = this.powerUps[i];
+            if (this.checkOverlap(powerUp, this.ballon)) {
+                const type = (powerUp as any).powerUpType;
+                this.activatePowerUp(type);
+                
+                // Visual feedback
+                this.tweens.add({
+                    targets: powerUp,
+                    scale: 0,
+                    alpha: 0,
+                    duration: 300,
+                    onComplete: () => powerUp.destroy()
+                });
+                
+                this.powerUps.splice(i, 1);
+            }
+        }
+    }
+
+    private activatePowerUp(type: string) {
+        switch (type) {
+            case 'health':
+                if (this.ballonHealth < 3) {
+                    this.ballonHealth++;
+                    EventBus.emit('update-health', this.ballonHealth);
+                }
+                break;
+
+            case 'freeze':
+                this.freezeActive = true;
+                this.activePowerUp = 'freeze';
+                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
+                EventBus.emit('update-powerup', 'freeze');
+                break;
+
+            case 'shield':
+                this.shieldActive = true;
+                this.activePowerUp = 'shield';
+                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
+                EventBus.emit('update-powerup', 'shield');
+                
+                // Visual feedback on balloon
+                if (this.ballon) {
+                    this.ballon.setTint(0x4444ff);
+                }
+                break;
+
+            case 'timer':
+                // Subtract 10 seconds from elapsed time
+                this.gameStartTime += 10000;
+                EventBus.emit('timer-update', '-10s');
+                break;
+        }
+    }
+
+    private updateActivePowerUp() {
+        if (this.activePowerUp && Date.now() >= this.powerUpEndTime) {
+            if (this.activePowerUp === 'freeze') {
+                this.freezeActive = false;
+            } else if (this.activePowerUp === 'shield') {
+                this.shieldActive = false;
+                if (this.ballon) {
+                    this.ballon.clearTint();
+                }
+            }
+            
+            this.activePowerUp = null;
+            EventBus.emit('update-powerup', null);
         }
     }
 }
