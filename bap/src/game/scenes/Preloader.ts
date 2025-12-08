@@ -76,6 +76,8 @@ export class Preloader extends Scene
         // this.load.spritesheet('sattelite', 'sattelite/spin.png', { frameWidth: 32, frameHeight: 32 });
         // this.load.spritesheet('ufo', 'ufo/fly.png', { frameWidth: 32, frameHeight: 32 });
         
+        this.load.spritesheet('meteor-falling', 'meteor/meteorFalling.png', { frameWidth: 216, frameHeight: 262 });
+        this.load.spritesheet('meteor-breaking', 'meteor/meteorBreaking.png', { frameWidth: 407, frameHeight: 403 });
         this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
@@ -92,6 +94,18 @@ export class Preloader extends Scene
     create() {
         // Animaties pas aanmaken als alles geladen is
         // this.load.on('complete', () => {
+            this.anims.create({
+                key: 'meteor-falling',
+                frames: this.anims.generateFrameNumbers('meteor-falling', { start: 0, end: 7 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'meteor-breaking',
+                frames: this.anims.generateFrameNumbers('meteor-breaking', { start: 0, end: 8 }),
+                frameRate: 10,
+                repeat: 0
+            });
             this.anims.create({
                 key: 'wind-blauw',
                 frames: this.anims.generateFrameNumbers('wind-blauw', { start: 0, end: 9 }),

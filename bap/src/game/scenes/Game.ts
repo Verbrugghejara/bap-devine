@@ -387,7 +387,7 @@ export class Game extends Scene {
         const configs = [
             { texture: 'bird-walk', animKey: 'bird-walk', scale: 3, hasAnimation: true, movementType: 'horizontal' },
             { texture: 'plane', animKey: 'plane-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
-            { texture: 'meteor', animKey: 'meteor-spin', scale: 0.5, hasAnimation: false, movementType: 'vertical' },
+            { texture: 'meteor-falling', animKey: 'meteor-falling', scale: 1, hasAnimation: true, movementType: 'vertical' },
             { texture: 'sattelite', animKey: 'sattelite-spin', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
             { texture: 'ufo', animKey: 'ufo-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' }
         ];
@@ -402,9 +402,16 @@ export class Game extends Scene {
             let x, y, direction, speed;
             
             if (config.movementType === 'vertical') {
-                x = Phaser.Math.Between(50, this.scale.width - 50);
+                direction = Math.random() < 0.5 ? 1 : -1; // Random left or right
+                // Adjust spawn position based on direction to avoid going off screen
+                if (direction === -1) {
+                    // Moving left, spawn more to the right
+                    x = Phaser.Math.Between(this.scale.width * 0.5, this.scale.width - 100);
+                } else {
+                    // Moving right, spawn more to the left
+                    x = Phaser.Math.Between(100, this.scale.width * 0.5);
+                }
                 y = -100;
-                direction = 0;
                 speed = Phaser.Math.Between(8, 12);
             } else {
                 const fromLeft = Math.random() < 0.5;
@@ -415,7 +422,10 @@ export class Game extends Scene {
             }
             
             const obstacle = this.physics.add.sprite(x, y, config.texture)
-                .setScale(config.movementType === 'horizontal' && direction === -1 ? -config.scale : config.scale, config.scale)
+                .setScale(
+                    (config.movementType === 'horizontal' && direction === -1) || (config.movementType === 'vertical' && direction === -1) ? -config.scale : config.scale, 
+                    config.scale
+                )
                 .setDepth(50)
                 .setOrigin(0.5);
             
@@ -541,7 +551,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 13];
+        const scrollSpeeds = [50, 50, 9, 11, 13];
         const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * (this.shieldActive ? 1.5 : 1);
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
@@ -834,6 +844,10 @@ export class Game extends Scene {
             if (!shouldFreeze) {
                 if (movementType === 'vertical') {
                     obstacle.y += speed;
+                    // Add horizontal drift for meteors
+                    if ((obstacle as any).obstacleType === 'meteor-falling') {
+                        obstacle.x += direction * 3;
+                    }
                 } else {
                     if (!direction) (obstacle as any).direction = 1;
                     obstacle.x += speed * direction;
@@ -915,6 +929,32 @@ export class Game extends Scene {
                             }
                         }
                     });
+                }
+                
+                // Meteor breaking animation
+                if (obstacleType === 'meteor-falling' && this.textures.exists('meteor-breaking')) {
+                    const breakingMeteor = this.physics.add.sprite(x+30, y+60, 'meteor-breaking')
+                        .setScale(1)
+                        .setDepth(50)
+                        .setOrigin(0.5);
+                    if (parent) parent.add(breakingMeteor);
+                    
+                    const body = breakingMeteor.body as Phaser.Physics.Arcade.Body;
+                    body.setAllowGravity(true);
+                    body.setGravityY(600);
+                    body.setVelocityY(Phaser.Math.Between(200, 300));
+                    
+                    if (this.anims.exists('meteor-breaking')) {
+                        breakingMeteor.play('meteor-breaking');
+                        breakingMeteor.once('animationcomplete', () => {
+                            this.tweens.add({
+                                targets: breakingMeteor,
+                                alpha: 0,
+                                duration: 300,
+                                onComplete: () => breakingMeteor.destroy()
+                            });
+                        });
+                    }
                 }
                 
                 this.obstacles.splice(i, 1);
