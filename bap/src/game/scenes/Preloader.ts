@@ -43,8 +43,8 @@ export class Preloader extends Scene
         this.load.image('bg-exosfeer', 'bgSferen/bgExosfeer.jpg');
         this.load.image('bg-gameover', 'bgGameOver.jpg');
         this.load.image('bg-gamevictory', 'bgGameVictory.jpg');
-        this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('bird-death', 'bird/Death.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('bird-walk', 'bird/birdFlying2.png', { frameWidth: 140, frameHeight: 125 });
+        this.load.spritesheet('bird-death', 'bird/birdDeath.png', { frameWidth: 320, frameHeight: 375 });
         this.load.image('heart', 'heart.svg');
         this.load.image('balloon', 'balloon.png');
         this.load.image('active-blauw', 'activePropellorBlauw.png');
@@ -78,6 +78,8 @@ export class Preloader extends Scene
         
         this.load.spritesheet('meteor-falling', 'meteor/meteorFalling.png', { frameWidth: 216, frameHeight: 262 });
         this.load.spritesheet('meteor-breaking', 'meteor/meteorBreaking.png', { frameWidth: 407, frameHeight: 403 });
+        this.load.spritesheet('plane-flying', 'plane/planeFlying.png', { frameWidth: 350, frameHeight: 143 });
+        this.load.spritesheet('plane-crashing', 'plane/planeCrashing.png', { frameWidth: 621, frameHeight: 719 });
         this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
@@ -94,6 +96,18 @@ export class Preloader extends Scene
     create() {
         // Animaties pas aanmaken als alles geladen is
         // this.load.on('complete', () => {
+            this.anims.create({
+                key: 'plane-crashing',
+                frames: this.anims.generateFrameNumbers('plane-crashing', { start: 0, end: 8 }),
+                frameRate: 10,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'plane-flying',
+                frames: this.anims.generateFrameNumbers('plane-flying', { start: 0, end: 5 }),
+                frameRate: 10,
+                repeat: -1
+            });
             this.anims.create({
                 key: 'meteor-falling',
                 frames: this.anims.generateFrameNumbers('meteor-falling', { start: 0, end: 7 }),
@@ -132,14 +146,14 @@ export class Preloader extends Scene
             });
             this.anims.create({
                 key: 'bird-walk',
-                frames: this.anims.generateFrameNumbers('bird-walk', { start: 0, end: 3 }),
+                frames: this.anims.generateFrameNumbers('bird-walk', { start: 0, end: 6 }),
                 frameRate: 10,
                 repeat: -1
             });
             this.anims.create({
                 key: 'bird-death',
-                frames: this.anims.generateFrameNumbers('bird-death', { start: 0, end: 3 }),
-                frameRate: 8,
+                frames: this.anims.generateFrameNumbers('bird-death', { start: 0, end: 8 }),
+                frameRate: 10,
                 repeat: 0
             });
 

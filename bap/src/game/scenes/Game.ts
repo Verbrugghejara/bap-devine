@@ -385,8 +385,8 @@ export class Game extends Scene {
 
     private getObstacleConfig() {
         const configs = [
-            { texture: 'bird-walk', animKey: 'bird-walk', scale: 3, hasAnimation: true, movementType: 'horizontal' },
-            { texture: 'plane', animKey: 'plane-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
+            { texture: 'bird-walk', animKey: 'bird-walk', scale: 1, hasAnimation: true, movementType: 'horizontal' },
+            { texture: 'plane-flying', animKey: 'plane-flying', scale: 1, hasAnimation: true, movementType: 'horizontal' },
             { texture: 'meteor-falling', animKey: 'meteor-falling', scale: 1, hasAnimation: true, movementType: 'vertical' },
             { texture: 'sattelite', animKey: 'sattelite-spin', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
             { texture: 'ufo', animKey: 'ufo-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' }
@@ -439,6 +439,12 @@ export class Game extends Scene {
             (obstacle as any).speed = speed;
             (obstacle as any).obstacleType = config.texture;
             (obstacle as any).movementType = config.movementType;
+            
+            // Add flying animation for birds
+            if (config.texture === 'bird-walk') {
+                (obstacle as any).flyingOffset = 0;
+                (obstacle as any).flyingSpeed = Phaser.Math.Between(2, 4);
+            }
             
             this.obstacles.push(obstacle);
         } catch (e) {
@@ -551,7 +557,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [50, 50, 9, 11, 13];
+        const scrollSpeeds = [5, 7, 9, 11, 13];
         const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * (this.shieldActive ? 1.5 : 1);
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
@@ -851,6 +857,12 @@ export class Game extends Scene {
                 } else {
                     if (!direction) (obstacle as any).direction = 1;
                     obstacle.x += speed * direction;
+                    
+                    // Add flying animation for birds
+                    if ((obstacle as any).obstacleType === 'bird-walk') {
+                        (obstacle as any).flyingOffset += (obstacle as any).flyingSpeed * 0.1;
+                        obstacle.y += Math.sin((obstacle as any).flyingOffset) * 1.5;
+                    }
                 }
             } else {
                 // Visual feedback for frozen obstacles
@@ -886,6 +898,10 @@ export class Game extends Scene {
             if (!this.ballonInvulnerable && !this.shieldActive && this.checkOverlap(obstacle, this.ballon)) {
                 this.damageBallon();
                 this.ballonInvulnerable = true;
+                
+                // Camera shake effect
+                this.cameras.main.shake(500, 0.01);
+                
                 this.time.delayedCall(1000, () => {
                     this.ballonInvulnerable = false;
                 });
@@ -894,12 +910,16 @@ export class Game extends Scene {
                 const y = obstacle.y;
                 const parent = obstacle.parentContainer;
                 const obstacleType = (obstacle as any).obstacleType;
+                const obstacleDirection = (obstacle as any).direction; // Save direction for animations
+                const obstacleScaleX = obstacle.scaleX; // Save scale for mirroring
                 obstacle.destroy();
                 
                 // Bird death animation
                 if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
-                    const deadObstacle = this.physics.add.sprite(x, y, "bird-walk")
-                        .setScale(4)
+                    // Adjust x offset based on direction (if mirrored, offset should be negative)
+                    const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                    const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
+                        .setScale(obstacleScaleX, 1) // Use the same horizontal scale (mirroring) as the original bird
                         .setDepth(50)
                         .setOrigin(0.5);
                     if (parent) parent.add(deadObstacle);
@@ -952,6 +972,34 @@ export class Game extends Scene {
                                 alpha: 0,
                                 duration: 300,
                                 onComplete: () => breakingMeteor.destroy()
+                            });
+                        });
+                    }
+                }
+                
+                // Plane crashing animation
+                if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
+                    // Adjust x offset based on direction (if mirrored, offset should be negative)
+                    const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                    const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-crashing')
+                        .setScale(obstacleScaleX, 1) // Use the same horizontal scale (mirroring) as the original plane
+                        .setDepth(50)
+                        .setOrigin(0.5);
+                    if (parent) parent.add(crashingPlane);
+                    
+                    const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
+                    body.setAllowGravity(true);
+                    body.setGravityY(700);
+                    body.setVelocityY(Phaser.Math.Between(250, 350));
+                    
+                    if (this.anims.exists('plane-crashing')) {
+                        crashingPlane.play('plane-crashing');
+                        crashingPlane.once('animationcomplete', () => {
+                            this.tweens.add({
+                                targets: crashingPlane,
+                                alpha: 0,
+                                duration: 300,
+                                onComplete: () => crashingPlane.destroy()
                             });
                         });
                     }
