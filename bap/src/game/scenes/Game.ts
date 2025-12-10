@@ -347,6 +347,15 @@ export class Game extends Scene {
                     this.ballonInvulnerable = false;
                 }
             });
+            
+            // Change balloon texture based on health (only if no power-up is active)
+            if (!this.activePowerUp) {
+                if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
+                    this.ballon.setTexture('balloon-health2');
+                } else if (this.ballonHealth === 1 && this.textures.exists('balloon-health1')) {
+                    this.ballon.setTexture('balloon-health1');
+                }
+            }
         }
         
         if (this.ballonHealth <= 0) {
@@ -401,6 +410,18 @@ export class Game extends Scene {
         try {
             let x, y, direction, speed;
             
+            // Calculate current sfeer's screen Y position range
+            const currentSfeerCenterY = this.sfeerBaseY[this.huidigeSfeerIndex] + this.sfeerOffsetY;
+            const currentSfeerHeight = this.sfeerHoogtes[this.huidigeSfeerIndex];
+            const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
+            const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
+            
+            // Only spawn if the top of the screen is within the current sfeer
+            if (currentSfeerTop > 0) {
+                // We're not yet in a position to spawn obstacles for this sfeer
+                return;
+            }
+            
             if (config.movementType === 'vertical') {
                 direction = Math.random() < 0.5 ? 1 : -1; // Random left or right
                 // Adjust spawn position based on direction to avoid going off screen
@@ -415,8 +436,8 @@ export class Game extends Scene {
                 speed = Phaser.Math.Between(8, 12);
             } else {
                 const fromLeft = Math.random() < 0.5;
-                x = fromLeft ? -50 : this.scale.width + 50;
-                y = -40;
+                x = fromLeft ? -200 : this.scale.width + 200;
+                y = -200;
                 direction = fromLeft ? 1 : -1;
                 speed = Phaser.Math.Between(2, 3);
             }
@@ -557,9 +578,18 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [100, 100, 100, 11, 13];
+        const scrollSpeeds = [5, 7, 9, 11, 13];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
-        const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * (this.shieldActive ? 1.5 : 1);
+        
+        // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
+        let healthSpeedModifier = 1.0;
+        if (this.ballonHealth === 2) {
+            healthSpeedModifier = 0.90;
+        } else if (this.ballonHealth === 1) {
+            healthSpeedModifier = 0.80;
+        }
+        
+        const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * healthSpeedModifier; // * (this.shieldActive ? 1.5 : 1);
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
         
@@ -868,8 +898,14 @@ export class Game extends Scene {
             } else {
                 // Visual feedback for frozen obstacles
                 if (!obstacle.getData('frozen')) {
-                    obstacle.setTint(0x88ccff);
+                    // obstacle.setTint(0x88ccff);
                     obstacle.setData('frozen', true);
+                    
+                    // Change plane texture to frozen version if it's a plane
+                    if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
+                        obstacle.setTexture('plane-freeze');
+                        obstacle.anims.stop();
+                    }
                 }
             }
             
@@ -877,6 +913,14 @@ export class Game extends Scene {
             if (!shouldFreeze && obstacle.getData('frozen')) {
                 obstacle.clearTint();
                 obstacle.setData('frozen', false);
+                
+                // Change plane back to animated version
+                if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-flying')) {
+                    obstacle.setTexture('plane-flying');
+                    if (this.anims.exists('plane-flying')) {
+                        obstacle.play('plane-flying');
+                    }
+                }
             }
             
             // Remove if off screen
@@ -1167,6 +1211,8 @@ export class Game extends Scene {
             (powerUp.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
             (powerUp as any).powerUpType = type;
             (powerUp as any).uniqueKey = uniqueKey;
+            (powerUp as any).baseY = y; // Store base Y position for bobbing animation
+            (powerUp as any).bobOffset = 0; // Current bob offset
 
             this.powerUps.push(powerUp);
             
@@ -1185,13 +1231,22 @@ export class Game extends Scene {
     }
 
     private updatePowerUpPositions() {
+        const time = this.time.now;
+        
         for (const powerUp of this.powerUps) {
-            powerUp.y += this.smoothScrollSpeed;
+            // Update base Y with scroll
+            (powerUp as any).baseY += this.smoothScrollSpeed;
+            
+            // Calculate bob offset (sine wave for smooth up/down motion)
+            (powerUp as any).bobOffset = Math.sin(time * 0.003) * 20;
+            
+            // Apply both base position and bob offset
+            powerUp.y = (powerUp as any).baseY + (powerUp as any).bobOffset;
         }
 
         // Remove power-ups that are off screen
         for (let i = this.powerUps.length - 1; i >= 0; i--) {
-            if (this.powerUps[i].y > this.scale.height + 200) {
+            if ((this.powerUps[i] as any).baseY > this.scale.height + 200) {
                 this.powerUps[i].destroy();
                 this.powerUps.splice(i, 1);
             }
@@ -1227,20 +1282,34 @@ export class Game extends Scene {
                 if (this.ballonHealth < 3) {
                     this.ballonHealth++;
                     EventBus.emit('update-health', this.ballonHealth);
+                    
+                    // Update balloon texture based on new health (if no other power-up is active)
+                    if (this.ballon && !this.activePowerUp) {
+                        if (this.ballonHealth === 3 && this.textures.exists('balloon')) {
+                            this.ballon.setTexture('balloon');
+                        } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
+                            this.ballon.setTexture('balloon-health2');
+                        }
+                    }
                 }
                 break;
 
             case 'freeze':
                 this.freezeActive = true;
                 this.activePowerUp = 'freeze';
-                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
+                this.powerUpEndTime = Date.now() + 15000; // 10 seconds
                 EventBus.emit('update-powerup', 'freeze');
+                
+                // Change balloon to freeze version
+                if (this.ballon && this.textures.exists('balloon-freeze')) {
+                    this.ballon.setTexture('balloon-freeze');
+                }
                 break;
 
             case 'shield':
                 this.shieldActive = true;
                 this.activePowerUp = 'shield';
-                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
+                this.powerUpEndTime = Date.now() + 15000; // 10 seconds
                 EventBus.emit('update-powerup', 'shield');
                 
                 // Change balloon to shield version
@@ -1261,11 +1330,27 @@ export class Game extends Scene {
         if (this.activePowerUp && Date.now() >= this.powerUpEndTime) {
             if (this.activePowerUp === 'freeze') {
                 this.freezeActive = false;
+                // Change balloon back based on health
+                if (this.ballon && this.textures.exists('balloon')) {
+                    if (this.ballonHealth === 3) {
+                        this.ballon.setTexture('balloon');
+                    } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
+                        this.ballon.setTexture('balloon-health2');
+                    } else if (this.ballonHealth === 1 && this.textures.exists('balloon-health1')) {
+                        this.ballon.setTexture('balloon-health1');
+                    }
+                }
             } else if (this.activePowerUp === 'shield') {
                 this.shieldActive = false;
-                // Change balloon back to normal
+                // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
-                    this.ballon.setTexture('balloon');
+                    if (this.ballonHealth === 3) {
+                        this.ballon.setTexture('balloon');
+                    } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
+                        this.ballon.setTexture('balloon-health2');
+                    } else if (this.ballonHealth === 1 && this.textures.exists('balloon-health1')) {
+                        this.ballon.setTexture('balloon-health1');
+                    }
                 }
             }
             

@@ -53,11 +53,15 @@ export class Preloader extends Scene
         this.load.image('winner', 'winner.png');
         this.load.image('second', 'second.png');
         this.load.image('alien', 'alienHoofd.png');
+        this.load.image('plane-freeze', 'planeFreeze.png');
         
 
 
         this.load.image('balloon', 'balloons/balloon.png');
         this.load.image('balloon-shield', 'balloons/balloonShield.png');
+        this.load.image('balloon-freeze', 'balloons/balloonFreeze.png');
+        this.load.image('balloon-health1', 'balloons/balloonHealth1.png');
+        this.load.image('balloon-health2', 'balloons/balloonHealth2.png');
 
 
         // Obstacle images (will be replaced with spritesheets later)
