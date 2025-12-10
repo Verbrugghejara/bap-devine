@@ -53,6 +53,9 @@ export class Preloader extends Scene
         this.load.image('arrows', 'arrows.png');
         this.load.image('progress-indicator', 'progressIndicator.png');
         this.load.image('timer', 'timer.png');
+        this.load.image('winner', 'winner.png');
+        this.load.image('second', 'second.png');
+        this.load.image('alien', 'alienHoofd.png');
         
         // Obstacle images (will be replaced with spritesheets later)
         this.load.image('bird', 'bird.png');

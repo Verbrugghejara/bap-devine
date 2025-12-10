@@ -557,7 +557,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 13];
+        // const scrollSpeeds = [5, 7, 9, 11, 13];
+        const scrollSpeeds = [200, 200, 200, 200, 200];
         const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * (this.shieldActive ? 1.5 : 1);
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
