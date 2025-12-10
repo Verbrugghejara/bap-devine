@@ -51,7 +51,7 @@ export class Game extends Scene {
     private bgExosfeer: Phaser.GameObjects.Image | null = null;
 
     // Balloon
-    private ballon: Phaser.GameObjects.Sprite | null = null;
+    private ballon: Phaser.GameObjects.Image | null = null;
     private ballonContainer: Phaser.GameObjects.Container | null = null;
     private ballonHealth: number = 3;
     private ballonInvulnerable: boolean = false;
@@ -61,7 +61,7 @@ export class Game extends Scene {
     private propellorRood: Phaser.GameObjects.Sprite | null;
     private propellorOffsetXBlauw: number = -39;
     private propellorOffsetXRood: number = 39;
-    private propellorOffsetY: number = 160;
+    private propellorOffsetY: number = 142;
 
     // Wind effects
     private windBlauw: Phaser.GameObjects.Sprite | null = null;
@@ -292,7 +292,7 @@ export class Game extends Scene {
 
     private createBalloon() {
         try {
-            this.ballon = this.add.sprite(0, 0, "balloon").setScale(0.5).setDepth(50);
+            this.ballon = this.add.image(0, 0, "balloon").setScale(0.54).setDepth(50);
 
             this.propellorBlauw = this.add.sprite(
                 this.propellorOffsetXBlauw,
@@ -557,7 +557,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [100, 7, 9, 11, 13];
+        const scrollSpeeds = [100, 100, 100, 11, 13];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * (this.shieldActive ? 1.5 : 1);
         this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
@@ -896,27 +896,128 @@ export class Game extends Scene {
             }
             
             // Check collision
-            if (!this.ballonInvulnerable && !this.shieldActive && this.checkOverlap(obstacle, this.ballon)) {
-                this.damageBallon();
-                this.ballonInvulnerable = true;
+            if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
+                // If shield is active, destroy obstacle but don't damage balloon
+                if (this.shieldActive) {
+                    const x = obstacle.x;
+                    const y = obstacle.y;
+                    const parent = obstacle.parentContainer;
+                    const obstacleType = (obstacle as any).obstacleType;
+                    const obstacleScaleX = obstacle.scaleX;
+                    obstacle.destroy();
+                    
+                    // Play destruction animations without damaging balloon
+                    // Bird death animation
+                    if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
+                        const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                        const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
+                            .setScale(obstacleScaleX, 1)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(deadObstacle);
+                        
+                        if (this.anims.exists('bird-death')) {
+                            deadObstacle.play("bird-death");
+                        }
+                        
+                        const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(800);
+                        body.setVelocityY(Phaser.Math.Between(250, 400));
+                        body.setVelocityX(Phaser.Math.Between(-50, 50));
+                        body.setBounce(0.2);
+                        
+                        this.time.addEvent({
+                            delay: 100,
+                            loop: true,
+                            callback: () => {
+                                if (deadObstacle && deadObstacle.y > this.scale.height + 100) {
+                                    this.tweens.add({
+                                        targets: deadObstacle!,
+                                        alpha: 0,
+                                        duration: 400,
+                                        onComplete: () => deadObstacle?.destroy(),
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Meteor breaking animation
+                    if (obstacleType === 'meteor-falling' && this.textures.exists('meteor-breaking')) {
+                        const breakingMeteor = this.physics.add.sprite(x+30, y+60, 'meteor-breaking')
+                            .setScale(1)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(breakingMeteor);
+                        
+                        const body = breakingMeteor.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(600);
+                        body.setVelocityY(Phaser.Math.Between(200, 300));
+                        
+                        if (this.anims.exists('meteor-breaking')) {
+                            breakingMeteor.play('meteor-breaking');
+                            breakingMeteor.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: breakingMeteor,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => breakingMeteor.destroy()
+                                });
+                            });
+                        }
+                    }
+                    
+                    // Plane crashing animation
+                    if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
+                        const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                        const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-crashing')
+                            .setScale(obstacleScaleX, 1)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(crashingPlane);
+                        
+                        const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(700);
+                        body.setVelocityY(Phaser.Math.Between(250, 350));
+                        
+                        if (this.anims.exists('plane-crashing')) {
+                            crashingPlane.play('plane-crashing');
+                            crashingPlane.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: crashingPlane,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => crashingPlane.destroy()
+                                });
+                            });
+                        }
+                    }
+                    
+                    this.obstacles.splice(i, 1);
+                } else {
+                    // Normal collision - damage balloon
+                    this.damageBallon();
+                    this.ballonInvulnerable = true;
+                    
+                    // Camera shake effect
+                    this.cameras.main.shake(500, 0.01);
+                    
+                    this.time.delayedCall(1000, () => {
+                        this.ballonInvulnerable = false;
+                    });
+                    
+                    const x = obstacle.x;
+                    const y = obstacle.y;
+                    const parent = obstacle.parentContainer;
+                    const obstacleType = (obstacle as any).obstacleType;
+                    const obstacleScaleX = obstacle.scaleX; // Save scale for mirroring
+                    obstacle.destroy();
                 
-                // Camera shake effect
-                this.cameras.main.shake(500, 0.01);
-                
-                this.time.delayedCall(1000, () => {
-                    this.ballonInvulnerable = false;
-                });
-                
-                const x = obstacle.x;
-                const y = obstacle.y;
-                const parent = obstacle.parentContainer;
-                const obstacleType = (obstacle as any).obstacleType;
-                const obstacleDirection = (obstacle as any).direction; // Save direction for animations
-                const obstacleScaleX = obstacle.scaleX; // Save scale for mirroring
-                obstacle.destroy();
-                
-                // Bird death animation
-                if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
+                    // Bird death animation
+                    if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
                     // Adjust x offset based on direction (if mirrored, offset should be negative)
                     const xOffset = obstacleScaleX < 0 ? -100 : 100;
                     const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
@@ -1006,7 +1107,8 @@ export class Game extends Scene {
                     }
                 }
                 
-                this.obstacles.splice(i, 1);
+                    this.obstacles.splice(i, 1);
+                }
             }
         }
     }
@@ -1141,9 +1243,9 @@ export class Game extends Scene {
                 this.powerUpEndTime = Date.now() + 10000; // 10 seconds
                 EventBus.emit('update-powerup', 'shield');
                 
-                // Visual feedback on balloon
-                if (this.ballon) {
-                    this.ballon.setTint(0x4444ff);
+                // Change balloon to shield version
+                if (this.ballon && this.textures.exists('balloon-shield')) {
+                    this.ballon.setTexture('balloon-shield');
                 }
                 break;
 
@@ -1161,8 +1263,9 @@ export class Game extends Scene {
                 this.freezeActive = false;
             } else if (this.activePowerUp === 'shield') {
                 this.shieldActive = false;
-                if (this.ballon) {
-                    this.ballon.clearTint();
+                // Change balloon back to normal
+                if (this.ballon && this.textures.exists('balloon')) {
+                    this.ballon.setTexture('balloon');
                 }
             }
             

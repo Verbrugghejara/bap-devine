@@ -33,8 +33,6 @@ export class Preloader extends Scene
         this.load.setPath('assets');
 
         this.load.image('logo', 'logo.png');
-        this.load.image('star', 'star.png');
-        this.load.image('ballon', 'ballon.png');
         this.load.image('background', 'bg.png');
         this.load.image('bg-troposfeer', 'bgSferen/bgTroposfeer.jpg');
         this.load.image('bg-stratosfeer', 'bgSferen/bgStratosfeer.jpg');
@@ -46,7 +44,6 @@ export class Preloader extends Scene
         this.load.spritesheet('bird-walk', 'bird/birdFlying2.png', { frameWidth: 140, frameHeight: 125 });
         this.load.spritesheet('bird-death', 'bird/birdDeath.png', { frameWidth: 320, frameHeight: 375 });
         this.load.image('heart', 'heart.svg');
-        this.load.image('balloon', 'balloon.png');
         this.load.image('active-blauw', 'activePropellorBlauw.png');
         this.load.image('active-rood', 'activePropellorRood.png');
         this.load.image('inactive', 'inactivePropellor.png');
@@ -57,6 +54,12 @@ export class Preloader extends Scene
         this.load.image('second', 'second.png');
         this.load.image('alien', 'alienHoofd.png');
         
+
+
+        this.load.image('balloon', 'balloons/balloon.png');
+        this.load.image('balloon-shield', 'balloons/balloonShield.png');
+
+
         // Obstacle images (will be replaced with spritesheets later)
         this.load.image('bird', 'bird.png');
         this.load.image('meteor', 'meteor.png');

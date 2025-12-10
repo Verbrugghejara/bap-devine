@@ -33,7 +33,7 @@ export class Tutorial extends Scene {
     private propellorRood: Phaser.GameObjects.Sprite | null;
     private windRood: Phaser.GameObjects.Sprite | null;
     private propellorOffsetX: number = -38;
-    private propellorOffsetY: number = 165;
+    private propellorOffsetY: number = 142;
     
     // Tutorial elements
     private activePropellor: Phaser.GameObjects.Image;
@@ -244,9 +244,9 @@ export class Tutorial extends Scene {
     private createBalloonAndPropellors() {
         this.balloon = this.add.image(
             this.scale.width - 280, 
-            820, 
+            860, 
             'balloon'
-        ).setDepth(1000).setScale(0.5);
+        ).setDepth(1000).setScale(0.54);
         
         this.propellorBlauw = this.add.sprite(
             this.balloon.x + this.propellorOffsetX,
