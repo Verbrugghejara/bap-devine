@@ -18,6 +18,8 @@
         </svg>
       </div>
       <!-- <div style="color:#222;font-size:18px;text-align:center;width:100%">Progress: {{ (sfeerProgress * 100).toFixed(1) }}%</div> -->
+      <div class="sfeer-progress-bg" >
+      </div>
       <div class="sfeer-progress-bar"  :style="{ height: 'calc(' + (sfeerProgress * 100) + '% - 32px)', transition: 'background 0.1s ease' }">
         <div class="sfeer-progress-highlight"
          >
@@ -142,6 +144,7 @@
             <p v-if="showTimerUpdate" class="timer-update" :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">-10</p>
           </Transition>
         </div>
+        
       </div>
       <div class="right-ui">
 
@@ -174,7 +177,13 @@
           </div>
         </div>
       </div>
+      
     </div>
+    <!-- <div class="distance-container"> -->
+          <div class="distance">
+            <p :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">{{ distanceText }}</p>
+          </div>
+        <!-- </div> -->
 
   </div>
 </template>
@@ -189,6 +198,7 @@ const sfeerText = ref('TROPOSFEER');
 const sfeerIndex = ref(0);
 const visible = ref(true);
 const timerText = ref('0:00');
+const distanceText = ref('0');
 const activePowerUp = ref<string | null>(null);
 const powerUpProgress = ref(0);
 const showTimerUpdate = ref(false);
@@ -224,6 +234,10 @@ function updateSfeerProgress(progress: number) {
 
 function updateTimer(time: string) {
   timerText.value = time;
+}
+
+function updateDistance(meters: number) {
+  distanceText.value = meters.toLocaleString('nl-BE');
 }
 
 function updateTimerBonus() {
@@ -262,6 +276,7 @@ onMounted(() => {
   EventBus.on('update-sfeer-index', updateSfeerIndex);
   EventBus.on('update-sfeer-progress', updateSfeerProgress);
   EventBus.on('update-timer', updateTimer);
+  EventBus.on('update-distance', updateDistance);
   EventBus.on('timer-update', updateTimerBonus);
   EventBus.on('update-powerup', updatePowerUp);
 });
@@ -274,6 +289,7 @@ onUnmounted(() => {
   EventBus.off('update-sfeer-index', updateSfeerIndex);
   EventBus.off('update-sfeer-progress', updateSfeerProgress);
   EventBus.off('update-timer', updateTimer);
+  EventBus.off('update-distance', updateDistance);
   EventBus.off('timer-update', updateTimerBonus);
   EventBus.off('update-powerup', updatePowerUp);
 });
@@ -374,6 +390,29 @@ onUnmounted(() => {
   gap: 16px;
 /* height: 65px; */
   /* justify-content: center; */
+}
+
+
+
+.distance {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.distance p {
+  font-family: 'Bungee', 'Arial Black', Arial, sans-serif;
+  font-size: 96px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  text-align: center;
+  margin: 0;
 }
 
 .timer {
@@ -557,6 +596,17 @@ margin: 0;
   border-radius: 100px;
   z-index: 1;
   transition: height 0.6s cubic-bezier(.4, 1.4, .6, 1);
+}
+
+.sfeer-progress-bg {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  width: 48px;
+  height: 95.5%;
+  background: #EDEDED;
+  border-radius: 100px;
+  z-index: 1;
 }
 
 .sfeer-progress-highlight {

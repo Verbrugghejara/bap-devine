@@ -660,7 +660,11 @@ export class Game extends Scene {
         const scrolled = Math.min(this.sfeerOffsetY, totalHeight);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
         
+        // Calculate meters: 0m at start, 1000m at top (rounded to nearest meter)
+        const metersClimbed = Math.round(progress * 1000);
+        
         EventBus.emit('update-sfeer-progress', progress);
+        EventBus.emit('update-distance', metersClimbed);
         if (typeof window !== 'undefined') {
             (window as any).sfeerProgress = progress;
         }
