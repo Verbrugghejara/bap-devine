@@ -357,6 +357,8 @@ export class GameVictory extends Scene {
         shineBottomRight.fillStyle(0xFFFFFF, 0.4);
         shineBottomRight.fillRoundedRect(btnWidth / 2 -60, btnHeight / 2 + 50, 9, 6, 3);
         shineBottomRight.rotation = -33.256 * (Math.PI / 180);
+
+        
         const circleRadius = circleSize / 3;
         const contentWidth = circleRadius * 2 + iconMargin + startText.width;
         const contentStartX = -contentWidth / 2;

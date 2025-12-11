@@ -24,6 +24,7 @@ export class Game extends Scene {
     private isVictorySequence: boolean = false;
     private isBalloonLeaving: boolean = false;
     private isVictorySwiping: boolean = false;
+    private lastSfeerIndex: number = 0;
 
     // Input state
     private rotary: any = null;
@@ -144,6 +145,7 @@ export class Game extends Scene {
         this.ballonHealth = 3;
         this.sfeerOffsetY = 0;
         this.huidigeSfeerIndex = 0;
+        this.lastSfeerIndex = 0;
         this.isGamePaused = false;
         this.pauseStartTime = null;
         this.countdownDone = false;
@@ -164,6 +166,11 @@ export class Game extends Scene {
         setTimeout(() => {
             this.gameStartTime = Date.now();
             this.countdownDone = true;
+            
+            // Show initial interlude for troposfeer after a short delay
+            setTimeout(() => {
+                EventBus.emit('show-interlude', 0);
+            }, 1000);
             
             // Spawn initial power-up for troposfeer
             this.checkPowerUpSpawn(0);
@@ -650,6 +657,12 @@ export class Game extends Scene {
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
             this.checkPowerUpSpawn(sfeerIndex);
+            
+            // Show interlude when entering new sfeer (skip first transition and only if countdown is done)
+            if (this.countdownDone && sfeerIndex > 0 && sfeerIndex > this.lastSfeerIndex) {
+                EventBus.emit('show-interlude', sfeerIndex);
+            }
+            this.lastSfeerIndex = sfeerIndex;
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);
     }

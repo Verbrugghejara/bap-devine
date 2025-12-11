@@ -2,6 +2,7 @@
 
 import PauseUI from './game/ui/PauseUI.vue';
 import CountDownUI from './game/ui/CountDownUI.vue';
+import InterludeUI from './game/ui/InterludeUI.vue';
 const showPauseUI = ref(false);
 
 import Phaser from 'phaser';
@@ -110,6 +111,7 @@ onUnmounted(() => {
         <PhaserGame ref="phaserRef" @current-active-scene="currentScene" />
         <CountDownUI v-if="showCountdown && currentSceneKey === 'Game'" :start="countdownActive" @done="onCountdownDone" />
         <GameUI v-if="showGameUI && currentSceneKey === 'Game'" />
+        <InterludeUI v-if="currentSceneKey === 'Game'" />
         <PauseUI v-if="showPauseUI && currentSceneKey === 'Game'" />
 
     </div>

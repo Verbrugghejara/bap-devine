@@ -78,7 +78,7 @@ export class MainMenu extends Scene {
 
             const shadowOffsetY = 8;
             const shadow = this.add.graphics();
-            shadow.fillStyle(0xBC7F36, 1);
+            shadow.fillStyle(0xB68302, 1);
             shadow.fillRoundedRect(
                 -btnWidth/2,
                 -btnHeight/2 + shadowOffsetY,
@@ -88,8 +88,24 @@ export class MainMenu extends Scene {
             );
 
         const bg = this.add.graphics();
-        bg.fillStyle(Number('0x' + SFEER_LABELS[0].colors.c.toString(16).padStart(6, '0')), 1);
+        bg.fillStyle(0xFFB703);
         bg.fillRoundedRect(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight, 16);
+
+        // Shining effects
+        const shineTopLeft = this.add.graphics();
+        shineTopLeft.fillStyle(0xFFFFFF, 0.4);
+        shineTopLeft.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -60, 16.844, 5.877, 3);
+        shineTopLeft.rotation = -33.256 * (Math.PI / 180);
+        const shineTopLeft2 = this.add.graphics();
+        shineTopLeft2.fillStyle(0xFFFFFF, 0.4);
+        shineTopLeft2.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -50, 9, 6, 3);
+        shineTopLeft2.rotation = -33.256 * (Math.PI / 180);
+        
+        const shineBottomRight = this.add.graphics();
+        shineBottomRight.fillStyle(0xFFFFFF, 0.4);
+        shineBottomRight.fillRoundedRect(btnWidth / 2 -60, btnHeight / 2 + 50, 9, 6, 3);
+        shineBottomRight.rotation = -33.256 * (Math.PI / 180);
+
 
         const circleRadius = circleSize / 3;
         const contentWidth = circleRadius * 2 + iconMargin + startText.width;
@@ -106,6 +122,9 @@ export class MainMenu extends Scene {
         this.startButton = this.add.container(this.scale.width / 2, this.scale.height - 200, [
             shadow,
             bg,
+            shineTopLeft,
+            shineTopLeft2,
+            shineBottomRight,
             circle,
             startText
         ]);
@@ -115,10 +134,13 @@ export class MainMenu extends Scene {
 
         const triggerButton = () => {
             const bg = this.startButton.list[1];
-            const circle = this.startButton.list[2];
-            const startText = this.startButton.list[3];
+            const shineTopLeft = this.startButton.list[2];
+            const shineTopLeft2 = this.startButton.list[3];
+            const shineBottomRight = this.startButton.list[4];
+            const circle = this.startButton.list[5];
+            const startText = this.startButton.list[6];
             this.tweens.add({
-                targets: [bg, circle, startText],
+                targets: [bg, shineTopLeft, shineTopLeft2, shineBottomRight, circle, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,
@@ -142,10 +164,13 @@ export class MainMenu extends Scene {
         
         if (buttonPressed && !this.wasButtonPressed) {
             const bg = this.startButton.list[1];
-            const circle = this.startButton.list[2];
-            const startText = this.startButton.list[3];
+            const shineTopLeft = this.startButton.list[2];
+            const shineTopLeft2 = this.startButton.list[3];
+            const shineBottomRight = this.startButton.list[4];
+            const circle = this.startButton.list[5];
+            const startText = this.startButton.list[6];
             this.tweens.add({
-                targets: [bg, circle, startText],
+                targets: [bg, shineTopLeft, shineTopLeft2, shineBottomRight, circle, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,
