@@ -128,7 +128,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
   border-radius: 24px;
-  background: #EFA348;
+  background: #FFB703;
   margin-top: 46px;
   transition: bottom 0.18s cubic-bezier(.4, 1.6, .6, 1);
 }
@@ -152,7 +152,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 16px;
   border-radius: 24px;
-  background: #BC7F36;
+  background: #B68302;
   margin-top: 46px;
 }
 p {

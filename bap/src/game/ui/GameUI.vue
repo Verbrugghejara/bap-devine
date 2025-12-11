@@ -253,7 +253,7 @@ function updatePowerUp(powerUp: string | null) {
     // Start progress countdown
     powerUpProgress.value = 1;
     const startTime = Date.now();
-    const duration = 10000; // 10 seconds
+    const duration = 15000; // 15 seconds
     
     const updateProgress = () => {
       const elapsed = Date.now() - startTime;

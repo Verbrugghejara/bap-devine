@@ -165,7 +165,7 @@ onUnmounted(() => {
 
 .interlude-container > div:nth-child(2) {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 24px;
 }
@@ -183,6 +183,8 @@ onUnmounted(() => {
 
 .pop-in-delayed-2 {
     animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.1s backwards;
+    display:flex;
+    flex-direction: row;
 }
 
 .pop-in-delayed-3 {

@@ -411,6 +411,9 @@ export class Game extends Scene {
     }
 
     private spawnObstacle() {
+        // Don't spawn obstacles when game is paused
+        if (this.isGamePaused) return;
+        
         const config = this.getObstacleConfig();
         if (!this.textures.exists(config.texture)) return;
         
@@ -423,11 +426,19 @@ export class Game extends Scene {
             const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
             const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
             
-            // Only spawn if the top of the screen is within the current sfeer
-            if (currentSfeerTop > 0) {
-                // We're not yet in a position to spawn obstacles for this sfeer
+            // Start spawning only when we're 20% into the sfeer
+            const startSpawnThreshold = currentSfeerHeight * 0.1;
+            if (currentSfeerTop > -startSpawnThreshold) {
+                // We haven't progressed enough into this sfeer yet
                 return;
             }
+            
+            // Stop spawning when we're near the end of the current sfeer (last 30% of the sfeer)
+            // const stopSpawnThreshold = currentSfeerHeight * 0.2;
+            // if (currentSfeerTop < -currentSfeerHeight + stopSpawnThreshold) {
+            //     // We're too close to the end of this sfeer
+            //     return;
+            // }
             
             if (config.movementType === 'vertical') {
                 direction = Math.random() < 0.5 ? 1 : -1; // Random left or right
@@ -585,7 +596,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 13];
+        const scrollSpeeds = [50, 7, 9, 11, 13];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
@@ -885,17 +896,29 @@ export class Game extends Scene {
             const movementType = (obstacle as any).movementType || 'horizontal';
             
             // Check if obstacle should be frozen
-            const distanceToBalloon = Phaser.Math.Distance.Between(
-                obstacle.x, obstacle.y,
-                this.ballonContainer.x, this.ballonContainer.y
-            );
-            const shouldFreeze = this.freezeActive && distanceToBalloon < 700;
+            const isFrozen = obstacle.getData('frozen');
             
-            // const screenMiddleY = this.scale.height / 2;
-            // const reachedMiddle = obstacle.y >= screenMiddleY - 50 && obstacle.y <= screenMiddleY + 50;
-            // const shouldFreeze = this.freezeActive && reachedMiddle;
+            // Once frozen, stay frozen until power-up ends
+            // Only check distance for obstacles that aren't already frozen
+            if (!isFrozen && this.freezeActive) {
+                const distanceToBalloon = Phaser.Math.Distance.Between(
+                    obstacle.x, obstacle.y,
+                    this.ballonContainer.x, this.ballonContainer.y
+                );
+                
+                if (distanceToBalloon < 700) {
+                    obstacle.setData('frozen', true);
+                    
+                    // Change plane texture to frozen version if it's a plane
+                    if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
+                        obstacle.setTexture('plane-freeze');
+                        obstacle.anims.stop();
+                    }
+                }
+            }
+            
             // Update obstacle position only if not frozen
-            if (!shouldFreeze) {
+            if (!isFrozen) {
                 if (movementType === 'vertical') {
                     obstacle.y += speed;
                     // Add horizontal drift for meteors
@@ -910,32 +933,6 @@ export class Game extends Scene {
                     if ((obstacle as any).obstacleType === 'bird-walk') {
                         (obstacle as any).flyingOffset += (obstacle as any).flyingSpeed * 0.1;
                         obstacle.y += Math.sin((obstacle as any).flyingOffset) * 1.5;
-                    }
-                }
-            } else {
-                // Visual feedback for frozen obstacles
-                if (!obstacle.getData('frozen')) {
-                    // obstacle.setTint(0x88ccff);
-                    obstacle.setData('frozen', true);
-                    
-                    // Change plane texture to frozen version if it's a plane
-                    if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
-                        obstacle.setTexture('plane-freeze');
-                        obstacle.anims.stop();
-                    }
-                }
-            }
-            
-            // Remove freeze tint if no longer frozen
-            if (!shouldFreeze && obstacle.getData('frozen')) {
-                obstacle.clearTint();
-                obstacle.setData('frozen', false);
-                
-                // Change plane back to animated version
-                if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-flying')) {
-                    obstacle.setTexture('plane-flying');
-                    if (this.anims.exists('plane-flying')) {
-                        obstacle.play('plane-flying');
                     }
                 }
             }
@@ -1314,7 +1311,7 @@ export class Game extends Scene {
             case 'freeze':
                 this.freezeActive = true;
                 this.activePowerUp = 'freeze';
-                this.powerUpEndTime = Date.now() + 15000; // 10 seconds
+                this.powerUpEndTime = Date.now() + 15000; // 15 seconds
                 EventBus.emit('update-powerup', 'freeze');
                 
                 // Change balloon to freeze version
@@ -1326,7 +1323,7 @@ export class Game extends Scene {
             case 'shield':
                 this.shieldActive = true;
                 this.activePowerUp = 'shield';
-                this.powerUpEndTime = Date.now() + 15000; // 10 seconds
+                this.powerUpEndTime = Date.now() + 15000; // 15 seconds
                 EventBus.emit('update-powerup', 'shield');
                 
                 // Change balloon to shield version
@@ -1336,17 +1333,40 @@ export class Game extends Scene {
                 break;
 
             case 'timer':
-                // Subtract 10 seconds from elapsed time
-                this.gameStartTime += 10000;
-                EventBus.emit('timer-update', '-10s');
+                // Subtract 15 seconds from elapsed time
+                this.gameStartTime += 15000;
+                EventBus.emit('timer-update', '-15s');
                 break;
         }
     }
 
     private updateActivePowerUp() {
         if (this.activePowerUp && Date.now() >= this.powerUpEndTime) {
-            if (this.activePowerUp === 'freeze') {
+            const powerUpType = this.activePowerUp;
+            
+            // Clear power-up state and notify UI immediately
+            this.activePowerUp = null;
+            EventBus.emit('update-powerup', null);
+            
+            if (powerUpType === 'freeze') {
                 this.freezeActive = false;
+                
+                // Unfreeze all frozen obstacles immediately
+                for (const obstacle of this.obstacles) {
+                    if (obstacle.getData('frozen')) {
+                        obstacle.clearTint();
+                        obstacle.setData('frozen', false);
+                        
+                        // Change plane back to animated version
+                        if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-flying')) {
+                            obstacle.setTexture('plane-flying');
+                            if (this.anims.exists('plane-flying')) {
+                                obstacle.play('plane-flying');
+                            }
+                        }
+                    }
+                }
+                
                 // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
@@ -1357,7 +1377,7 @@ export class Game extends Scene {
                         this.ballon.setTexture('balloon-health1');
                     }
                 }
-            } else if (this.activePowerUp === 'shield') {
+            } else if (powerUpType === 'shield') {
                 this.shieldActive = false;
                 // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
@@ -1370,9 +1390,6 @@ export class Game extends Scene {
                     }
                 }
             }
-            
-            this.activePowerUp = null;
-            EventBus.emit('update-powerup', null);
         }
     }
 }
