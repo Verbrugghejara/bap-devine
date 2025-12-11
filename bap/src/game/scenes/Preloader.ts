@@ -86,6 +86,8 @@ export class Preloader extends Scene
         // this.load.spritesheet('sattelite', 'sattelite/spin.png', { frameWidth: 32, frameHeight: 32 });
         // this.load.spritesheet('ufo', 'ufo/fly.png', { frameWidth: 32, frameHeight: 32 });
         
+        this.load.spritesheet('sattelite-flying', 'sattelite/satteliteFlying.png', { frameWidth: 380, frameHeight: 380 });
+        this.load.spritesheet('sattelite-breaking', 'sattelite/satteliteBreaking.png', { frameWidth: 1100, frameHeight: 820 });
         this.load.spritesheet('meteor-falling', 'meteor/meteorFalling.png', { frameWidth: 216, frameHeight: 262 });
         this.load.spritesheet('meteor-breaking', 'meteor/meteorBreaking.png', { frameWidth: 407, frameHeight: 403 });
         this.load.spritesheet('plane-flying', 'plane/planeFlying.png', { frameWidth: 350, frameHeight: 143 });
@@ -95,6 +97,7 @@ export class Preloader extends Scene
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
         this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
         this.load.video('home-animation','mainMenuVideo.mp4')
+        this.load.video('storytelling-animation','storyTelling.mp4')
         // Vogel walk spritesheet (gebruik 128x128 en 8 frames als test)
         // this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 128, frameHeight: 128 });
 
@@ -106,6 +109,18 @@ export class Preloader extends Scene
     create() {
         // Animaties pas aanmaken als alles geladen is
         // this.load.on('complete', () => {
+            this.anims.create({
+                key: 'sattelite-breaking',
+                frames: this.anims.generateFrameNumbers('sattelite-breaking', { start: 0, end: 11 }),
+                frameRate: 15,
+                repeat: 0
+            });
+            this.anims.create({
+                key: 'sattelite-flying',
+                frames: this.anims.generateFrameNumbers('sattelite-flying', { start: 0, end: 8 }),
+                frameRate: 10,
+                repeat: -1
+            });
             this.anims.create({
                 key: 'plane-crashing',
                 frames: this.anims.generateFrameNumbers('plane-crashing', { start: 0, end: 8 }),

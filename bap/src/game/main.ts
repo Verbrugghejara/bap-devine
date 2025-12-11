@@ -9,6 +9,7 @@ import { Tutorial as TutorialRed } from './scenes/TutorialRed';
 import { GameOver } from './scenes/GameOver';
 // If './scenes/GameVictory' has a default export:
 import { GameVictory } from './scenes/GameVictory';
+import { StoryTelling } from './scenes/StoryTelling';
 
 // Or, if it exports a different named member, e.g. 'VictoryScene':
 // import { VictoryScene } from './scenes/GameVictory';
@@ -36,7 +37,8 @@ const config: Phaser.Types.Core.GameConfig = {
         Tutorial,
         TutorialRed,
         GameOver,
-        GameVictory
+        GameVictory,
+        StoryTelling
     ]
 };
 

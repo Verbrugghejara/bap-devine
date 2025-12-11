@@ -404,7 +404,7 @@ export class Game extends Scene {
             { texture: 'bird-walk', animKey: 'bird-walk', scale: 1, hasAnimation: true, movementType: 'horizontal' },
             { texture: 'plane-flying', animKey: 'plane-flying', scale: 1, hasAnimation: true, movementType: 'horizontal' },
             { texture: 'meteor-falling', animKey: 'meteor-falling', scale: 1, hasAnimation: true, movementType: 'vertical' },
-            { texture: 'sattelite', animKey: 'sattelite-spin', scale: 0.5, hasAnimation: false, movementType: 'horizontal' },
+            { texture: 'sattelite-flying', animKey: 'sattelite-flying', scale: 0.7, hasAnimation: true, movementType: 'horizontal' },
             { texture: 'ufo', animKey: 'ufo-fly', scale: 0.5, hasAnimation: false, movementType: 'horizontal' }
         ];
         return configs[this.huidigeSfeerIndex] || configs[0];
@@ -457,7 +457,12 @@ export class Game extends Scene {
                 x = fromLeft ? -200 : this.scale.width + 200;
                 y = -200;
                 direction = fromLeft ? 1 : -1;
-                speed = Phaser.Math.Between(2, 3);
+                // Satellites move faster than other horizontal obstacles
+                if (config.texture === 'sattelite-flying') {
+                    speed = Phaser.Math.Between(4, 5);
+                } else {
+                    speed = Phaser.Math.Between(2, 3);
+                }
             }
             
             const obstacle = this.physics.add.sprite(x, y, config.texture)
@@ -596,7 +601,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [50, 7, 9, 11, 13];
+        const scrollSpeeds = [150, 150, 150, 11, 13];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
@@ -1054,6 +1059,33 @@ export class Game extends Scene {
                         }
                     }
                     
+                    // Satellite breaking animation
+                    if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
+                        const xOffset = obstacleScaleX < 0 ? 0 : 0;
+                        const breakingSattelite = this.physics.add.sprite(x + xOffset, y-50, 'sattelite-breaking')
+                            .setScale(obstacleScaleX, 0.7)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(breakingSattelite);
+                        
+                        const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(600);
+                        body.setVelocityY(Phaser.Math.Between(200, 300));
+                        
+                        if (this.anims.exists('sattelite-breaking')) {
+                            breakingSattelite.play('sattelite-breaking');
+                            breakingSattelite.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: breakingSattelite,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => breakingSattelite.destroy()
+                                });
+                            });
+                        }
+                    }
+                    
                     this.obstacles.splice(i, 1);
                 } else {
                     // Normal collision - damage balloon
@@ -1160,6 +1192,34 @@ export class Game extends Scene {
                                 alpha: 0,
                                 duration: 300,
                                 onComplete: () => crashingPlane.destroy()
+                            });
+                        });
+                    }
+                }
+                
+                // Satellite breaking animation
+                if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
+                    // Adjust x offset based on direction (if mirrored, offset should be negative)
+                    const xOffset = obstacleScaleX < 0 ? 0 : 0;
+                    const breakingSattelite = this.physics.add.sprite(x + xOffset, y-40, 'sattelite-breaking')
+                        .setScale(obstacleScaleX, 0.7) // obstacleScaleX already contains 0.7 scale + mirroring
+                        .setDepth(50)
+                        .setOrigin(0.5);
+                    if (parent) parent.add(breakingSattelite);
+                    
+                    const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
+                    body.setAllowGravity(true);
+                    body.setGravityY(600);
+                    body.setVelocityY(Phaser.Math.Between(200, 300));
+                    
+                    if (this.anims.exists('sattelite-breaking')) {
+                        breakingSattelite.play('sattelite-breaking');
+                        breakingSattelite.once('animationcomplete', () => {
+                            this.tweens.add({
+                                targets: breakingSattelite,
+                                alpha: 0,
+                                duration: 300,
+                                onComplete: () => breakingSattelite.destroy()
                             });
                         });
                     }
