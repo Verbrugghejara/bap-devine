@@ -29,6 +29,14 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: false
         }
     },
+    // fps: {
+    //     target: 60,
+    //     forceSetTimeOut: false
+    // },
+    render: {
+        pixelArt: false,
+        antialias: true
+    },
     scene: [
         Boot,
         Preloader,
@@ -44,7 +52,31 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const StartGame = (parent: string) => {
 
-    return new Game({ ...config, parent });
+    const game = new Game({ ...config, parent });
+    
+    // Add FPS display
+    // const fpsText = document.createElement('div');
+    // fpsText.style.position = 'absolute';
+    // fpsText.style.top = '10px';
+    // fpsText.style.left = '10px';
+    // fpsText.style.color = '#00ff00';
+    // fpsText.style.fontFamily = 'monospace';
+    // fpsText.style.fontSize = '16px';
+    // fpsText.style.zIndex = '10000';
+    // fpsText.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    // fpsText.style.padding = '5px 10px';
+    // fpsText.style.borderRadius = '4px';
+    // document.body.appendChild(fpsText);
+    
+    // function updateFPS() {
+    //     if (game.loop) {
+    //         fpsText.textContent = `FPS: ${Math.round(game.loop.actualFps)}`;
+    //     }
+    //     requestAnimationFrame(updateFPS);
+    // }
+    // updateFPS();
+    
+    return game;
 
 }
 

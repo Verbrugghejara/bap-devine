@@ -1,0 +1,24 @@
+{
+  "name": "arduino-serial-keyboard-bridge",
+  "version": "1.0.0",
+  "description": "Serial to Keyboard bridge for Arduino Uno rotary encoders",
+  "main": "arduino_serial_keyboard_bridge.js",
+  "scripts": {
+    "start": "node arduino_serial_keyboard_bridge.js",
+    "test": "node -e \"console.log('Testing dependencies...'); require('serialport'); require('robotjs'); console.log('✓ All dependencies OK')\""
+  },
+  "keywords": [
+    "arduino",
+    "serial",
+    "keyboard",
+    "rotary",
+    "encoder"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "serialport": "^12.0.0",
+    "@serialport/parser-readline": "^12.0.0",
+    "robotjs": "^0.6.0"
+  }
+}

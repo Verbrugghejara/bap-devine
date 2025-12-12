@@ -19,6 +19,12 @@ export class StoryTelling extends Scene {
     }
 
     create() {
+        // Reset skip button state
+        this.skipHoldStart = null;
+        this.skipHoldProgress = 0;
+        this.skipButtonIsDown = false;
+        this.isTransitioning = false;
+        
         this.rotary = getRotaryClient();
         this.createSkipButton();
         const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'storytelling-animation')

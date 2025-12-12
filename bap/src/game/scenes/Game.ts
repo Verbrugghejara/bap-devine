@@ -601,7 +601,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [150, 150, 150, 11, 13];
+        const scrollSpeeds = [5, 7, 9, 11, 13];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
@@ -761,20 +761,20 @@ export class Game extends Scene {
                 if (sensor1Active) {
                     EventBus.emit('rotary1-move');
                     if (activeCount === 1) {
-                        deltaX += 8;
+                        deltaX += 6;
                     } else {
-                        if (diff1 < -threshold) deltaX -= 8;
-                        if (diff1 > threshold) deltaX += 8;
+                        if (diff1 < -threshold) deltaX -= 6;
+                        if (diff1 > threshold) deltaX += 6;
                     }
                 }
                 
                 if (sensor2Active) {
                     EventBus.emit('rotary2-move');
                     if (activeCount === 1) {
-                        deltaX -= 8;
+                        deltaX -= 6;
                     } else {
-                        if (diff2 < -threshold) deltaX -= 8;
-                        if (diff2 > threshold) deltaX += 8;
+                        if (diff2 < -threshold) deltaX -= 6;
+                        if (diff2 > threshold) deltaX += 6;
                     }
                 }
                 
@@ -1371,7 +1371,7 @@ export class Game extends Scene {
             case 'freeze':
                 this.freezeActive = true;
                 this.activePowerUp = 'freeze';
-                this.powerUpEndTime = Date.now() + 15000; // 15 seconds
+                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
                 EventBus.emit('update-powerup', 'freeze');
                 
                 // Change balloon to freeze version
@@ -1383,7 +1383,7 @@ export class Game extends Scene {
             case 'shield':
                 this.shieldActive = true;
                 this.activePowerUp = 'shield';
-                this.powerUpEndTime = Date.now() + 15000; // 15 seconds
+                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
                 EventBus.emit('update-powerup', 'shield');
                 
                 // Change balloon to shield version
