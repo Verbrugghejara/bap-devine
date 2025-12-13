@@ -13,6 +13,8 @@ function angleDiff(a: number, b: number): number {
 }
 
 export class Game extends Scene {
+    // Houd bij van welke kant horizontale obstakels laatst kwamen (per type)
+    private lastObstacleSides: { [key: string]: number[] } = {};
     // ==================== PROPERTIES ====================
     
     // Game state
@@ -28,7 +30,7 @@ export class Game extends Scene {
 
     // Input state
     private rotary: any = null;
-    // private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
+    private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private enterKey: Phaser.Input.Keyboard.Key | null = null;
     private wasEnterDown: boolean = false;
     private wasButtonPressed: boolean = false;
@@ -188,8 +190,8 @@ export class Game extends Scene {
     }
 
     private setupInput() {
-        // Geen keyboard input meer, alleen rotaryClient/WebSocket
-        // this.cursors = null;
+        // Keyboard pijltjes als fallback/debug
+        this.cursors = this.input.keyboard?.createCursorKeys() || null;
         this.enterKey = null;
         this.wasEnterDown = false;
         this.wasButtonPressed = false;
@@ -372,30 +374,38 @@ export class Game extends Scene {
 
     // ==================== OBSTACLES ====================
 
+    private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
     private setupObstacles() {
         this.obstacles = [];
         this.spawnObstacle();
-        
-        /*
+
+        // Obstakels blijven spawnen
+        if (this.obstacleSpawnTimer) {
+            this.obstacleSpawnTimer.remove(false);
+        }
         this.obstacleSpawnTimer = this.time.addEvent({
             delay: this.getObstacleSpawnDelay(),
             loop: true,
             callback: () => {
                 this.spawnObstacle();
+                // Reset timer met nieuwe delay voor variatie
+                if (this.obstacleSpawnTimer) {
+                    this.obstacleSpawnTimer.delay = this.getObstacleSpawnDelay();
+                }
             }
         });
-        */
     }
 
     private getObstacleSpawnDelay(): number {
+        // Lagere delays voor meer obstakels
         const delays = [
-            Phaser.Math.Between(4000, 7000),  // Troposfeer - birds
-            Phaser.Math.Between(4000, 7000),  // Stratosfeer - planes
-            Phaser.Math.Between(1500, 3000),  // Mesosfeer - meteors
-            Phaser.Math.Between(4000, 7000),  // Thermosfeer - satellites
-            Phaser.Math.Between(4000, 7000)   // Exosfeer - ufos
+            Phaser.Math.Between(3000, 4000),  // Troposfeer - birds
+            Phaser.Math.Between(2500, 4000),  // Stratosfeer - planes (meer vliegtuigen)
+            Phaser.Math.Between(2000, 3000),   // Mesosfeer - meteors
+            Phaser.Math.Between(1800, 3500),  // Thermosfeer - satellites
+            Phaser.Math.Between(2000, 4000)   // Exosfeer - ufos
         ];
-        return delays[this.huidigeSfeerIndex] || 5000;
+        return delays[this.huidigeSfeerIndex] || 2000;
     }
 
     private getObstacleConfig() {
@@ -410,7 +420,6 @@ export class Game extends Scene {
     }
 
     private spawnObstacle() {
-        // Don't spawn obstacles when game is paused
         if (this.isGamePaused) return;
         
         const config = this.getObstacleConfig();
@@ -452,16 +461,48 @@ export class Game extends Scene {
                 y = -100;
                 speed = Phaser.Math.Between(8, 12);
             } else {
-                const fromLeft = Math.random() < 0.5;
+                // --- ALLE HORIZONTALE OBSTAKELS: van beide kanten, max 2x zelfde kant ---
+                let fromLeft;
+                const typeKey = config.texture;
+                if (!this.lastObstacleSides[typeKey]) this.lastObstacleSides[typeKey] = [];
+                const last = this.lastObstacleSides[typeKey];
+                let lastSide = last.length > 0 ? last[last.length - 1] : null;
+                let count = 0;
+                for (let i = last.length - 1; i >= 0 && lastSide !== null; i--) {
+                    if (last[i] === lastSide) count++;
+                    else break;
+                }
+                if (count >= 2 && lastSide !== null) {
+                    fromLeft = lastSide === -1;
+                } else {
+                    fromLeft = Math.random() < 0.5;
+                }
+                // Sla kant op
+                last.push(fromLeft ? 1 : -1);
+                if (last.length > 5) last.shift();
                 x = fromLeft ? -200 : this.scale.width + 200;
                 y = -200;
                 direction = fromLeft ? 1 : -1;
-                // Satellites move faster than other horizontal obstacles
-                if (config.texture === 'sattelite-flying') {
-                    speed = Phaser.Math.Between(4, 5);
-                } else {
-                    speed = Phaser.Math.Between(2, 3);
+                // Variabele snelheid per sfeer en type
+                let minSpeed = 2, maxSpeed = 3;
+                switch (this.huidigeSfeerIndex) {
+                    case 0: // Troposfeer - birds
+                        minSpeed = 2; maxSpeed = 3;
+                        break;
+                    case 1: // Stratosfeer - planes
+                        minSpeed = 2; maxSpeed = 3;
+                        break;
+                    case 2: // Mesosfeer - meteors (should be vertical, but just in case)
+                        minSpeed = 1; maxSpeed = 2;
+                        break;
+                    case 3: // Thermosfeer - satellites
+                        minSpeed = 4; maxSpeed = 5;
+                        break;
+                    case 4: // Exosfeer - ufos
+                        minSpeed = 5; maxSpeed = 6;
+                        break;
                 }
+                speed = Phaser.Math.Between(minSpeed, maxSpeed);
             }
             
             const obstacle = this.physics.add.sprite(x, y, config.texture)
@@ -493,6 +534,7 @@ export class Game extends Scene {
         } catch (e) {
             console.error('[Game] Failed to spawn obstacle:', e);
         }
+        
     }
 
     private checkOverlap(a: any, b: any): boolean {
@@ -601,7 +643,7 @@ export class Game extends Scene {
 
     private updateScroll() {
         const scrollSpeeds = [5, 7, 9, 11, 13];
-        // const scrollSpeeds = [200, 200, 200, 200, 200];
+        // const scrollSpeeds = [200, 200, 200, 200, 13];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
         let healthSpeedModifier = 1.0;
@@ -649,6 +691,15 @@ export class Game extends Scene {
     private updateObstaclePositions() {
         for (const obstacle of this.obstacles) {
             obstacle.y += this.smoothScrollSpeed;
+
+            // UFO bobbing effect (op en neer bewegen)
+            if ((obstacle as any).obstacleType === 'ufo') {
+                if (!(obstacle as any).bobbingOffset) {
+                    (obstacle as any).bobbingOffset = Math.random() * Math.PI * 2;
+                }
+                (obstacle as any).bobbingOffset += 0.05;
+                obstacle.y += Math.sin((obstacle as any).bobbingOffset) * 3;
+            }
         }
     }
 
@@ -725,7 +776,7 @@ export class Game extends Scene {
 
     private updateBalloonMovement() {
         if (!this.ballonContainer) return;
-        
+
         let deltaX = 0;
         let propellorLeftActive = false;
         let propellorRightActive = false;
@@ -755,6 +806,16 @@ export class Game extends Scene {
                 }
 
                 this._lastRotaryDiffs = [diff1, diff2];
+            }
+        }
+
+        // Keyboard pijltjes als fallback
+        if (this.cursors) {
+            if (this.cursors.left?.isDown) {
+                deltaX -= 8;
+            }
+            if (this.cursors.right?.isDown) {
+                deltaX += 8;
             }
         }
 
@@ -885,7 +946,7 @@ export class Game extends Scene {
                     this.ballonContainer.x, this.ballonContainer.y
                 );
                 
-                if (distanceToBalloon < 700) {
+                if (distanceToBalloon < 1100) {
                     obstacle.setData('frozen', true);
                     
                     // Change plane texture to frozen version if it's a plane
@@ -1059,6 +1120,30 @@ export class Game extends Scene {
                             });
                         }
                     }
+                    // UFO breaking animation
+                    if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
+                        console.log('UFO breaking animation triggered');
+                        const breakingUfo = this.physics.add.sprite(x, y, 'ufo-breaking')
+                            .setScale(1, 1)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(breakingUfo);
+                        const body = breakingUfo.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(600);
+                        body.setVelocityY(Phaser.Math.Between(200, 300));
+                        if (this.anims.exists('ufo-breaking')) {
+                            breakingUfo.play('ufo-breaking');
+                            breakingUfo.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: breakingUfo,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => breakingUfo.destroy()
+                                });
+                            });
+                        }
+                    }
                     
                     this.obstacles.splice(i, 1);
                 } else {
@@ -1171,33 +1256,56 @@ export class Game extends Scene {
                     }
                 }
                 
-                // Satellite breaking animation
-                if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
-                    // Adjust x offset based on direction (if mirrored, offset should be negative)
-                    const xOffset = obstacleScaleX < 0 ? 0 : 0;
-                    const breakingSattelite = this.physics.add.sprite(x + xOffset, y-40, 'sattelite-breaking')
-                        .setScale(obstacleScaleX, 0.7) // obstacleScaleX already contains 0.7 scale + mirroring
-                        .setDepth(50)
-                        .setOrigin(0.5);
-                    if (parent) parent.add(breakingSattelite);
-                    
-                    const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
-                    body.setAllowGravity(true);
-                    body.setGravityY(600);
-                    body.setVelocityY(Phaser.Math.Between(200, 300));
-                    
-                    if (this.anims.exists('sattelite-breaking')) {
-                        breakingSattelite.play('sattelite-breaking');
-                        breakingSattelite.once('animationcomplete', () => {
-                            this.tweens.add({
-                                targets: breakingSattelite,
-                                alpha: 0,
-                                duration: 300,
-                                onComplete: () => breakingSattelite.destroy()
+                    // Satellite breaking animation
+                    if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
+                        const xOffset = obstacleScaleX < 0 ? 0 : 0;
+                        const breakingSattelite = this.physics.add.sprite(x + xOffset, y-40, 'sattelite-breaking')
+                            .setScale(obstacleScaleX, 0.7)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(breakingSattelite);
+                        const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(600);
+                        body.setVelocityY(Phaser.Math.Between(200, 300));
+                        if (this.anims.exists('sattelite-breaking')) {
+                            breakingSattelite.play('sattelite-breaking');
+                            breakingSattelite.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: breakingSattelite,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => breakingSattelite.destroy()
+                                });
                             });
-                        });
+                        }
                     }
-                }
+
+                    // UFO breaking animation (ook bij gewone botsing)
+                    if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
+                        const xOffset = obstacleScaleX < 0 ? 0 : 0;
+
+                        const breakingUfo = this.physics.add.sprite(x + xOffset, y, 'ufo-breaking')
+                            .setScale(0.5, 0.5)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(breakingUfo);
+                        const body = breakingUfo.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(600);
+                        body.setVelocityY(Phaser.Math.Between(200, 300));
+                        if (this.anims.exists('ufo-breaking')) {
+                            breakingUfo.play('ufo-breaking');
+                            breakingUfo.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: breakingUfo,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => breakingUfo.destroy()
+                                });
+                            });
+                        }
+                    }
                 
                     this.obstacles.splice(i, 1);
                 }
@@ -1244,9 +1352,17 @@ export class Game extends Scene {
         const sfeerCenterY = this.sfeerBaseY[sfeerIndex] + this.sfeerOffsetY;
         const sfeerHeight = this.sfeerHoogtes[sfeerIndex];
         
-        // Spawn in upper 30-60% of the sfeer (random position)
-        const minOffset = sfeerHeight * 0.3;
-        const maxOffset = sfeerHeight * 0.6;
+        let minOffset = sfeerHeight * 0.3;
+        let maxOffset = sfeerHeight * 0.6;
+        // Laat freeze power-up lager spawnen in de sfeer
+        if (type === 'freeze') {
+            minOffset = sfeerHeight * 0.55;
+            maxOffset = sfeerHeight * 0.85;
+        }
+        if ( type === 'timer') {
+            minOffset = sfeerHeight * 0.2;
+            maxOffset = sfeerHeight * 0.25;
+        }
         const randomOffset = Phaser.Math.Between(minOffset, maxOffset);
         const y = sfeerCenterY - (sfeerHeight / 2) + randomOffset;
 
@@ -1367,9 +1483,9 @@ export class Game extends Scene {
                 break;
 
             case 'timer':
-                // Subtract 15 seconds from elapsed time
-                this.gameStartTime += 15000;
-                EventBus.emit('timer-update', '-15s');
+                // Subtract 10 seconds from elapsed time
+                this.gameStartTime += 10000;
+                EventBus.emit('timer-update', '-10s');
                 break;
         }
     }

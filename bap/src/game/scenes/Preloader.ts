@@ -86,6 +86,7 @@ export class Preloader extends Scene
         // this.load.spritesheet('sattelite', 'sattelite/spin.png', { frameWidth: 32, frameHeight: 32 });
         // this.load.spritesheet('ufo', 'ufo/fly.png', { frameWidth: 32, frameHeight: 32 });
         
+        this.load.spritesheet('ufo-breaking', 'ufo/ufoBreaking.png', { frameWidth: 950, frameHeight: 1000 });
         this.load.spritesheet('sattelite-flying', 'sattelite/satteliteFlying.png', { frameWidth: 380, frameHeight: 380 });
         this.load.spritesheet('sattelite-breaking', 'sattelite/satteliteBreaking.png', { frameWidth: 1100, frameHeight: 820 });
         this.load.spritesheet('meteor-falling', 'meteor/meteorFalling.png', { frameWidth: 216, frameHeight: 262 });
@@ -109,6 +110,12 @@ export class Preloader extends Scene
     create() {
         // Animaties pas aanmaken als alles geladen is
         // this.load.on('complete', () => {
+            this.anims.create({
+                key: 'ufo-breaking',
+                frames: this.anims.generateFrameNumbers('ufo-breaking', { start: 0, end: 11 }),
+                frameRate: 15,
+                repeat: 0
+            });
             this.anims.create({
                 key: 'sattelite-breaking',
                 frames: this.anims.generateFrameNumbers('sattelite-breaking', { start: 0, end: 11 }),
