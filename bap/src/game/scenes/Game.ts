@@ -202,11 +202,11 @@ export class Game extends Scene {
     private createSfeerLayers() {
         const standaardHoogte = this.scale.height;
         this.sfeerHoogtes = [
-            standaardHoogte * 3, // troposfeer
-            standaardHoogte * 4, // stratosfeer
-            standaardHoogte * 5, // mesosfeer
-            standaardHoogte * 6, // thermosfeer
-            standaardHoogte * 7, // exosfeer
+            standaardHoogte * 4, // troposfeer
+            standaardHoogte * 5, // stratosfeer
+            standaardHoogte * 6, // mesosfeer
+            standaardHoogte * 7, // thermosfeer
+            standaardHoogte * 8, // exosfeer
         ];
         
         this.sfeerRects = [];
@@ -493,7 +493,7 @@ export class Game extends Scene {
                         minSpeed = 2; maxSpeed = 3;
                         break;
                     case 2: // Mesosfeer - meteors (should be vertical, but just in case)
-                        minSpeed = 1; maxSpeed = 2;
+                        minSpeed = 1; maxSpeed = 1;
                         break;
                     case 3: // Thermosfeer - satellites
                         minSpeed = 4; maxSpeed = 5;
@@ -642,7 +642,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 13];
+        const scrollSpeeds = [5, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 13];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
@@ -720,14 +720,23 @@ export class Game extends Scene {
         }
         
         if (this.huidigeSfeerIndex !== sfeerIndex) {
+            // Toon interlude iets eerder: aan het einde van de vorige sfeer
+            if (this.countdownDone && sfeerIndex > 0 && sfeerIndex > this.lastSfeerIndex) {
+                // Bepaal progressie in vorige sfeer
+                const prevSfeerIndex = sfeerIndex - 1;
+                const prevSfeerHeight = this.sfeerHoogtes[prevSfeerIndex];
+                const prevSfeerBaseY = this.sfeerBaseY[prevSfeerIndex];
+                const prevSfeerTop = prevSfeerBaseY - prevSfeerHeight / 2;
+                const prevSfeerBottom = prevSfeerBaseY + prevSfeerHeight / 2;
+                const centerWorldY = (this.scale.height / 2) - this.sfeerOffsetY;
+                const progressInPrevSfeer = 1 - ((centerWorldY - prevSfeerTop) / prevSfeerHeight);
+                if (progressInPrevSfeer > 0.85) {
+                    EventBus.emit('show-interlude', sfeerIndex);
+                }
+            }
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
             this.checkPowerUpSpawn(sfeerIndex);
-            
-            // Show interlude when entering new sfeer (skip first transition and only if countdown is done)
-            if (this.countdownDone && sfeerIndex > 0 && sfeerIndex > this.lastSfeerIndex) {
-                EventBus.emit('show-interlude', sfeerIndex);
-            }
             this.lastSfeerIndex = sfeerIndex;
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);

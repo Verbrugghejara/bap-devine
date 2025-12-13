@@ -117,7 +117,7 @@ function showInterlude(index: number) {
   // Hide after 3 seconds
   setTimeout(() => {
     visible.value = false;
-  }, 3000);
+  }, 2000);
 }
 
 function hideInterlude() {
