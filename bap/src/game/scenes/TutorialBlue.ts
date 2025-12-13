@@ -72,6 +72,7 @@ export class Tutorial extends Scene {
     update() {
         this.updateSkipButton();
         this.handleButtonInput();
+        // Geen keyboard input, alleen rotaryClient/WebSocket
         this.updateInactivePropellorShake();
         this.updateArrowsRotation();
         this.updateActivePropellorRotation();
@@ -401,7 +402,8 @@ export class Tutorial extends Scene {
     }
 
     private handleButtonInput() {
-        const buttonPressed = this.rotary?.buttonPressed || false;
+        const buttonRaw = this.rotary?.buttonPressed;
+        const buttonPressed = typeof buttonRaw === 'boolean' || typeof buttonRaw === 'number' ? !!buttonRaw : false;
         
         // Button pressed
         if (buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {

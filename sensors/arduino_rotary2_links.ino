@@ -11,15 +11,21 @@
  * Functie: Draaien activeert 'a' key (links)
  */
 
+
 #include <Wire.h>
-#include <Keyboard.h>
+
+
+
 
 #define AS5600_ADDR 0x36
 #define ANGLE_REG 0x0E
+#define BUTTON_PIN 4
+
 
 float prevAngle = 0;
 bool initialized = false;
-const float THRESHOLD = 3.0;  // 3 graden beweging triggert keypress
+int prevButton = 1; // HIGH (niet ingedrukt)
+const float THRESHOLD = 2.0;  // 2 graden beweging triggert output
 
 float readAngle() {
   Wire.beginTransmission(AS5600_ADDR);
@@ -37,11 +43,11 @@ float readAngle() {
   return -1;
 }
 
+
 void setup() {
+  Serial.begin(115200);
   Wire.begin();
-  Keyboard.begin();
-  
-  // Wacht tot sensor stabiel is
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
   delay(100);
   float angle = readAngle();
   if (angle >= 0) {
@@ -50,31 +56,44 @@ void setup() {
   }
 }
 
+
 void loop() {
   if (!initialized) {
+    Serial.println("ERROR");
     delay(50);
     return;
   }
-  
+
   float angle = readAngle();
   if (angle < 0) {
+    Serial.println("ERROR");
     delay(20);
     return;
   }
-  
-  // Rotary 2: Elke beweging → 'a' (links)
+
+  int button = digitalRead(BUTTON_PIN);
+
   float diff = angle - prevAngle;
-  
-  // Handle 360° wraparound
   if (diff > 180) diff -= 360;
   if (diff < -180) diff += 360;
-  
+
+  // Verstuur bij rotatie
   if (abs(diff) > THRESHOLD) {
-    Keyboard.press('a');
-    delay(50);
-    Keyboard.releaseAll();
+    Serial.print(angle, 2);
+    Serial.print(",");
+    Serial.print(-abs(diff), 2); // altijd negatief voor links
+    Serial.print(",");
+    Serial.println(button == LOW ? 1 : 0);
     prevAngle = angle;
+    prevButton = button;
   }
-  
-  delay(20);  // 50 Hz update rate
+  // Verstuur bij button change (ook zonder rotatie)
+  else if (button != prevButton) {
+    Serial.print(angle, 2);
+    Serial.print(",0,");
+    Serial.println(button == LOW ? 1 : 0);
+    prevButton = button;
+  }
+
+  delay(5);  // 200 Hz update rate
 }

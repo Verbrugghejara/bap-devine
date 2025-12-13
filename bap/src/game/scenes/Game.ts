@@ -28,12 +28,12 @@ export class Game extends Scene {
 
     // Input state
     private rotary: any = null;
-    private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
+    // private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private enterKey: Phaser.Input.Keyboard.Key | null = null;
     private wasEnterDown: boolean = false;
     private wasButtonPressed: boolean = false;
-    private _lastLeftDown: boolean = false;
-    private _lastRightDown: boolean = false;
+    // private _lastLeftDown: boolean = false;
+    // private _lastRightDown: boolean = false;
     private inactivityTimeout: any = null;
 
     // Sfeer (atmosphere) layers
@@ -70,7 +70,7 @@ export class Game extends Scene {
 
     // Obstacles
     private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
-    private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    // private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
 
     // Power-ups
     private powerUps: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
@@ -79,7 +79,8 @@ export class Game extends Scene {
     private powerUpEndTime: number = 0;
     private freezeActive: boolean = false;
     private shieldActive: boolean = false;
-    private baseScrollSpeed: number = 100;
+    // private baseScrollSpeed: number = 100;
+    private _lastRotaryDiffs: number[] = [0, 0];
 
     // ==================== LIFECYCLE METHODS ====================
 
@@ -157,7 +158,7 @@ export class Game extends Scene {
         this.powerUpEndTime = 0;
         this.freezeActive = false;
         this.shieldActive = false;
-        this.baseScrollSpeed = 100;
+        // this.baseScrollSpeed = 100;
         
         sfeerProgress.value = 0;
         EventBus.emit('show-countdown');
@@ -187,13 +188,9 @@ export class Game extends Scene {
     }
 
     private setupInput() {
-        this.cursors = this.input.keyboard?.createCursorKeys() || null;
-        
-        if (this.input && this.input.keyboard) {
-            this.input.keyboard.enabled = true;
-            this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-        }
-        
+        // Geen keyboard input meer, alleen rotaryClient/WebSocket
+        // this.cursors = null;
+        this.enterKey = null;
         this.wasEnterDown = false;
         this.wasButtonPressed = false;
     }
@@ -379,6 +376,7 @@ export class Game extends Scene {
         this.obstacles = [];
         this.spawnObstacle();
         
+        /*
         this.obstacleSpawnTimer = this.time.addEvent({
             delay: this.getObstacleSpawnDelay(),
             loop: true,
@@ -386,6 +384,7 @@ export class Game extends Scene {
                 this.spawnObstacle();
             }
         });
+        */
     }
 
     private getObstacleSpawnDelay(): number {
@@ -424,7 +423,7 @@ export class Game extends Scene {
             const currentSfeerCenterY = this.sfeerBaseY[this.huidigeSfeerIndex] + this.sfeerOffsetY;
             const currentSfeerHeight = this.sfeerHoogtes[this.huidigeSfeerIndex];
             const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
-            const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
+            // const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
             
             // Start spawning only when we're 20% into the sfeer
             const startSpawnThreshold = currentSfeerHeight * 0.1;
@@ -728,82 +727,57 @@ export class Game extends Scene {
         if (!this.ballonContainer) return;
         
         let deltaX = 0;
-        let sensor1Active = false;
-        let sensor2Active = false;
-        
+        let propellorLeftActive = false;
+        let propellorRightActive = false;
+
         // Rotary input
         if (this.rotary && Array.isArray(this.rotary.lastAngles) && Array.isArray(this.rotary.prevAngles)) {
-            if (
-                typeof this.rotary.lastAngles[0] === 'number' &&
-                typeof this.rotary.lastAngles[1] === 'number' &&
-                (typeof this.rotary.prevAngles[0] !== 'number' || typeof this.rotary.prevAngles[1] !== 'number')
-            ) {
-                this.rotary.prevAngles = [...this.rotary.lastAngles];
-            }
-            
             const angles = this.rotary.lastAngles;
             const prevs = this.rotary.prevAngles;
             const threshold = 3;
-            
+
             if (
                 angles.length >= 2 && prevs.length >= 2 &&
                 typeof angles[0] === 'number' && typeof prevs[0] === 'number' &&
                 typeof angles[1] === 'number' && typeof prevs[1] === 'number'
             ) {
-                const diff1 = angleDiff(angles[0], prevs[0]);
-                const diff2 = angleDiff(angles[1], prevs[1]);
-                
-                sensor1Active = Math.abs(diff1) > threshold;
-                sensor2Active = Math.abs(diff2) > threshold;
-                
-                const activeCount = (sensor1Active ? 1 : 0) + (sensor2Active ? 1 : 0);
-                
-                if (sensor1Active) {
+                const diff1 = angleDiff(angles[0], prevs[0]); // rechts
+                const diff2 = angleDiff(angles[1], prevs[1]); // links
+
+                // Rotary1: naar rechts, Rotary2: naar links
+                if (Math.abs(diff1) > threshold) {
                     EventBus.emit('rotary1-move');
-                    if (activeCount === 1) {
-                        deltaX += 6;
-                    } else {
-                        if (diff1 < -threshold) deltaX -= 6;
-                        if (diff1 > threshold) deltaX += 6;
-                    }
+                    deltaX += Math.abs(diff1); // rechts
                 }
-                
-                if (sensor2Active) {
+                if (Math.abs(diff2) > threshold) {
                     EventBus.emit('rotary2-move');
-                    if (activeCount === 1) {
-                        deltaX -= 6;
-                    } else {
-                        if (diff2 < -threshold) deltaX -= 6;
-                        if (diff2 > threshold) deltaX += 6;
-                    }
+                    deltaX -= Math.abs(diff2); // links
                 }
-                
+
                 this._lastRotaryDiffs = [diff1, diff2];
             }
         }
-        
-        // Update propellor animations
-        this.updatePropellorAnimation(this.propellorBlauw, sensor1Active);
-        this.updatePropellorAnimation(this.propellorRood, sensor2Active);
-        
-        // Update wind effects
-        this.updateWindSprite(sensor1Active, sensor2Active);
-        
-        // Keyboard input (fallback)
-        if (this.cursors) {
-            if (this.cursors.left?.isDown && !this._lastLeftDown) {}
-            if (this.cursors.right?.isDown && !this._lastRightDown) {}
-            this._lastLeftDown = !!this.cursors.left?.isDown;
-            this._lastRightDown = !!this.cursors.right?.isDown;
-            if (this.cursors.left?.isDown) deltaX -= 10;
-            if (this.cursors.right?.isDown) deltaX += 10;
+
+        // Propellor animatie: als ballon naar links/rechts beweegt
+        if (deltaX < 0) {
+            propellorLeftActive = true;
         }
-        
+        if (deltaX > 0) {
+            propellorRightActive = true;
+        }
+
+        // Update propellor animations (override sensorXActive)
+        this.updatePropellorAnimation(this.propellorBlauw, propellorRightActive);
+        this.updatePropellorAnimation(this.propellorRood, propellorLeftActive);
+
+        // Update wind effects
+        this.updateWindSprite(propellorRightActive, propellorLeftActive);
+
         // Apply movement
         if (deltaX !== 0) {
             this.ballonContainer.x += deltaX;
         }
-        
+
         // Keep balloon in bounds
         const bounds = this.ballonContainer.getBounds();
         if (bounds.left < 0) this.ballonContainer.x += -bounds.left;

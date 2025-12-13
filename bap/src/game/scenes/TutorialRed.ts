@@ -70,7 +70,7 @@ export class Tutorial extends Scene {
 
     update() {
         this.updateSkipButton();
-        this.handleButtonInput();
+        // Geen keyboard input, alleen rotaryClient/WebSocket
         this.updateInactivePropellorShake();
         this.updateArrowsRotation();
         this.updateActivePropellorRotation();
@@ -406,9 +406,9 @@ export class Tutorial extends Scene {
         const buttonPressed = this.rotary?.buttonPressed || false;
         
         // Button pressed
-        if (buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
-            this.skipButtonIsDown = true;
-            if (this.skipHoldStart === null) {
+            if (buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
+                this.skipButtonIsDown = true;
+                if (this.skipHoldStart === null) {
                 this.skipHoldStart = Date.now();
             }
             

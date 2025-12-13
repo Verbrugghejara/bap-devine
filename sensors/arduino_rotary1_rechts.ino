@@ -15,8 +15,9 @@
  * Functie: Draaien activeert 'd' key (rechts)
  */
 
+
 #include <Wire.h>
-#include <Keyboard.h>
+
 
 #define AS5600_ADDR 0x36
 #define ANGLE_REG 0x0E
@@ -24,7 +25,7 @@
 
 float prevAngle = 0;
 bool initialized = false;
-const float THRESHOLD = 3.0;  // 3 graden beweging triggert keypress
+const float THRESHOLD = 2.0;  // 2 graden beweging triggert output
 
 float readAngle() {
   Wire.beginTransmission(AS5600_ADDR);
@@ -43,11 +44,9 @@ float readAngle() {
 }
 
 void setup() {
+  Serial.begin(115200);
   Wire.begin();
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-  Keyboard.begin();
-  
-  // Wacht tot sensor stabiel is
   delay(100);
   float angle = readAngle();
   if (angle >= 0) {
@@ -58,37 +57,31 @@ void setup() {
 
 void loop() {
   if (!initialized) {
+    Serial.println("ERROR");
     delay(50);
     return;
   }
-  
+
   float angle = readAngle();
   if (angle < 0) {
+    Serial.println("ERROR");
     delay(20);
     return;
   }
-  
-  // Rotary 1: Elke beweging → 'd' (rechts)
+
   float diff = angle - prevAngle;
-  
-  // Handle 360° wraparound
   if (diff > 180) diff -= 360;
   if (diff < -180) diff += 360;
-  
+
+  // Alleen printen bij echte beweging
   if (abs(diff) > THRESHOLD) {
-    Keyboard.press('d');
-    delay(50);
-    Keyboard.releaseAll();
+    Serial.print(angle, 2);
+    Serial.print(",");
+    Serial.print(diff, 2);
+    Serial.print(",");
+    Serial.println(digitalRead(BUTTON_PIN) == LOW ? 1 : 0);
     prevAngle = angle;
   }
-  
-  // Button: spatiebalk
-  if (digitalRead(BUTTON_PIN) == LOW) {
-    Keyboard.press(' ');
-    delay(100);
-    Keyboard.releaseAll();
-    delay(200);  // Debounce
-  }
-  
-  delay(20);  // 50 Hz update rate
+
+  delay(5);  // 200 Hz update rate
 }

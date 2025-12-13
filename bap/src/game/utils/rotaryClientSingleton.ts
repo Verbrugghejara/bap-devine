@@ -1,16 +1,12 @@
 // rotaryClientSingleton.ts
-import { KeyboardController } from '../scenes/KeyboardController';
 
-// Schakel tussen KeyboardController (Arduino) en DualRotaryWSClient (Raspberry Pi)
-// import { DualRotaryWSClient } from '../scenes/DualRotaryWSClient';
+import { DualRotaryWSClient } from '../scenes/DualRotaryWSClient';
 
-let rotaryClient: KeyboardController | null = null;
+let rotaryClient: DualRotaryWSClient | null = null;
 
-export function getRotaryClient(): KeyboardController {
+export function getRotaryClient(): DualRotaryWSClient {
   if (!rotaryClient) {
-    rotaryClient = new KeyboardController();
-    // Voor Raspberry Pi WebSocket:
-    // rotaryClient = new DualRotaryWSClient('ws://localhost:8765');
+    rotaryClient = new DualRotaryWSClient('ws://localhost:8765');
   }
   return rotaryClient;
 }
