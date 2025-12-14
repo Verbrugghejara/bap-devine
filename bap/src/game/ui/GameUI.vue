@@ -1,8 +1,56 @@
 <template>
   <div class="game-ui-container" v-show="visible">
     <div class="sfeer-progress-outer">
-      <div class="sfeer-progress-alien" :style="{ bottom: 'calc(' + (sfeerProgress * 100) + '% - 32px)', transition: 'background 0.1s ease' }">
-        <svg width="81" height="92" viewBox="0 0 128 147" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div class="sfeer-progress-alien" :class="transitionClass" :style="{ bottom: 'calc(' + (sfeerProgress * 100) + '% - 32px)', transition: 'background 3s ease' }">
+              <svg v-if="currentAlienSVG === 'hit'" width="81" height="92" viewBox="0 0 128 147" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M91.3711 48.4126L114.14 25.6436C115.051 24.7324 116.529 24.7324 117.44 25.6436C123.272 31.4755 123.272 40.9308 117.44 46.7627L115.79 48.4126C109.047 55.1557 98.1142 55.1557 91.3711 48.4126Z" fill="#008049"/>
+              <path d="M36.6289 48.4126L13.8599 25.6436C12.9487 24.7324 11.4713 24.7324 10.56 25.6436C4.72816 31.4755 4.72816 40.9308 10.56 46.7627L12.21 48.4126C18.9531 55.1557 29.8858 55.1557 36.6289 48.4126Z" fill="#008049"/>
+              <ellipse cx="52.8368" cy="33.9613" rx="8.23128" ry="18.5204" fill="#008049"/>
+              <ellipse cx="69.2238" cy="35.5957" rx="8.23128" ry="18.5204" transform="rotate(30 69.2238 35.5957)" fill="#008049"/>
+              <ellipse cx="64.7073" cy="23.4944" rx="9.65993" ry="21.7348" transform="rotate(15 64.7073 23.4944)" fill="#008049"/>
+              <rect x="6.47266" y="35.2568" width="115.112" height="110.795" rx="40.2892" fill="#00B873"/>
+              <circle cx="64.0283" cy="75.541" r="23.0224" fill="white"/>
+              <path d="M63.6914 71.9468C71.0389 71.947 76.9951 77.9039 76.9951 85.2515C76.995 92.5989 71.0388 98.5549 63.6914 98.5552C56.3438 98.5552 50.3868 92.5991 50.3867 85.2515C50.3867 77.9038 56.3437 71.9468 63.6914 71.9468Z" fill="black"/>
+              <circle cx="63.7556" cy="74.7551" r="5.7556" fill="white"/>
+              <path d="M79.1373 126.627C82.316 126.627 84.9801 123.961 83.7883 121.015C83.6338 120.633 83.4634 120.255 83.2773 119.882C82.2107 117.743 80.6474 115.8 78.6766 114.163C76.7058 112.526 74.3661 111.228 71.7911 110.342C69.2161 109.456 66.4562 109 63.6691 109C60.8819 109 58.1221 109.456 55.5471 110.342C52.9721 111.228 50.6324 112.526 48.6616 114.163C46.6908 115.8 45.1275 117.743 44.0609 119.882C43.8747 120.255 43.7044 120.633 43.5499 121.015C42.3581 123.961 45.0222 126.627 48.2009 126.627L63.6691 126.627L79.1373 126.627Z" fill="#008049"/>
+              <ellipse cx="63.6697" cy="124.159" rx="8.27368" ry="2.15835" transform="rotate(-180 63.6697 124.159)" fill="#A42348"/>
+              <path d="M77.3252 50.1474C80.3312 48.9078 73.3141 52.6254 64.6068 52.8929C55.9959 53.1593 46.9582 48.8867 52.8824 50.9889" stroke="#008049" stroke-width="4.12905" stroke-miterlimit="10" stroke-linecap="round"/>
+              </svg>
+
+              <svg v-else-if="nearObstacle" width="81" height="92" viewBox="0 0 128 152" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M91.3691 48.4126L114.138 25.6436C115.049 24.7324 116.527 24.7324 117.438 25.6436C123.27 31.4755 123.27 40.9308 117.438 46.7627L115.788 48.4126C109.045 55.1557 98.1122 55.1557 91.3691 48.4126Z" fill="#008049"/>
+          <path d="M36.627 48.4126L13.8579 25.6436C12.9467 24.7324 11.4693 24.7324 10.5581 25.6436C4.7262 31.4755 4.72621 40.9308 10.5581 46.7627L12.208 48.4126C18.9511 55.1557 29.8838 55.1557 36.627 48.4126Z" fill="#008049"/>
+          <ellipse cx="52.8348" cy="33.9613" rx="8.23128" ry="18.5204" fill="#008049"/>
+          <ellipse cx="69.2218" cy="35.5957" rx="8.23128" ry="18.5204" transform="rotate(30 69.2218 35.5957)" fill="#008049"/>
+          <ellipse cx="64.7073" cy="23.4944" rx="9.65993" ry="21.7348" transform="rotate(15 64.7073 23.4944)" fill="#008049"/>
+          <rect x="6.4707" y="35.2563" width="115.112" height="110.795" rx="40.2892" fill="#00B873"/>
+          <path d="M71.036 45.2255C72.8795 45.8364 68.5411 43.9194 63.3421 44.1297C58.2006 44.3365 52.9975 47.2657 56.4378 45.7617" stroke="#008049" stroke-width="4.12905" stroke-miterlimit="10" stroke-linecap="round"/>
+          <circle cx="64.0263" cy="75.5405" r="23.0224" fill="white"/>
+          <path d="M63.6895 71.9468C71.0369 71.947 76.9932 77.9039 76.9932 85.2515C76.993 92.5989 71.0369 98.5549 63.6895 98.5552C56.3418 98.5552 50.3849 92.5991 50.3848 85.2515C50.3848 77.9038 56.3417 71.9468 63.6895 71.9468Z" fill="black"/>
+          <circle cx="55.4158" cy="77.7009" r="5.7556" fill="white"/>
+          <path d="M78.69 133.626C81.8687 133.626 84.5328 130.96 83.341 128.014C83.1866 127.632 83.0162 127.254 82.83 126.881C81.7634 124.742 80.2001 122.799 78.2293 121.162C76.2585 119.525 73.9188 118.227 71.3438 117.341C68.7688 116.455 66.009 116 63.2218 116C60.4347 116 57.6748 116.455 55.0998 117.341C52.5248 118.227 50.1852 119.525 48.2143 121.162C46.2435 122.799 44.6802 124.742 43.6136 126.881C43.4275 127.254 43.2571 127.632 43.1027 128.014C41.9108 130.96 44.5749 133.626 47.7536 133.626L63.2218 133.626H78.69Z" fill="#008049"/>
+          <ellipse cx="63.2209" cy="129.158" rx="8.27368" ry="2.15835" fill="#A42348"/>
+          </svg>
+              <svg v-else-if="health === 1" width="81" height="92" viewBox="0 0 122 146" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M86.0781 48.6899L108.285 26.4829C109.174 25.5942 110.615 25.5942 111.504 26.4829C117.191 32.1709 117.191 41.3928 111.504 47.0807L109.343 49.2415C103.071 55.5136 92.9017 55.5136 86.6297 49.2415L86.0781 48.6899Z" fill="#008049"/>
+        <path d="M35.7246 48.2485L13.5176 26.0415C12.6289 25.1528 11.1879 25.1528 10.2992 26.0415C4.61126 31.7295 4.61126 40.9514 10.2992 46.6393L12.46 48.8001C18.732 55.0721 28.901 55.0721 35.173 48.8001L35.7246 48.2485Z" fill="#008049"/>
+        <ellipse cx="50.278" cy="33.945" rx="7.83273" ry="18.5138" fill="#008049"/>
+        <ellipse cx="7.93349" cy="18.2953" rx="7.93349" ry="18.2953" transform="matrix(0.855026 0.518584 -0.481643 0.876368 67.9023 15.4312)" fill="#008049"/>
+        <ellipse cx="9.22404" cy="21.6587" rx="9.22404" ry="21.6587" transform="matrix(0.962592 0.270954 -0.247153 0.968977 58.0488 0)" fill="#008049"/>
+        <rect x="6.16211" y="35.2441" width="109.538" height="110.756" rx="32" fill="#00B873"/>
+        <circle cx="61.0224" cy="77.0219" r="23.0224" fill="white"/>
+        <path d="M60.6855 73.4277C68.033 73.428 73.9893 79.3849 73.9893 86.7324C73.9891 94.0799 68.033 100.036 60.6855 100.036C53.3379 100.036 47.381 94.08 47.3809 86.7324C47.3809 79.3847 53.3378 73.4277 60.6855 73.4277Z" fill="black"/>
+        <circle cx="52.4118" cy="79.1833" r="5.7556" fill="white"/>
+        <circle cx="69.5" cy="93.5" r="3.5" fill="white"/>
+        <path d="M77.9765 128.12C79.7831 128.12 81.2815 126.639 80.9019 124.873C80.6451 123.678 80.2464 122.506 79.7104 121.377C78.6955 119.239 77.2078 117.297 75.3324 115.66C73.4571 114.024 71.2306 112.726 68.7803 111.841C66.33 110.955 63.7038 110.5 61.0516 110.5C58.3994 110.5 55.7732 110.955 53.3229 111.841C50.8726 112.726 48.6462 114.024 46.7708 115.66C44.8954 117.297 43.4078 119.239 42.3928 121.377C41.8568 122.506 41.4582 123.678 41.2013 124.873C40.8217 126.639 42.3201 128.12 44.1268 128.12L61.0516 128.12L77.9765 128.12Z" fill="#008049"/>
+        <ellipse cx="62.2229" cy="123.159" rx="8.27368" ry="2.15835" fill="#A42348"/>
+        <path d="M59.5783 50.4434C61.7399 48.0143 57.0542 54.4256 49.3401 58.4729C41.7122 62.477 31.716 62.5855 37.9631 61.8862" stroke="#008049" stroke-width="4.12905" stroke-miterlimit="10" stroke-linecap="round"/>
+        <path d="M87.9287 104.268C85.1258 105.886 81.3628 104.616 79.5239 101.431C79.4903 101.373 79.4594 101.313 79.4275 101.255C79.4068 101.222 79.3848 101.19 79.3652 101.156C77.0844 97.2059 79.0737 88.9308 79.0737 88.9308C79.1263 88.9476 87.3758 91.5897 89.5156 95.296C89.5332 95.3264 89.5485 95.3577 89.5645 95.3885C89.6016 95.4487 89.6387 95.5092 89.6743 95.5709C91.5132 98.756 90.7317 102.65 87.9287 104.268Z" fill="#5ADEFF"/>
+        <ellipse cx="0.759918" cy="1.31172" rx="0.759918" ry="1.31172" transform="matrix(-0.960377 -0.278703 0.271699 -0.962382 89.4551 102.148)" fill="white" fill-opacity="0.1"/>
+        </svg>
+
+
+        <svg v-else width="81" height="92" viewBox="0 0 128 147" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M91.3716 48.4137L114.141 25.6447C115.052 24.7335 116.529 24.7334 117.44 25.6447V25.6447C123.272 31.4766 123.272 40.9319 117.44 46.7638L115.791 48.4137C109.047 55.1568 98.1147 55.1568 91.3716 48.4137V48.4137Z" fill="#008049"/>
         <path d="M36.6279 48.4137L13.8589 25.6447C12.9477 24.7335 11.4703 24.7334 10.5591 25.6447V25.6447C4.72718 31.4766 4.72718 40.9319 10.5591 46.7638L12.209 48.4137C18.9521 55.1568 29.8848 55.1568 36.6279 48.4137V48.4137Z" fill="#008049"/>
         <ellipse cx="52.8348" cy="33.9623" rx="8.23128" ry="18.5204" fill="#008049"/>
@@ -16,6 +64,7 @@
         <path d="M48.2016 111.159C45.0229 111.159 42.3588 113.825 43.5506 116.772C43.7051 117.154 43.8754 117.532 44.0616 117.905C45.1282 120.043 46.6915 121.986 48.6623 123.623C50.6331 125.26 52.9728 126.558 55.5478 127.444C58.1228 128.33 60.8826 128.786 63.6698 128.786C66.4569 128.786 69.2168 128.33 71.7918 127.444C74.3668 126.558 76.7064 125.26 78.6773 123.623C80.6481 121.986 82.2114 120.043 83.278 117.905C83.4641 117.532 83.6345 117.154 83.7889 116.772C84.9808 113.825 82.3167 111.159 79.138 111.159L63.6698 111.159L48.2016 111.159Z" fill="#008049"/>
         <ellipse cx="63.6672" cy="125.185" rx="8.27368" ry="2.15835" fill="#A42348"/>
         </svg>
+
       </div>
       <!-- <div style="color:#222;font-size:18px;text-align:center;width:100%">Progress: {{ (sfeerProgress * 100).toFixed(1) }}%</div> -->
       <div class="sfeer-progress-bg" >
@@ -189,19 +238,133 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, onMounted } from 'vue';
+// Angry alien (hit) event logic
+import { ref, watch } from 'vue';
+// ...existing code...
+const hitTimeout = ref<number | null>(null);
+EventBus.on('show-hit-emotion', () => {
+  if (hitTimeout.value) clearTimeout(hitTimeout.value);
+  currentAlienSVG.value = 'hit';
+  alienEnlarged.value = false;
+  void alienEnlarged.value;
+  setTimeout(() => {
+    alienEnlarged.value = true;
+    hitTimeout.value = window.setTimeout(() => {
+      alienEnlarged.value = false;
+      // Terug naar juiste emotie na 3s
+      if (nearObstacle.value) {
+        currentAlienSVG.value = 'nearObstacle';
+      } else if (health.value === 1) {
+        currentAlienSVG.value = 'oneHeart';
+      } else {
+        currentAlienSVG.value = 'default';
+      }
+    }, 3000);
+  }, 0);
+});
+import { onMounted, onUnmounted } from 'vue';
 import { EventBus } from '../EventBus';
 import { SFEER_COLORS } from '../utils/sfeerLabels';
-import { sfeerProgress } from '../utils/sfeerProgressStore';
+// import { sfeerProgress as sfeerProgressStore } from '../utils/sfeerProgressStore'; // not used
+// --- Reactive state declarations ---
 const health = ref(3);
+const visible = ref(true);
 const sfeerText = ref('TROPOSFEER');
 const sfeerIndex = ref(0);
-const visible = ref(true);
+const sfeerProgress = ref(0);
 const timerText = ref('0:00');
 const distanceText = ref('0');
 const activePowerUp = ref<string | null>(null);
 const powerUpProgress = ref(0);
 const showTimerUpdate = ref(false);
+
+// (already imported above)
+
+const nearObstacle = ref(false);
+let scaredLock = false;
+EventBus.on('update-near-obstacle', (val: boolean) => {
+  if (val) {
+    nearObstacle.value = true;
+    scaredLock = true;
+    setTimeout(() => {
+      nearObstacle.value = false;
+      scaredLock = false;
+    }, 1500);
+  } else {
+    if (!scaredLock) {
+      nearObstacle.value = false;
+    }
+  }
+  console.log('Near obstacle updated to', nearObstacle.value);
+});
+onUnmounted(() => {
+  EventBus.off('update-near-obstacle');
+});
+const alienEnlarged = ref(false);
+const transitionClass = ref('');
+let lastEnlarged = false;
+watch(alienEnlarged, (val, oldVal) => {
+  if (val && !oldVal) {
+    transitionClass.value = 'enlarge-fast enlarged';
+  } else if (!val && oldVal) {
+    transitionClass.value = 'shrink-slow';
+  }
+  lastEnlarged = val;
+});
+// Voor debug button:
+// @ts-ignore
+window.alienEnlarged = alienEnlarged;
+let alienTimeout: number | null = null;
+// Track which SVG is currently shown in sfeer-progress-alien
+const currentAlienSVG = ref<string>('default');
+
+watch([
+  health,
+  nearObstacle
+], ([newHealth, newNearObstacle]) => {
+  // Geef 'hit' prioriteit: als currentAlienSVG 'hit' is, overschrijf niet
+  if (currentAlienSVG.value === 'hit') return;
+  let newSVG = 'default';
+  if (newNearObstacle) {
+    newSVG = 'nearObstacle';
+  } else if (newHealth === 1) {
+    newSVG = 'oneHeart';
+  }
+  // Always restart animation for nearObstacle, even if already active
+  if (newSVG === 'nearObstacle') {
+    if (alienTimeout) clearTimeout(alienTimeout);
+    alienEnlarged.value = false;
+    void alienEnlarged.value;
+    setTimeout(() => {
+      alienEnlarged.value = true;
+      alienTimeout = window.setTimeout(() => {
+        alienEnlarged.value = false;
+      }, 3000);
+    }, 0);
+    currentAlienSVG.value = newSVG;
+    return;
+  }
+  if (currentAlienSVG.value !== newSVG) {
+    // If coming FROM 'nearObstacle' (scared alien), do NOT enlarge, just show normal size
+    if (currentAlienSVG.value === 'nearObstacle') {
+      alienEnlarged.value = false;
+      if (alienTimeout) clearTimeout(alienTimeout);
+      currentAlienSVG.value = newSVG;
+      return;
+    }
+    // Otherwise, enlarge on any SVG change
+    alienEnlarged.value = false;
+    if (alienTimeout) clearTimeout(alienTimeout);
+    void alienEnlarged.value;
+    setTimeout(() => {
+      alienEnlarged.value = true;
+      alienTimeout = window.setTimeout(() => {
+        alienEnlarged.value = false;
+      }, 3000);
+    }, 0);
+    currentAlienSVG.value = newSVG;
+  }
+});
 function hideGameUI() {
   visible.value = false;
 }
@@ -296,6 +459,18 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.sfeer-progress-alien.enlarged {
+    transition: transform 0.3s cubic-bezier(0.22, 1.5, 0.36, 1);
+  transform: translateX(-50%) scale(1.4);
+  z-index: 10;
+}
+
+.enlarge-fast {
+  transition: transform 0.3s cubic-bezier(0.22, 1.5, 0.36, 1) !important;
+}
+.shrink-slow {
+  transition: transform 3s cubic-bezier(0.4, 2, 0.2, 1) !important;
+}
 .game-ui-container {
   position: fixed;
   top: 0;
@@ -678,6 +853,7 @@ margin: 0;
 }
 
 .sfeer-progress-alien {
+    transition: transform 3s cubic-bezier(0.4, 2, 0.2, 1);
   position: absolute;
   bottom: 0;
   left: 50%;
@@ -685,12 +861,19 @@ margin: 0;
   /* right: 50%; */
   background: #fff;
   border-radius: 16px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(1);
   width: 112px;
   height: 112px;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.enlarge-fast {
+  transition: transform 0.3s cubic-bezier(0.22, 1.5, 0.36, 1) !important;
+}
+.shrink-slow {
+  transition: transform 1.5s ease !important;
 }
 </style>

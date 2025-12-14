@@ -13,6 +13,32 @@ function angleDiff(a: number, b: number): number {
 }
 
 export class Game extends Scene {
+        // Track near-obstacle state to avoid spamming events
+        // wasNearObstacle is declared below, only once
+        /**
+         * Checks if the balloon is near any obstacle (within a given distance).
+         * Emits an event to the UI if the state changes.
+         * @param threshold The distance in pixels to consider as 'near'.
+         */
+        private wasNearObstacle: boolean = false;
+        private checkNearObstacle(threshold: number = 200): void {
+            if (!this.ballonContainer) return;
+            let near = false;
+            for (const obstacle of this.obstacles) {
+                const dist = Phaser.Math.Distance.Between(
+                    obstacle.x, obstacle.y,
+                    this.ballonContainer.x, this.ballonContainer.y
+                );
+                if (dist < threshold) {
+                    near = true;
+                    break;
+                }
+            }
+            if (near !== this.wasNearObstacle) {
+                this.wasNearObstacle = near;
+                EventBus.emit('update-near-obstacle', near);
+            }
+        }
     // Houd bij van welke kant horizontale obstakels laatst kwamen (per type)
     private lastObstacleSides: { [key: string]: number[] } = {};
     // ==================== PROPERTIES ====================
@@ -69,6 +95,8 @@ export class Game extends Scene {
     // Wind effects
     private windBlauw: Phaser.GameObjects.Sprite | null = null;
     private windRood: Phaser.GameObjects.Sprite | null = null;
+    // Track if wind is in tilted mode
+    private _windIsTilted: boolean = false;
 
     // Obstacles
     private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
@@ -131,6 +159,9 @@ export class Game extends Scene {
         this.updateBalloonMovement();
         this.updateWindEffects();
         this.checkObstacleCollisions();
+
+        // Check for proximity to obstacles and notify UI
+        this.checkNearObstacle(200); // Adjust threshold as needed
     }
 
     shutdown() {
@@ -340,6 +371,7 @@ export class Game extends Scene {
         this.ballonHealth--;
         this.ballonInvulnerable = true;
         EventBus.emit('update-health', this.ballonHealth);
+        EventBus.emit('show-hit-emotion');
         
         if (this.ballon) {
             this.tweens.add({
@@ -362,9 +394,30 @@ export class Game extends Scene {
                     this.ballon.setTexture('balloon-health1');
                 }
             }
+            // Zet propellor stand afhankelijk van health
+            if (!this.activePowerUp) {
+                if (this.ballonHealth <= 1) {
+                    this.setPropellorPositions('tilted');
+                    this._windIsTilted = true;
+                    this.updateWindEffects();
+                } else {
+                    this.setPropellorPositions('normal');
+                    this._windIsTilted = false;
+                    this.updateWindEffects();
+                }
+            }
         }
         
         if (this.ballonHealth <= 0) {
+            // Wind sprites verwijderen bij game over
+            if (this.windBlauw) {
+                this.windBlauw.destroy();
+                this.windBlauw = null;
+            }
+            if (this.windRood) {
+                this.windRood.destroy();
+                this.windRood = null;
+            }
             this.time.delayedCall(1000, () => {
                 EventBus.emit('hide-gameui');
                 this.scene.start('GameOver');
@@ -785,6 +838,8 @@ export class Game extends Scene {
 
     private updateBalloonMovement() {
         if (!this.ballonContainer) return;
+        if (this.ballonHealth <= 0) return;
+        // Ballon mag altijd bewegen, ook bij 0 levens
 
         let deltaX = 0;
         let propellorLeftActive = false;
@@ -880,18 +935,37 @@ export class Game extends Scene {
         // Wind blauw
         if (sensor1Active) {
             if (!this.windBlauw) {
+                let x = this.ballonContainer.x + this.propellorOffsetXBlauw + 30;
+                let y = this.ballonContainer.y + this.propellorOffsetY;
+                if (this.ballonHealth === 1) {
+                    x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
+                    y = this.ballonContainer.y + this.propellorOffsetY - 100;
+                }
                 this.windBlauw = this.add.sprite(
-                    this.ballonContainer.x + this.propellorOffsetXBlauw + 30,
-                    this.ballonContainer.y + this.propellorOffsetY,
+                    x,
+                    y,
                     'wind-blauw'
                 ).setDepth(1002).setScale(0.4);
                 this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
+                // Forceer juiste rotatie direct na aanmaken
+                if (this.ballonHealth === 1) {
+                    this.windBlauw.setRotation(0.26);
+                } else {
+                    this.windBlauw.setRotation(0);
+                }
                 this.windBlauw.once('animationcomplete', () => {
                     if (this.windBlauw) {
                         this.windBlauw.destroy();
                         this.windBlauw = null;
                     }
                 });
+            } else {
+                // Forceer juiste rotatie als sprite al bestaat
+                if (this.ballonHealth === 1) {
+                    this.windBlauw.setRotation(0.26);
+                } else {
+                    this.windBlauw.setRotation(0);
+                }
             }
         } else {
             if (this.windBlauw && !this.windBlauw.anims.isPlaying) {
@@ -903,18 +977,37 @@ export class Game extends Scene {
         // Wind rood
         if (sensor2Active) {
             if (!this.windRood) {
+                let x = this.ballonContainer.x + this.propellorOffsetXRood - 30;
+                let y = this.ballonContainer.y + this.propellorOffsetY;
+                if (this.ballonHealth === 1) {
+                    x = this.ballonContainer.x + this.propellorOffsetXRood + 40;
+                    y = this.ballonContainer.y + this.propellorOffsetY + 100;
+                }
                 this.windRood = this.add.sprite(
-                    this.ballonContainer.x + this.propellorOffsetXRood - 30,
-                    this.ballonContainer.y + this.propellorOffsetY,
+                    x,
+                    y,
                     'wind-rood'
                 ).setDepth(1002).setScale(0.4);
                 this.windRood.play({ key: 'wind-rood', repeat: 0 });
+                // Forceer juiste rotatie direct na aanmaken
+                if (this.ballonHealth === 1) {
+                    this.windRood.setRotation(0.26);
+                } else {
+                    this.windRood.setRotation(0);
+                }
                 this.windRood.once('animationcomplete', () => {
                     if (this.windRood) {
                         this.windRood.destroy();
                         this.windRood = null;
                     }
                 });
+            } else {
+                // Forceer juiste rotatie als sprite al bestaat
+                if (this.ballonHealth === 1) {
+                    this.windRood.setRotation(0.26);
+                } else {
+                    this.windRood.setRotation(0);
+                }
             }
         } else {
             if (this.windRood && !this.windRood.anims.isPlaying) {
@@ -924,14 +1017,37 @@ export class Game extends Scene {
         }
     }
 
+    // Offset-waarden voor makkelijk testen (nu als class properties)
+    blauwYOffsetTilted: number = 25;
+    roodYOffsetTilted: number = 20;
+
     private updateWindEffects() {
+        if (this.ballonHealth <= 0) {
+            // Wind moet niet meer zichtbaar zijn
+            if (this.windBlauw) { this.windBlauw.setVisible(false); }
+            if (this.windRood) { this.windRood.setVisible(false); }
+            return;
+        }
+        // ...existing code...
         if (this.windBlauw && this.ballonContainer) {
-            this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
-            this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY;
+            if (this._windIsTilted) {
+                this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
+                this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY - this.blauwYOffsetTilted;
+            } else {
+                this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
+                this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY;
+            }
+            this.windBlauw.setVisible(true);
         }
         if (this.windRood && this.ballonContainer) {
-            this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 50;
-            this.windRood.y = this.ballonContainer.y + this.propellorOffsetY;
+            if (this._windIsTilted) {
+                this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 40;
+                this.windRood.y = this.ballonContainer.y + this.propellorOffsetY + this.roodYOffsetTilted;
+            } else {
+                this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 50;
+                this.windRood.y = this.ballonContainer.y + this.propellorOffsetY;
+            }
+            this.windRood.setVisible(true);
         }
     }
 
@@ -1004,6 +1120,7 @@ export class Game extends Scene {
             
             // Check collision
             if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
+                // ...existing code...
                 // If shield is active, destroy obstacle but don't damage balloon
                 if (this.shieldActive) {
                     const x = obstacle.x;
@@ -1530,10 +1647,13 @@ export class Game extends Scene {
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
                         this.ballon.setTexture('balloon');
+                        this.setPropellorPositions('normal');
                     } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                         this.ballon.setTexture('balloon-health2');
-                    } else if (this.ballonHealth === 1 && this.textures.exists('balloon-health1')) {
-                        this.ballon.setTexture('balloon-health1');
+                        this.setPropellorPositions('normal');
+                    } else if (this.ballonHealth <= 1 && this.textures.exists('balloon-health1')) {
+                        this.ballon.setTexture('balloon-health1').setScale(1.2);
+                        this.setPropellorPositions('tilted');
                     }
                 }
             } else if (powerUpType === 'shield') {
@@ -1542,13 +1662,44 @@ export class Game extends Scene {
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
                         this.ballon.setTexture('balloon');
+                        this.setPropellorPositions('normal');
                     } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                         this.ballon.setTexture('balloon-health2');
-                    } else if (this.ballonHealth === 1 && this.textures.exists('balloon-health1')) {
-                        this.ballon.setTexture('balloon-health1');
+                        this.setPropellorPositions('normal');
+                    } else if (this.ballonHealth <= 1 && this.textures.exists('balloon-health1')) {
+                        this.ballon.setTexture('balloon-health1').setScale(1.2);
+                        this.setPropellorPositions('tilted');
                     }
                 }
             }
+            // Zet de propellor posities afhankelijk van health
         }
     }
+
+    private setPropellorPositions(mode: 'normal' | 'tilted') {
+        console.log('[setPropellorPositions]', mode);
+        if (!this.propellorBlauw || !this.propellorRood) return;
+        // Sync wind mode
+        // Let op: setRotation gebruikt radialen, setAngle gebruikt graden
+        if (mode === 'tilted') {
+            this.propellorBlauw.x = this.propellorOffsetXBlauw -5;
+            this.propellorBlauw.y = this.propellorOffsetY - 15;
+            this.propellorBlauw.setRotation(0.26); // ~15 graden
+            // this.propellorBlauw.setTint(0x3399ff); // debug: blauw
+            this.propellorRood.x = this.propellorOffsetXRood-12;
+            this.propellorRood.y = this.propellorOffsetY + 3;
+            this.propellorRood.setRotation(0.26); // ~15 graden
+            // this.propellorRood.setTint(0xff3333); // debug: rood
+        } else {
+            this.propellorBlauw.x = this.propellorOffsetXBlauw;
+            this.propellorBlauw.y = this.propellorOffsetY;
+            this.propellorBlauw.setRotation(0);
+            this.propellorRood.x = this.propellorOffsetXRood;
+            this.propellorRood.y = this.propellorOffsetY;
+            this.propellorRood.setRotation(0);
+        }
+        // Wind logica nu in updateWindEffects
+    }
+
+    // setWindPositions verwijderd, logica zit nu in updateWindEffects
 }
