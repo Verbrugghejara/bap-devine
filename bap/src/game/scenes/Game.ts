@@ -5,6 +5,8 @@ import { EventBus } from '../EventBus';
 import { sfeerProgress } from '../utils/sfeerProgressStore';
 
 // Helper voor hoekverschil
+
+// ==================== UTILITIES ====================
 function angleDiff(a: number, b: number): number {
     let diff = a - b;
     if (diff > 180) diff -= 360;
@@ -12,38 +14,10 @@ function angleDiff(a: number, b: number): number {
     return diff;
 }
 
+
 export class Game extends Scene {
-        // Track near-obstacle state to avoid spamming events
-        // wasNearObstacle is declared below, only once
-        /**
-         * Checks if the balloon is near any obstacle (within a given distance).
-         * Emits an event to the UI if the state changes.
-         * @param threshold The distance in pixels to consider as 'near'.
-         */
-        private wasNearObstacle: boolean = false;
-        private checkNearObstacle(threshold: number = 200): void {
-            if (!this.ballonContainer) return;
-            let near = false;
-            for (const obstacle of this.obstacles) {
-                const dist = Phaser.Math.Distance.Between(
-                    obstacle.x, obstacle.y,
-                    this.ballonContainer.x, this.ballonContainer.y
-                );
-                if (dist < threshold) {
-                    near = true;
-                    break;
-                }
-            }
-            if (near !== this.wasNearObstacle) {
-                this.wasNearObstacle = near;
-                EventBus.emit('update-near-obstacle', near);
-            }
-        }
-    // Houd bij van welke kant horizontale obstakels laatst kwamen (per type)
-    private lastObstacleSides: { [key: string]: number[] } = {};
     // ==================== PROPERTIES ====================
-    
-    // Game state
+    // --- Game State ---
     private gameStartTime: number = 0;
     private gameEndTime: number = 0;
     private countdownDone: boolean = false;
@@ -54,17 +28,16 @@ export class Game extends Scene {
     private isVictorySwiping: boolean = false;
     private lastSfeerIndex: number = 0;
 
-    // Input state
+    // --- Input State ---
     private rotary: any = null;
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private enterKey: Phaser.Input.Keyboard.Key | null = null;
     private wasEnterDown: boolean = false;
     private wasButtonPressed: boolean = false;
-    // private _lastLeftDown: boolean = false;
-    // private _lastRightDown: boolean = false;
     private inactivityTimeout: any = null;
+    private _lastRotaryDiffs: number[] = [0, 0];
 
-    // Sfeer (atmosphere) layers
+    // --- Sfeer Layers ---
     private huidigeSfeerIndex: number = 0;
     private sfeerRects: Phaser.GameObjects.Rectangle[] = [];
     private sfeerBaseY: number[] = [];
@@ -72,48 +45,50 @@ export class Game extends Scene {
     private sfeerOffsetY: number = 0;
     private smoothScrollSpeed: number = 5;
 
-    // Background images
+    // --- Backgrounds ---
     private bgTroposfeer: Phaser.GameObjects.Image | null = null;
     private bgStratosfeer: Phaser.GameObjects.Image | null = null;
     private bgMesosfeer: Phaser.GameObjects.Image | null = null;
     private bgThermosfeer: Phaser.GameObjects.Image | null = null;
     private bgExosfeer: Phaser.GameObjects.Image | null = null;
 
-    // Balloon
+    // --- Balloon ---
     private ballon: Phaser.GameObjects.Image | null = null;
     private ballonContainer: Phaser.GameObjects.Container | null = null;
     private ballonHealth: number = 3;
     private ballonInvulnerable: boolean = false;
 
-    // Propellors
+    // --- Propellors ---
     private propellorBlauw: Phaser.GameObjects.Sprite | null;
     private propellorRood: Phaser.GameObjects.Sprite | null;
     private propellorOffsetXBlauw: number = -39;
     private propellorOffsetXRood: number = 39;
     private propellorOffsetY: number = 142;
 
-    // Wind effects
+    // --- Wind Effects ---
     private windBlauw: Phaser.GameObjects.Sprite | null = null;
     private windRood: Phaser.GameObjects.Sprite | null = null;
-    // Track if wind is in tilted mode
     private _windIsTilted: boolean = false;
 
-    // Obstacles
+    // --- Obstacles ---
     private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
-    // private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    private lastObstacleSides: { [key: string]: number[] } = {};
+    private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    private wasNearObstacle: boolean = false;
 
-    // Power-ups
+    // --- Power-ups ---
     private powerUps: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private powerUpsSpawned: Set<string> = new Set();
     private activePowerUp: string | null = null;
     private powerUpEndTime: number = 0;
     private freezeActive: boolean = false;
     private shieldActive: boolean = false;
-    // private baseScrollSpeed: number = 100;
-    private _lastRotaryDiffs: number[] = [0, 0];
+
+    // --- Wind Offset for Testing ---
+    blauwYOffsetTilted: number = 25;
+    roodYOffsetTilted: number = 20;
 
     // ==================== LIFECYCLE METHODS ====================
-
     constructor() {
         super('Game');
         EventBus.emit('show-countdown');
@@ -121,6 +96,7 @@ export class Game extends Scene {
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.on('victory-swipe-in', this.handleVictorySwipeIn, this);
     }
+
 
     create() {
         this.initializeGameState();
@@ -130,23 +106,20 @@ export class Game extends Scene {
         this.createBalloon();
         this.setupObstacles();
         this.setupInput();
-        
         EventBus.emit('current-scene-ready', this);
     }
 
+
     update() {
         this.handlePauseInput();
-        
         if (this.isGamePaused) {
             this.checkPauseTimeout();
             return;
         }
-
         if (this.isVictorySequence) {
             this.updateVictorySequence();
             return;
         }
-
         this.updateScroll();
         this.updateBackgrounds();
         this.updateObstaclePositions();
@@ -159,10 +132,9 @@ export class Game extends Scene {
         this.updateBalloonMovement();
         this.updateWindEffects();
         this.checkObstacleCollisions();
-
-        // Check for proximity to obstacles and notify UI
-        this.checkNearObstacle(200); // Adjust threshold as needed
+        this.checkNearObstacle(10); // Check for proximity to obstacles and notify UI
     }
+
 
     shutdown() {
         clearTimeout(this.inactivityTimeout);
@@ -171,6 +143,43 @@ export class Game extends Scene {
         EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
         closeRotaryClient();
+    }
+
+    // ==================== NEAR OBSTACLE CHECK ====================
+    /**
+     * Checks if the balloon is near any obstacle (within a given distance).
+     * Emits an event to the UI if the state changes.
+     * @param threshold The distance in pixels to consider as 'near'.
+     */
+    private checkNearObstacle(threshold: number = 10): void {
+        if (!this.ballonContainer) return;
+        let near = false;
+        const margin = 0;
+        for (const obstacle of this.obstacles) {
+            const balloonBounds = this.ballonContainer.getBounds();
+            const reducedBalloonBounds = new Phaser.Geom.Rectangle(
+                balloonBounds.x + margin,
+                balloonBounds.y + margin,
+                balloonBounds.width - 2 * margin,
+                balloonBounds.height - 2 * margin
+            );
+            const obstacleBounds = obstacle.getBounds();
+            const inflatedBalloonBounds = new Phaser.Geom.Rectangle(
+                reducedBalloonBounds.x - threshold,
+                reducedBalloonBounds.y - threshold,
+                reducedBalloonBounds.width + 2 * threshold,
+                reducedBalloonBounds.height + 2 * threshold
+            );
+            if (Phaser.Geom.Intersects.RectangleToRectangle(inflatedBalloonBounds, obstacleBounds)) {
+                near = true;
+                break;
+            }
+        }
+        if (near !== this.wasNearObstacle) {
+            if (this.shieldActive) return;
+            this.wasNearObstacle = near;
+            EventBus.emit('update-near-obstacle', near);
+        }
     }
 
     // ==================== INITIALIZATION ====================
@@ -191,7 +200,6 @@ export class Game extends Scene {
         this.powerUpEndTime = 0;
         this.freezeActive = false;
         this.shieldActive = false;
-        // this.baseScrollSpeed = 100;
         
         sfeerProgress.value = 0;
         EventBus.emit('show-countdown');
@@ -390,6 +398,7 @@ export class Game extends Scene {
             if (!this.activePowerUp) {
                 if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                     this.ballon.setTexture('balloon-health2');
+
                 } else if (this.ballonHealth === 1 && this.textures.exists('balloon-health1')) {
                     this.ballon.setTexture('balloon-health1');
                 }
@@ -454,9 +463,9 @@ export class Game extends Scene {
         const delays = [
             Phaser.Math.Between(3000, 4000),  // Troposfeer - birds
             Phaser.Math.Between(2500, 4000),  // Stratosfeer - planes (meer vliegtuigen)
-            Phaser.Math.Between(2000, 3000),   // Mesosfeer - meteors
-            Phaser.Math.Between(1800, 3500),  // Thermosfeer - satellites
-            Phaser.Math.Between(2000, 4000)   // Exosfeer - ufos
+            Phaser.Math.Between(2500, 3500),   // Mesosfeer - meteors
+            Phaser.Math.Between(2500, 3500),  // Thermosfeer - satellites
+            Phaser.Math.Between(2500, 4000)   // Exosfeer - ufos
         ];
         return delays[this.huidigeSfeerIndex] || 2000;
     }
@@ -1066,6 +1075,7 @@ export class Game extends Scene {
             // Once frozen, stay frozen until power-up ends
             // Only check distance for obstacles that aren't already frozen
             if (!isFrozen && this.freezeActive) {
+                this.setPropellorPositions('normal');
                 const distanceToBalloon = Phaser.Math.Distance.Between(
                     obstacle.x, obstacle.y,
                     this.ballonContainer.x, this.ballonContainer.y
@@ -1123,6 +1133,7 @@ export class Game extends Scene {
                 // ...existing code...
                 // If shield is active, destroy obstacle but don't damage balloon
                 if (this.shieldActive) {
+                    this.setPropellorPositions('normal');
                     const x = obstacle.x;
                     const y = obstacle.y;
                     const parent = obstacle.parentContainer;
@@ -1579,6 +1590,8 @@ export class Game extends Scene {
                             this.ballon.setTexture('balloon');
                         } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                             this.ballon.setTexture('balloon-health2');
+
+                    this.setPropellorPositions('normal');
                         }
                     }
                 }
@@ -1619,20 +1632,17 @@ export class Game extends Scene {
     private updateActivePowerUp() {
         if (this.activePowerUp && Date.now() >= this.powerUpEndTime) {
             const powerUpType = this.activePowerUp;
-            
             // Clear power-up state and notify UI immediately
             this.activePowerUp = null;
             EventBus.emit('update-powerup', null);
-            
+
             if (powerUpType === 'freeze') {
                 this.freezeActive = false;
-                
                 // Unfreeze all frozen obstacles immediately
                 for (const obstacle of this.obstacles) {
                     if (obstacle.getData('frozen')) {
                         obstacle.clearTint();
                         obstacle.setData('frozen', false);
-                        
                         // Change plane back to animated version
                         if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-flying')) {
                             obstacle.setTexture('plane-flying');
@@ -1642,17 +1652,16 @@ export class Game extends Scene {
                         }
                     }
                 }
-                
                 // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
-                        this.ballon.setTexture('balloon');
+                        this.ballon.setTexture('balloon').setScale(0.54);
                         this.setPropellorPositions('normal');
                     } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
-                        this.ballon.setTexture('balloon-health2');
+                        this.ballon.setTexture('balloon-health2').setScale(0.54);
                         this.setPropellorPositions('normal');
                     } else if (this.ballonHealth <= 1 && this.textures.exists('balloon-health1')) {
-                        this.ballon.setTexture('balloon-health1').setScale(1.2);
+                        this.ballon.setTexture('balloon-health1').setScale(0.54);
                         this.setPropellorPositions('tilted');
                     }
                 }
@@ -1661,13 +1670,13 @@ export class Game extends Scene {
                 // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
-                        this.ballon.setTexture('balloon');
+                        this.ballon.setTexture('balloon').setScale(0.54);
                         this.setPropellorPositions('normal');
                     } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
-                        this.ballon.setTexture('balloon-health2');
+                        this.ballon.setTexture('balloon-health2').setScale(0.54);
                         this.setPropellorPositions('normal');
                     } else if (this.ballonHealth <= 1 && this.textures.exists('balloon-health1')) {
-                        this.ballon.setTexture('balloon-health1').setScale(1.2);
+                        this.ballon.setTexture('balloon-health1').setScale(0.54);
                         this.setPropellorPositions('tilted');
                     }
                 }

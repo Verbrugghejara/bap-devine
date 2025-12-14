@@ -125,7 +125,7 @@ export class Preloader extends Scene
             this.anims.create({
                 key: 'sattelite-flying',
                 frames: this.anims.generateFrameNumbers('sattelite-flying', { start: 0, end: 8 }),
-                frameRate: 10,
+                frameRate: 4,
                 repeat: -1
             });
             this.anims.create({
