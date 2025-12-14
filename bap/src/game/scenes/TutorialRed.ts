@@ -102,7 +102,7 @@ export class Tutorial extends Scene {
         
        // Zet troposfeer achtergrond image
         if (this.textures.exists('bg-troposfeer')) {
-            const bg = this.add.image(this.scale.width / 2, this.scale.height+15, 'bg-troposfeer');
+            const bg = this.add.image(this.scale.width / 2, this.scale.height, 'bg-troposfeer');
             const tex = this.textures.get('bg-troposfeer').getSourceImage();
             const scaleX = this.scale.width / tex.width;
             bg.setOrigin(0.5, 1).setDepth(-100).setScale(scaleX, 1);

@@ -344,7 +344,6 @@ export class Game extends Scene {
                 this.propellorOffsetY,
                 'propellor-blauw'
             ).setScale(0.5).setDepth(1002);
-            
             if (this.anims.exists('propellor-blauw')) {
                 this.propellorBlauw.setFrame(0);
                 this.propellorBlauw.anims.stop();
@@ -355,7 +354,6 @@ export class Game extends Scene {
                 this.propellorOffsetY,
                 'propellor-rood'
             ).setScale(0.5).setDepth(1002);
-            
             if (this.anims.exists('propellor-rood')) {
                 this.propellorRood.setFrame(0);
                 this.propellorRood.anims.stop();
@@ -364,12 +362,27 @@ export class Game extends Scene {
             this.windBlauw = null;
             this.windRood = null;
 
+            // Start lager dan normaal
+            const startY = this.scale.height * 0.90;
+            const targetY = this.scale.height * 0.85;
             this.ballonContainer = this.add.container(
                 this.scale.width / 2,
-                this.scale.height * 0.85,
+                startY,
                 [this.propellorBlauw, this.propellorRood, this.ballon]
             );
             this.ballonContainer.setDepth(1002);
+
+            // Eerst ballon los omhoog laten gaan, dan pas bg swipen
+            this.scene.pause(); // Pauzeer de scene zodat update() niet direct alles beweegt
+            this.tweens.add({
+                targets: this.ballonContainer,
+                y: targetY,
+                duration: 1200,
+                ease: 'Cubic.easeOut',
+                onComplete: () => {
+                    this.scene.resume(); // Start nu pas de rest van de game
+                }
+            });
         } catch (e) {
             console.error("[Game] Kan ballon of propellors niet aanmaken!", e);
         }
@@ -708,8 +721,12 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        // const scrollSpeeds = [5, 7, 9, 11, 12];
-        const scrollSpeeds = [200, 200, 200, 200, 200];
+        const scrollSpeeds = [5, 7, 9, 11, 12];
+        // Scroll pas als ballon op targetY is
+        if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
+            return;
+        }
+        // const scrollSpeeds = [200, 200, 200, 200, 200];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
         let healthSpeedModifier = 1.0;
