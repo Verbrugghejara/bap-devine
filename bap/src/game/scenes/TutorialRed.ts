@@ -369,7 +369,7 @@ export class Tutorial extends Scene {
         // Store references
         this.skipFill = skipFill;
         this.skipCircleRadius = circleRadius;
-        this.animTargets = [skipBg, skipCircle, skipFill, skipText];
+        this.animTargets = [skipBg, skipCircle, skipFill, skipText, shineTopLeft, shineTopLeft2, shineBottomRight];
         
         // Click handler
         skipButton.on('pointerdown', () => {

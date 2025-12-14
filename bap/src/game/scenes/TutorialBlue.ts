@@ -4,6 +4,7 @@ import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 export class Tutorial extends Scene {
+    private sceneIsReady: boolean = false;
     // ==================== PROPERTIES ====================
     
     // Rotary input
@@ -67,6 +68,9 @@ export class Tutorial extends Scene {
         this.createProgressBar();
         this.createSkipButton();
         this.setupEventListeners();
+        // Reset rotary button state zodat een ingedrukte knop niet direct effect heeft
+        this.wasButtonPressed = this.rotary?.buttonPressed || false;
+        this.sceneIsReady = true;
     }
 
     update() {
@@ -360,7 +364,7 @@ export class Tutorial extends Scene {
         // Store references
         this.skipFill = skipFill;
         this.skipCircleRadius = circleRadius;
-        this.animTargets = [skipBg, skipCircle, skipFill, skipText];
+        this.animTargets = [skipBg, skipCircle, skipFill, skipText, shineTopLeft, shineTopLeft2, shineBottomRight];
         
         // Click handler
         skipButton.on('pointerdown', () => {
@@ -436,14 +440,14 @@ export class Tutorial extends Scene {
     private handleButtonInput() {
         const buttonRaw = this.rotary?.buttonPressed;
         const buttonPressed = typeof buttonRaw === 'boolean' || typeof buttonRaw === 'number' ? !!buttonRaw : false;
-        
-        // Button pressed
-        if (buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
+
+        // Button pressed (alleen als sceneIsReady)
+        if (this.sceneIsReady && buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
             if (this.skipHoldStart === null) {
                 this.skipHoldStart = Date.now();
             }
-            
+
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
                 targets: this.animTargets,
@@ -452,13 +456,13 @@ export class Tutorial extends Scene {
                 yoyo: false
             });
         }
-        
-        // Button released
-        if (!buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
+
+        // Button released (alleen als sceneIsReady)
+        if (this.sceneIsReady && !buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
             this.skipButtonIsDown = false;
             this.skipHoldStart = null;
             this.skipHoldProgress = 0;
-            
+
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
                 targets: this.animTargets,
@@ -467,14 +471,14 @@ export class Tutorial extends Scene {
                 yoyo: false
             });
         }
-        
+
         this.wasButtonPressed = buttonPressed;
-        
-        // Check hold progress
-        if (this.skipHoldStart !== null && !this.isTransitioning) {
+
+        // Check hold progress (alleen als sceneIsReady)
+        if (this.sceneIsReady && this.skipHoldStart !== null && !this.isTransitioning) {
             const elapsed = Date.now() - this.skipHoldStart;
             this.skipHoldProgress = Math.min(1, elapsed / 2800);
-            
+
             if (this.skipHoldProgress >= 1) {
                 this.isTransitioning = true;
                 this.skipHoldStart = null;

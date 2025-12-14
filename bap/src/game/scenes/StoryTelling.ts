@@ -6,6 +6,8 @@ export class StoryTelling extends Scene {
     private skipFill: Phaser.GameObjects.Graphics | null = null;
     private skipCircleRadius: number = 20;
     private animTargets: Phaser.GameObjects.GameObject[] = [];
+    private skipButton: Phaser.GameObjects.Container | null = null;
+    private skipButtonVisible: boolean = false;
     private rotary: any = null;
     private wasButtonPressed: boolean = false;
     private skipHoldStart: number | null = null;
@@ -13,6 +15,7 @@ export class StoryTelling extends Scene {
     private skipButtonTween: Phaser.Tweens.Tween | null = null;
     private skipButtonIsDown: boolean = false;
     private isTransitioning: boolean = false;
+    private videoIsPlaying: boolean = false;
 
     constructor() {
         super('StoryTelling');
@@ -24,19 +27,21 @@ export class StoryTelling extends Scene {
         this.skipHoldProgress = 0;
         this.skipButtonIsDown = false;
         this.isTransitioning = false;
-        
+        this.videoIsPlaying = false;
+
         this.rotary = getRotaryClient();
         this.createSkipButton();
         const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'storytelling-animation')
             .setOrigin(0.5)
             .setDepth(1000);
-        
+
         console.log('Video object:', video);
-        
+
         video.on('play', () => {
             console.log('Video started playing!');
+            this.videoIsPlaying = true;
         });
-        
+
         // When video completes, go to next scene
         video.on('complete', () => {
             if (!this.isTransitioning) {
@@ -45,7 +50,7 @@ export class StoryTelling extends Scene {
                 this.scene.start('TutorialBlue');
             }
         });
-        
+
         video.setMute(true);
         video.play(false);
     }
@@ -54,7 +59,7 @@ export class StoryTelling extends Scene {
         const buttonHeight = 100;
         const skipShadowOffsetY = 8;
         const buttonX = this.scale.width - buttonWidth / 2 - 54;
-        const buttonY = this.scale.height / 4 - 400;
+        const buttonY = this.scale.height / 2 + 850;
         const circleRadius = 20;
         const gap = 32;
         const skipTextPadding = 12;
@@ -102,7 +107,7 @@ export class StoryTelling extends Scene {
         
         // Circle outline
         const skipCircle = this.add.graphics();
-        skipCircle.lineStyle(4, 0xffffff, 1);
+        skipCircle.lineStyle(8, 0xffffff, 1);
         skipCircle.strokeCircle(0, 0, circleRadius);
         skipCircle.setDepth(2002);
         
@@ -127,12 +132,16 @@ export class StoryTelling extends Scene {
         skipButton.setSize(buttonWidth, buttonHeight);
         skipButton.setDepth(2000);
         skipButton.setInteractive({ useHandCursor: true });
-        
+        skipButton.setAlpha(0); // Start onzichtbaar
+        skipButton.setScale(0.7);
+
         // Store references
         this.skipFill = skipFill;
         this.skipCircleRadius = circleRadius;
-        this.animTargets = [skipBg, skipCircle, skipFill, skipText];
-        
+        this.animTargets = [skipBg, skipCircle, skipFill, skipText, shineTopLeft, shineTopLeft2, shineBottomRight];
+        this.skipButton = skipButton;
+        this.skipButtonVisible = false;
+
         // Click handler
         skipButton.on('pointerdown', () => {
             console.log('Skip button clicked!');
@@ -167,14 +176,24 @@ export class StoryTelling extends Scene {
     
     private handleButtonInput() {
         const buttonPressed = this.rotary?.buttonPressed || false;
-        
-        // Button pressed
-        if (buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
+
+        // Button pressed: pop in skip button (alleen als video speelt)
+        if (this.videoIsPlaying && buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
             if (this.skipHoldStart === null) {
                 this.skipHoldStart = Date.now();
             }
-            
+            if (this.skipButton && !this.skipButtonVisible) {
+                this.skipButtonVisible = true;
+                this.skipButton.setAlpha(1);
+                this.skipButton.setScale(0.7);
+                this.tweens.add({
+                    targets: this.skipButton,
+                    scale: 1,
+                    duration: 220,
+                    ease: 'Back.easeOut'
+                });
+            }
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
                 targets: this.animTargets,
@@ -183,13 +202,24 @@ export class StoryTelling extends Scene {
                 yoyo: false
             });
         }
-        
-        // Button released
-        if (!buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
+
+        // Button released: pop out skip button
+        if (this.videoIsPlaying && !buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
             this.skipButtonIsDown = false;
             this.skipHoldStart = null;
             this.skipHoldProgress = 0;
-            
+            if (this.skipButton && this.skipButtonVisible) {
+                this.skipButtonVisible = false;
+                this.tweens.add({
+                    targets: this.skipButton,
+                    scale: 0.7,
+                    duration: 180,
+                    ease: 'Back.easeIn',
+                    onComplete: () => {
+                        if (this.skipButton) this.skipButton.setAlpha(0);
+                    }
+                });
+            }
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
                 targets: this.animTargets,
@@ -198,14 +228,14 @@ export class StoryTelling extends Scene {
                 yoyo: false
             });
         }
-        
+
         this.wasButtonPressed = buttonPressed;
-        
+
         // Check hold progress
-        if (this.skipHoldStart !== null && !this.isTransitioning) {
+        if (this.videoIsPlaying && this.skipHoldStart !== null && !this.isTransitioning) {
             const elapsed = Date.now() - this.skipHoldStart;
             this.skipHoldProgress = Math.min(1, elapsed / 2800);
-            
+
             if (this.skipHoldProgress >= 1) {
                 this.isTransitioning = true;
                 this.skipHoldStart = null;

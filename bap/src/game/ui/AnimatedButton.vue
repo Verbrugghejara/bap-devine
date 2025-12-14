@@ -71,13 +71,13 @@ function handleClick() {
 
 function checkButton() {
   if (!buttonCheckEnabled.value) return;
-  
+
   const buttonPressed = rotary?.buttonPressed || false;
-  
-  if (buttonPressed && !wasButtonPressed.value) {
+
+  // Trigger click alleen bij loslaten (van ingedrukt naar niet-ingedrukt)
+  if (!buttonPressed && wasButtonPressed.value) {
     handleClick();
   }
-  
   wasButtonPressed.value = buttonPressed;
 }
 
@@ -93,11 +93,16 @@ function globalKeyHandler(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener('keydown', globalKeyHandler);
   intervalId = window.setInterval(checkButton, 16); // ~60fps
-  
-  // Enable button checking after a short delay to prevent immediate trigger
-  setTimeout(() => {
-    buttonCheckEnabled.value = true;
-  }, 300);
+
+  // Enable button checking pas als knop niet ingedrukt is (anti-accidental resume)
+  const waitForRelease = () => {
+    if (!(rotary?.buttonPressed)) {
+      buttonCheckEnabled.value = true;
+    } else {
+      setTimeout(waitForRelease, 50);
+    }
+  };
+  waitForRelease();
 });
 onUnmounted(() => {
   window.removeEventListener('keydown', globalKeyHandler);
