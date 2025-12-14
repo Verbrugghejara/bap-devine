@@ -102,9 +102,18 @@ export class Tutorial extends Scene {
         this.totalDelta = 0;
         this.windBlauw = null;
         
-        this.cameras.main.setBackgroundColor(
-            '#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase()
-        );
+        // Zet troposfeer achtergrond image
+        if (this.textures.exists('bg-troposfeer')) {
+            const bg = this.add.image(this.scale.width / 2, this.scale.height, 'bg-troposfeer');
+            const tex = this.textures.get('bg-troposfeer').getSourceImage();
+            const scaleX = this.scale.width / tex.width;
+            bg.setOrigin(0.5, 1).setDepth(-100).setScale(scaleX, 1);
+        } else {
+            // Fallback: kleur
+            this.cameras.main.setBackgroundColor(
+                '#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase()
+            );
+        }
     }
 
     private setupEventListeners() {
@@ -125,31 +134,33 @@ export class Tutorial extends Scene {
 
     private createBackground() {
         const bg = this.add.graphics();
-        bg.fillStyle(0x000000, 0.25);
-        
+        const shadowOffset = 8;
         const rectWidth = 800;
-        const rectHeight = 1100;
-        const rectRadius = 20;
+        const rectHeight = 1350;
+        const rectRadius = 32;
         const rectX = (this.scale.width - rectWidth) / 2;
         const rectY = (this.scale.height - rectHeight) / 2;
-        
+
+        // Shadow
+        bg.fillStyle(0xE1E1E1, 1);
+        bg.fillRoundedRect(rectX, rectY + shadowOffset, rectWidth, rectHeight, rectRadius);
+
+        // Main background
+        bg.fillStyle(0xffffff, 1);
         bg.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
-        bg.lineStyle(6, 0x35BBF0, 1);
-        bg.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
-        bg.setDepth(1);
     }
 
     private createTitle() {
         const paddingX = 32;
         const paddingY = 24;
         const borderRadius = 16;
-        const titleY = 380;
+        const titleY = 400;
         const shadowOffset = 8;
         
         // Temp title voor afmetingen
         const tempTitle = this.add.text(0, 0, 'Hoe werkt het?', {
             fontFamily: 'Bungee',
-            fontSize: 40,
+            fontSize: 64,
             color: '#fff',
             padding: { x: 20, y: 10 },
             align: 'center',
@@ -160,14 +171,6 @@ export class Tutorial extends Scene {
         
         // Background met shadow
         const titleBg = this.add.graphics();
-        titleBg.fillStyle(0x2192BF, 1);
-        titleBg.fillRoundedRect(
-            this.scale.width / 2 - titleWidth / 2,
-            titleY - titleHeight / 2 + shadowOffset,
-            titleWidth,
-            titleHeight,
-            borderRadius
-        );
         titleBg.fillStyle(0x35BBF0, 1);
         titleBg.fillRoundedRect(
             this.scale.width / 2 - titleWidth / 2,
@@ -185,7 +188,7 @@ export class Tutorial extends Scene {
             'Hoe werkt het?',
             {
                 fontFamily: 'Bungee',
-                fontSize: 40,
+                fontSize: 64,
                 color: '#fff',
                 padding: { x: 20, y: 10 },
                 align: 'center',
@@ -196,20 +199,20 @@ export class Tutorial extends Scene {
     }
 
     private createDescription() {
-        const descFontSize = 32;
-        const descY = this.scale.height / 2 - 450;
+        const descFontSize = 52;
+        const descY = this.scale.height / 2 - 420;
         
         const text1 = this.add.text(0, 0, 'Draai aan ', {
             fontFamily: 'Space Grotesk',
             fontSize: descFontSize,
-            color: '#ffffff',
+            color: '#35BBF0',
             fontStyle: 'normal',
         }).setOrigin(0, 0.5).setDepth(10);
         
         const text2 = this.add.text(0, 0, 'blauw', {
             fontFamily: 'Space Grotesk',
             fontSize: descFontSize,
-            color: '#ffffff',
+            color: '#35BBF0',
             fontStyle: 'bold',
         }).setOrigin(0, 0.5).setDepth(10);
         
@@ -222,10 +225,10 @@ export class Tutorial extends Scene {
 
     private createTutorialElements() {
         const propellorX = this.scale.width / 2;
-        const propellorY = this.scale.height / 2 + 350;
+        const propellorY = this.scale.height / 2 + 425;
         
         this.inactivePropellor = this.add.image(
-            propellorX + 150,
+            propellorX + 200,
             propellorY,
             'inactive'
         ).setDepth(1001).setScale(0.60);
@@ -234,13 +237,13 @@ export class Tutorial extends Scene {
             propellorX - 150,
             propellorY,
             'active-blauw'
-        ).setDepth(1003).setScale(0.60);
+        ).setDepth(1003).setScale(0.8);
         
         this.arrows = this.add.image(
             this.activePropellor.x,
             this.activePropellor.y,
-            'arrows'
-        ).setDepth(1004).setScale(0.60);
+            'arrows-blue'
+        ).setDepth(1004).setScale(0.6);
     }
 
     private createBalloonAndPropellors() {
@@ -280,14 +283,14 @@ export class Tutorial extends Scene {
         const buttonHeight = 100;
         const skipShadowOffsetY = 8;
         const buttonX = this.scale.width - buttonWidth / 2 - 54;
-        const buttonY = this.scale.height - 200;
+        const buttonY = this.scale.height - 150;
         const circleRadius = 20;
         const gap = 32;
         const skipTextPadding = 12;
         
         // Shadow
         const skipShadow = this.add.graphics();
-        skipShadow.fillStyle(0x246E8B, 1);
+        skipShadow.fillStyle(0x2485AB, 1);
         skipShadow.fillRoundedRect(
             -buttonWidth / 2,
             -buttonHeight / 2 + skipShadowOffsetY,
@@ -309,10 +312,26 @@ export class Tutorial extends Scene {
             fontSize: 50,
             color: '#ffffff',
         }).setOrigin(0, 0.5).setDepth(2001);
+
+        // Shining effects
+        const shineTopLeft = this.add.graphics();
+        shineTopLeft.fillStyle(0xFFFFFF, 0.4);
+        shineTopLeft.fillRoundedRect(-buttonWidth / 2 +70, -buttonHeight / 2 -105, 16.844, 5.877, 3);
+        shineTopLeft.rotation = -33.256 * (Math.PI / 180);
+        const shineTopLeft2 = this.add.graphics();
+        shineTopLeft2.fillStyle(0xFFFFFF, 0.4);
+        shineTopLeft2.fillRoundedRect(-buttonWidth / 2 +70, -buttonHeight / 2 -95, 9, 6, 3);
+        shineTopLeft2.rotation = -33.256 * (Math.PI / 180);
+        
+        const shineBottomRight = this.add.graphics();
+        shineBottomRight.fillStyle(0xFFFFFF, 0.4);
+        shineBottomRight.fillRoundedRect(buttonWidth / 2 -80, buttonHeight / 2 + 100, 9, 6, 3);
+        shineBottomRight.rotation = -33.256 * (Math.PI / 180);
+
         
         // Circle outline
         const skipCircle = this.add.graphics();
-        skipCircle.lineStyle(4, 0xffffff, 1);
+        skipCircle.lineStyle(8, 0xffffff, 1);
         skipCircle.strokeCircle(0, 0, circleRadius);
         skipCircle.setDepth(2002);
         
@@ -330,7 +349,10 @@ export class Tutorial extends Scene {
         skipText.y = 0;
         
         // Container
-        const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg, skipCircle, skipFill, skipText]);
+        const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg,
+            shineTopLeft,
+            shineTopLeft2,
+            shineBottomRight, skipCircle, skipFill, skipText]);
         skipButton.setSize(buttonWidth, buttonHeight);
         skipButton.setDepth(2000);
         skipButton.setInteractive({ useHandCursor: true });
@@ -360,7 +382,7 @@ export class Tutorial extends Scene {
         this.progressBar.clear();
         
         // Background
-        this.progressBar.fillStyle(0xffffff, 0.25);
+        this.progressBar.fillStyle(0xEDEDED, 1);
         this.progressBar.fillRoundedRect(barX, barY, barWidth, barHeight, radius);
         
         // Fill
@@ -368,8 +390,18 @@ export class Tutorial extends Scene {
             const fillWidth = (barWidth - 30) * this.progress;
             this.progressBar.fillStyle(0x35BBF0, 1);
             this.progressBar.fillRoundedRect(barX, barY, fillWidth + 30, barHeight, radius);
+
+            // Highlighted part (zoals GameOver)
+            this.progressBar.fillStyle(0xffffff, 0.1);
+            this.progressBar.fillRoundedRect(
+                barX + 20,
+                barY + 8,
+                Math.max(0, fillWidth - 10),
+                6,
+                3
+            );
         }
-        
+
         // Border
         this.progressBar.strokeRoundedRect(barX, barY, barWidth, barHeight, radius);
         
@@ -462,8 +494,9 @@ export class Tutorial extends Scene {
             if (typeof angle2 === 'number' && this.lastAngle2 !== undefined) {
                 const angle2Delta = angle2 - this.lastAngle2;
                 if (Math.abs(angle2Delta) >= 2) {
+                    // Start shake alleen als timer exact 0 is (laat uitspelen)
                     if (this.inactiveShakeTimer === 0) {
-                        this.inactiveShakeTimer = 6;
+                        this.inactiveShakeTimer = 16; // langer voor volledige heen-en-weer
                         this.inactiveShakeDirection = Math.sign(angle2Delta) || 1;
                     }
                 }
@@ -474,8 +507,13 @@ export class Tutorial extends Scene {
         // Apply shake animation
         if (this.inactivePropellor) {
             if (this.inactiveShakeTimer > 0) {
-                this.inactivePropellor.rotation = 
-                    Math.sin(this.inactiveShakeTimer * 0.7) * 0.25 * this.inactiveShakeDirection;
+                // Shake: heen en weer, niet resetten bij nieuwe data
+                // 0 -> links, midden -> rechts, einde -> terug naar 0
+                const totalFrames = 16;
+                const progress = 1 - (this.inactiveShakeTimer / totalFrames);
+                // Ease in-out
+                const eased = Math.sin(progress * Math.PI);
+                this.inactivePropellor.rotation = eased * 0.25 * this.inactiveShakeDirection;
                 this.inactiveShakeTimer--;
             } else {
                 this.inactivePropellor.rotation = 0;

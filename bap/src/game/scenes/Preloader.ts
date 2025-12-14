@@ -47,7 +47,8 @@ export class Preloader extends Scene
         this.load.image('active-blauw', 'activePropellorBlauw.png');
         this.load.image('active-rood', 'activePropellorRood.png');
         this.load.image('inactive', 'inactivePropellor.png');
-        this.load.image('arrows', 'arrows.png');
+        this.load.image('arrows-blue', 'arrowsBlue.png');
+        this.load.image('arrows-red', 'arrowsRed.png');
         this.load.image('progress-indicator', 'progressIndicator.png');
         this.load.image('timer', 'timer.png');
         this.load.image('winner', 'winner.png');

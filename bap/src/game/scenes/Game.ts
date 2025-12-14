@@ -436,7 +436,6 @@ export class Game extends Scene {
 
     // ==================== OBSTACLES ====================
 
-    private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
     private setupObstacles() {
         this.obstacles = [];
         this.spawnObstacle();
@@ -452,7 +451,12 @@ export class Game extends Scene {
                 this.spawnObstacle();
                 // Reset timer met nieuwe delay voor variatie
                 if (this.obstacleSpawnTimer) {
-                    this.obstacleSpawnTimer.delay = this.getObstacleSpawnDelay();
+                    this.obstacleSpawnTimer.reset({
+                        delay: this.getObstacleSpawnDelay(),
+                        callback: this.obstacleSpawnTimer.callback,
+                        callbackScope: this.obstacleSpawnTimer.callbackScope,
+                        loop: true
+                    });
                 }
             }
         });
@@ -461,7 +465,7 @@ export class Game extends Scene {
     private getObstacleSpawnDelay(): number {
         // Lagere delays voor meer obstakels
         const delays = [
-            Phaser.Math.Between(3000, 4000),  // Troposfeer - birds
+            Phaser.Math.Between(2500, 5000),  // Troposfeer - birds
             Phaser.Math.Between(2500, 4000),  // Stratosfeer - planes (meer vliegtuigen)
             Phaser.Math.Between(2500, 3500),   // Mesosfeer - meteors
             Phaser.Math.Between(2500, 3500),  // Thermosfeer - satellites
@@ -1027,8 +1031,6 @@ export class Game extends Scene {
     }
 
     // Offset-waarden voor makkelijk testen (nu als class properties)
-    blauwYOffsetTilted: number = 25;
-    roodYOffsetTilted: number = 20;
 
     private updateWindEffects() {
         if (this.ballonHealth <= 0) {
@@ -1261,7 +1263,7 @@ export class Game extends Scene {
                     if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
                         console.log('UFO breaking animation triggered');
                         const breakingUfo = this.physics.add.sprite(x, y, 'ufo-breaking')
-                            .setScale(1, 1)
+                            .setScale(0.5, 0.5)
                             .setDepth(50)
                             .setOrigin(0.5);
                         if (parent) parent.add(breakingUfo);
