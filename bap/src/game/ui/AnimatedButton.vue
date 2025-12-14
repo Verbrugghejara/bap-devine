@@ -11,8 +11,8 @@
       :class="{ animate: animating, 'animate-up': animatingUp }"
     >
       <slot name="icon">
-       <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="-1 -1 26 26" fill="none">
-  <circle cx="12" cy="12" r="10.5" stroke="white" stroke-width="4"/>
+       <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="-3 -3 30 30" fill="none">
+  <circle cx="12" cy="12" r="10.5" stroke="white" stroke-width="5"/>
 </svg>
       </slot>
       <p>{{ text }}</p>
@@ -20,8 +20,8 @@
 
     <div class="button-shadow">
       <slot name="icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-  <circle cx="12" cy="12" r="10.5" stroke="white" stroke-width="3"/>
+       <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="-3 -3 30 30" fill="none">
+  <circle cx="12" cy="12" r="10.5" stroke="white" stroke-width="5"/>
 </svg>
       </slot>
       <p>{{ text }}</p>
@@ -121,8 +121,8 @@ onUnmounted(() => {
   position: absolute;
   bottom: 8px;
   color: #FFF;
-  font-family: Bungee;
-  font-size: 36px;
+  font-family: 'Bungee';
+  font-size: 64px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
@@ -147,7 +147,7 @@ onUnmounted(() => {
 .button-shadow {
   color: #FFF;
   font-family: Bungee;
-  font-size: 36px;
+  font-size: 64px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;

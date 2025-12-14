@@ -209,14 +209,14 @@ export class Tutorial extends Scene {
         const descY = this.scale.height / 2 - 420;
         
         const text1 = this.add.text(0, 0, 'Draai aan ', {
-            fontFamily: 'Space Grotesk',
+            fontFamily: 'Nunito',
             fontSize: descFontSize,
             color: '#E73228',
             fontStyle: 'normal',
         }).setOrigin(0, 0.5).setDepth(10);
         
         const text2 = this.add.text(0, 0, 'rood', {
-            fontFamily: 'Space Grotesk',
+            fontFamily: 'Nunito',
             fontSize: descFontSize,
             color: '#E73228',
             fontStyle: 'bold',

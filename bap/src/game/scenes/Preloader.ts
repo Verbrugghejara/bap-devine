@@ -41,6 +41,7 @@ export class Preloader extends Scene
         this.load.image('bg-exosfeer', 'bgSferen/bgExosfeer.jpg');
         this.load.image('bg-gameover', 'bgGameOver.jpg');
         this.load.image('bg-gamevictory', 'bgGameVictory.jpg');
+        this.load.image('aliens-gamevictory', 'aliensVictory.png');
         this.load.spritesheet('bird-walk', 'bird/birdFlying2.png', { frameWidth: 140, frameHeight: 125 });
         this.load.spritesheet('bird-death', 'bird/birdDeath.png', { frameWidth: 320, frameHeight: 375 });
         this.load.image('heart', 'heart.svg');

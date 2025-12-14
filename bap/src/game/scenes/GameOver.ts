@@ -95,7 +95,7 @@ export class GameOver extends Scene {
             this.scale.height / 4 -100,
             'Oei... dat was een gekke landing.',
             {
-                fontFamily: 'Space Grotesk',
+                fontFamily: 'Nunito',
                 fontSize: 56,
                 color: '#ffffff',
                 fontStyle: 'bold',
@@ -354,7 +354,7 @@ export class GameOver extends Scene {
             buttonY,
             'Opnieuw proberen?',
             {
-                fontFamily: 'Space Grotesk',
+                fontFamily: 'Nunito',
                 fontSize: 40,
                 color: '#FFFFFF',
                 fontStyle: '500'

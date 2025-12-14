@@ -288,8 +288,10 @@ export class Game extends Scene {
     private createBackgrounds() {
         this.createBackground('bg-troposfeer', 0, (img, scale) => {
             this.bgTroposfeer = img;
+            this.bgTroposfeer.setScale(scale.x, scale.y);
+            this.bgTroposfeer.setOrigin(0.5, 1);
             this.bgTroposfeer.y = this.scale.height;
-            this.bgTroposfeer.setOrigin(0.5, 1).setDepth(-200).setScale(scale.x, scale.y);
+            this.bgTroposfeer.setDepth(-200);
         });
 
         this.createBackground('bg-stratosfeer', 1, (img, scale) => {
@@ -685,12 +687,12 @@ export class Game extends Scene {
     }
 
     private checkPauseTimeout() {
-        if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
-            EventBus.emit('hide-pauseui');
-            this.scene.start('MainMenu');
-            this.isGamePaused = false;
-            this.pauseStartTime = null;
-        }
+        // if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
+        //     EventBus.emit('hide-pauseui');
+        //     this.scene.start('MainMenu');
+        //     this.isGamePaused = false;
+        //     this.pauseStartTime = null;
+        // }
     }
 
     // ==================== UPDATE METHODS ====================
@@ -708,8 +710,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
-        // const scrollSpeeds = [200, 200, 200, 200, 13];
+        // const scrollSpeeds = [5, 7, 9, 11, 12];
+        const scrollSpeeds = [200, 200, 200, 200, 200];
         
         // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
         let healthSpeedModifier = 1.0;

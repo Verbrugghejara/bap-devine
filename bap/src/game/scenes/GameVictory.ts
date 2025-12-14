@@ -2,8 +2,6 @@ import { GameObjects, Scene } from "phaser";
 const VICTORY_SWIPE_DURATION = 1400;
 import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
-import { emit } from "process";
-import { sfeerProgress } from "../utils/sfeerProgressStore";
 import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 
@@ -56,16 +54,15 @@ export class GameVictory extends Scene {
             .setDepth(1);
         victoryContainer.add(bgVictory);
         
-        // Black overlay on top of background (starts invisible)
-        const blackOverlayTop = this.add.graphics();
-        blackOverlayTop.fillStyle(0x000000, 0.25);
-        blackOverlayTop.fillRect(0, 0, this.scale.width, this.scale.height);
-        blackOverlayTop.setDepth(8);
-        blackOverlayTop.setAlpha(0);
-        victoryContainer.add(blackOverlayTop);
+        // Aliens victory image als overlay (start onzichtbaar)
+        const aliensVictoryImg = this.add.image(this.scale.width / 2, this.scale.height, 'aliens-gamevictory')
+            .setOrigin(0.5, 1)
+            .setDepth(8)
+            .setScale(1)
+        victoryContainer.add(aliensVictoryImg);
         
         // Title container
-        const titleContainer = this.add.container(this.scale.width / 2, this.scale.height / 4 - 150);
+        const titleContainer = this.add.container(this.scale.width / 2, this.scale.height / 4 - 250);
         titleContainer.setAlpha(0);
         titleContainer.setDepth(10);
         
@@ -98,11 +95,11 @@ export class GameVictory extends Scene {
 
         this.description = this.add.text(
             this.scale.width / 2,
-            this.scale.height / 4 +100,
-            'Yes! De alien is veilig thuis!\nWat een topteam!',
+            this.scale.height / 4 - 50,
+            'SNELSTE TIJD:  02:41',
             {
-                fontFamily: 'Space Grotesk',
-                fontSize: 56,
+                fontFamily: 'Bungee',
+                fontSize: 48,
                 color: '#ffffff',
                 fontStyle: 'bold',
                 align: 'center',
@@ -122,41 +119,9 @@ export class GameVictory extends Scene {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         
-        // Timer display (commented out)
-        // const ms = durationMs % 1000;
-        // const msHundredths = Math.floor(ms / 10).toString().padStart(2, '0');
-        // const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${msHundredths}`;
-
-        // const iconKey = 'timer';
-        // const timeText = this.add.text(0, 0, `${formattedTime}`, {
-        //     fontFamily: 'Bungee',
-        //     fontSize: 80,
-        //     color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
-        //     fontStyle: 'bold',
-        //     align: 'center',
-        // }).setOrigin(0, 0.5).setDepth(10).setShadow(0, 4, '#00000075', 0, false, true);
-        // let iconSprite: Phaser.GameObjects.Image | null = null;
-        // let groupWidth = timeText.width;
-        // const timeIconMargin = 16;
-        // if (this.textures.exists(iconKey)) {
-        //     iconSprite = this.add.image(0, 0, iconKey).setOrigin(0, 0.5).setDisplaySize(80, 80).setDepth(10);
-        //     groupWidth += iconSprite.displayWidth + timeIconMargin;
-        // }
-        // const groupX = this.scale.width / 2 - groupWidth / 2;
-        // const groupY = this.scale.height / 4 + 100;
-        // if (iconSprite) {
-        //     iconSprite.setPosition(groupX, groupY);
-        //     timeText.setPosition(groupX + iconSprite.displayWidth + timeIconMargin, groupY);
-        //     victoryContainer.add(iconSprite);
-        // } else {
-        //     timeText.setPosition(this.scale.width / 2 - timeText.width / 2, groupY);
-        // }
-        // victoryContainer.add(timeText);
-        
-        // Leaderboard container
-        const leaderboardWidth = 520;
+        const leaderboardWidth = 750;
         const leaderboardHeight = 200;
-        const leaderboardY = this.scale.height / 2 - 100;
+        const leaderboardY = this.scale.height / 2 - 350;
         
         // Create container for entire leaderboard
         const leaderboardContainer = this.add.container(this.scale.width / 2, leaderboardY);
@@ -176,10 +141,10 @@ export class GameVictory extends Scene {
         leaderboardContainer.add(leaderboardBg);
         
         // Row 1 - JIJ
-        const row1Y = -50;
-        const iconStartX = -leaderboardWidth / 2 + 60;
-        const nameX = iconStartX + 120;
-        const timeXRight = leaderboardWidth / 2 - 60;
+        const row1Y = 0;
+        const iconStartX = -leaderboardWidth / 2 + 64;
+        const nameX = iconStartX + 200;
+        const timeXRight = leaderboardWidth / 2 - 64;
         
         // Trophy icon for JIJ
         const trophyIcon1 = this.add.image(iconStartX, row1Y, 'winner')
@@ -188,15 +153,15 @@ export class GameVictory extends Scene {
         leaderboardContainer.add(trophyIcon1);
         
         // Alien icon for JIJ
-        const alienIcon1 = this.add.image(iconStartX + 80, row1Y, 'alien')
+        const alienIcon1 = this.add.image(iconStartX + 100, row1Y, 'alien')
             .setOrigin(0.5)
-            .setScale(0.3);
+            .setScale(0.5);
         leaderboardContainer.add(alienIcon1);
         
         // Name JIJ
         const name1 = this.add.text(nameX, row1Y, 'JIJ', {
             fontFamily: 'Bungee',
-            fontSize: 40,
+            fontSize: 60,
                 color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
         }).setOrigin(0, 0.5);
         leaderboardContainer.add(name1);
@@ -204,38 +169,14 @@ export class GameVictory extends Scene {
         // Time 1:23
         const time1 = this.add.text(timeXRight, row1Y, `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`, {
             fontFamily: 'Bungee',
-            fontSize: 40,
+            fontSize: 60,
                 color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
         }).setOrigin(1, 0.5);
         leaderboardContainer.add(time1);
         
-        // Row 2 - ANDERE
-        const row2Y = 50;
-        const nameX2 = iconStartX + 60;
-        
-        // Trophy icon for ANDERE
-        const trophyIcon2 = this.add.image(iconStartX, row2Y, 'second')
-            .setOrigin(0.5)
-            .setScale(0.8);
-        leaderboardContainer.add(trophyIcon2);
-        
-        // Name ANDERE
-        const name2 = this.add.text(nameX2, row2Y, 'ANDERE', {
-            fontFamily: 'Bungee',
-            fontSize: 40,
-                color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
-        }).setOrigin(0, 0.5);
-        leaderboardContainer.add(name2);
-        
-        // Time 2:41
-        const time2 = this.add.text(timeXRight, row2Y, '2:41', {
-            fontFamily: 'Bungee',
-            fontSize: 40,
-                color: '#' + SFEER_LABELS[4].colors.d.toString(16).padStart(6, '0').toUpperCase(),
-        }).setOrigin(1, 0.5);
-        leaderboardContainer.add(time2);
-        
         victoryContainer.add(leaderboardContainer);
+
+        // (verwijderd: dubbele declaratie aliensVictoryImg)
         
         this.tweens.add({
             targets: victoryContainer,
@@ -251,20 +192,20 @@ export class GameVictory extends Scene {
             onComplete: () => {
                 victoryContainer.y = 0;
                 this.scene.stop('Game');
-                
-                // After 2 seconds, fade in black overlay
+
+                // Na 1 seconde, fade-in aliensVictoryImg en scale groter
                 this.time.delayedCall(1000, () => {
-                    // Fade in black overlay
                     this.tweens.add({
-                        targets: blackOverlayTop,
-                        alpha: 1,
+                        targets: aliensVictoryImg,
+                        // alpha: 1,
+                        scale: 1.25,
                         duration: 800,
                         ease: 'Cubic.Out',
                         onComplete: () => {
                             // Pop in elements one by one
                             const popDuration = 500;
                             const popDelay = 150;
-                            
+
                             // Title
                             this.tweens.add({
                                 targets: titleContainer,
@@ -273,7 +214,7 @@ export class GameVictory extends Scene {
                                 duration: popDuration,
                                 ease: 'Back.easeOut'
                             });
-                            
+
                             // Description
                             this.time.delayedCall(popDelay, () => {
                                 this.tweens.add({
@@ -284,7 +225,7 @@ export class GameVictory extends Scene {
                                     ease: 'Back.easeOut'
                                 });
                             });
-                            
+
                             // Leaderboard
                             this.time.delayedCall(popDelay * 2, () => {
                                 this.tweens.add({
@@ -295,7 +236,7 @@ export class GameVictory extends Scene {
                                     ease: 'Back.easeOut'
                                 });
                             });
-                            
+
                             // Button
                             this.time.delayedCall(popDelay * 3, () => {
                                 this.tweens.add({
@@ -316,7 +257,7 @@ export class GameVictory extends Scene {
         const paddingY = 16;
         const startText = this.add.text(0, 0, 'Opnieuw', {
             fontFamily: 'Bungee',
-            fontSize: '40px',
+            fontSize: '64px',
             color: '#ffffff',
         }).setOrigin(0.5, 0.5).setDepth(50);
 
@@ -346,16 +287,16 @@ export class GameVictory extends Scene {
         // Shining effects
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
-        shineTopLeft.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -60, 16.844, 5.877, 3);
+        shineTopLeft.fillRoundedRect(-btnWidth / 2 +55, -btnHeight / 2 -90, 16.844, 5.877, 3);
         shineTopLeft.rotation = -33.256 * (Math.PI / 180);
         const shineTopLeft2 = this.add.graphics();
         shineTopLeft2.fillStyle(0xFFFFFF, 0.4);
-        shineTopLeft2.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -50, 9, 6, 3);
+        shineTopLeft2.fillRoundedRect(-btnWidth / 2 +55, -btnHeight / 2 -80, 9, 6, 3);
         shineTopLeft2.rotation = -33.256 * (Math.PI / 180);
         
         const shineBottomRight = this.add.graphics();
         shineBottomRight.fillStyle(0xFFFFFF, 0.4);
-        shineBottomRight.fillRoundedRect(btnWidth / 2 -60, btnHeight / 2 + 50, 9, 6, 3);
+        shineBottomRight.fillRoundedRect(btnWidth / 2 -60, btnHeight / 2 + 85, 9, 6, 3);
         shineBottomRight.rotation = -33.256 * (Math.PI / 180);
 
         
@@ -372,7 +313,7 @@ export class GameVictory extends Scene {
         startText.setY(0);
 
         // Button en tekst positie onderaan victoryContainer
-        const buttonY = this.scale.height / 2 + 200;
+        const buttonY = this.scale.height / 2 - 150;
         this.againButton = this.add.container(this.scale.width / 2, buttonY +100, [
             shadow,
             bg,
@@ -393,7 +334,7 @@ export class GameVictory extends Scene {
             buttonY,
             'Opnieuw proberen?',
             {
-                fontFamily: 'Space Grotesk',
+                fontFamily: 'Nunito',
                 fontSize: 40,
                 color: '#FFFFFF',
                 fontStyle: '500'
