@@ -288,10 +288,8 @@ export class Game extends Scene {
     private createBackgrounds() {
         this.createBackground('bg-troposfeer', 0, (img, scale) => {
             this.bgTroposfeer = img;
-            this.bgTroposfeer.setScale(scale.x, scale.y);
-            this.bgTroposfeer.setOrigin(0.5, 1);
             this.bgTroposfeer.y = this.scale.height;
-            this.bgTroposfeer.setDepth(-200);
+            this.bgTroposfeer.setOrigin(0.5, 1).setDepth(-200).setScale(scale.x, scale.y);
         });
 
         this.createBackground('bg-stratosfeer', 1, (img, scale) => {
