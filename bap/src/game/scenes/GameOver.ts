@@ -2,7 +2,7 @@ import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { getRotaryClient } from "../utils/rotaryClientSingleton";
-import { sfeerProgress } from "../utils/sfeerProgressStore";
+
 
 
 export class GameOver extends Scene {
@@ -10,10 +10,12 @@ export class GameOver extends Scene {
     description: GameObjects.Text;
     againButton: GameObjects.Container;
     againText: GameObjects.Text;
+    sfeerNaamText: GameObjects.Text;
     private autoNavigateTimeout: ReturnType<typeof setTimeout> | null = null;
     private timeoutStarted: boolean = false;
     private rotary: any = null;
     private wasButtonPressed: boolean = false;
+    private hasSwipedIn: boolean = false;
 
     constructor() {
         super('GameOver');
@@ -38,11 +40,15 @@ export class GameOver extends Scene {
                         this.scene.stop('Game');
                         this.scene.stop('GameOver');
                         this.scene.start('MainMenu');
-                    }, 30000);
+                    }, 60000);
                 }
         
-        const gameoverContainer = this.add.container(0, 0);
+        // Swipe-in: identiek aan Game swipe-out, start onderaan beeld en beweeg naar y=0
+        const GAMEOVER_SWIPE_DURATION = 1400; // Match Game.ts
+        const gameoverContainer = this.add.container(0, this.scale.height);
         gameoverContainer.setDepth(9999);
+
+        
         
         const bgGameOver = this.add.image(this.scale.width / 2, this.scale.height / 2, 'bg-gameover')
             .setOrigin(0.5, 0.5)
@@ -90,14 +96,37 @@ export class GameOver extends Scene {
         titleContainer.add([titleBg, this.title]);
         gameoverContainer.add(titleContainer);
 
+        // Bepaal behaalde sfeer op basis van progress
+        let currentProgress = 0;
+        if (typeof window !== 'undefined' && (window as any).sfeerProgress !== undefined) {
+            currentProgress = (window as any).sfeerProgress;
+        }
+        // Sfeergrenzen bepalen
+
+        let sfeerIndex = 0;
+        if (Array.isArray(SFEER_LABELS) && SFEER_LABELS.length > 0) {
+            // Simuleer de progressiegrenzen zoals in Game.ts
+            // We nemen aan: 0-0.2 troposfeer, 0.2-0.4 stratosfeer, 0.4-0.6 mesosfeer, 0.6-0.8 thermosfeer, 0.8-1 exosfeer
+            const grenzen = [0, 0.2, 0.4, 0.6, 0.8, 1.01];
+            for (let i = 0; i < grenzen.length - 1; i++) {
+                if (
+                    (currentProgress >= grenzen[i] && currentProgress < grenzen[i + 1]) ||
+                    (i === grenzen.length - 2 && currentProgress >= grenzen[i]) // for progress == 1
+                ) {
+                    sfeerIndex = i;
+                    break;
+                }
+            }
+        }
+        const sfeerNaam = SFEER_LABELS[sfeerIndex]?.naam || 'troposfeer';
         this.description = this.add.text(
             this.scale.width / 2,
-            this.scale.height / 4 -100,
-            'Oei... dat was een gekke landing.',
+            this.scale.height / 4 - 80,
+            `Je behaalde de`,
             {
-                fontFamily: 'Nunito',
+                fontFamily: 'nunito',
                 fontSize: 56,
-                color: '#ffffff',
+                color: '#ffffff' ,
                 fontStyle: 'bold',
                 align: 'center',
                 wordWrap: { width: 900 }
@@ -107,12 +136,32 @@ export class GameOver extends Scene {
             .setDepth(11)
             .setAlpha(0);
         gameoverContainer.add(this.description);
+        console.log('GameOver sfeerIndex:', sfeerIndex, 'sfeerNaam:', sfeerNaam);
+
+        // Sfeer naam los eronder (nu na declaratie sfeerNaam)
+        this.sfeerNaamText = this.add.text(
+            this.scale.width / 2,
+            this.scale.height / 4,
+            sfeerNaam,
+            {
+                fontFamily: 'Bungee',
+                fontSize: 64,
+                color: '#' + SFEER_LABELS[sfeerIndex].colors.d.toString(16).padStart(6, '0'),
+                fontStyle: 'bold',
+                align: 'center',
+                wordWrap: { width: 900 }
+            }
+        )
+            .setOrigin(0.5)
+            .setDepth(12)
+            .setAlpha(0);
+        gameoverContainer.add(this.sfeerNaamText);
 
         let durationMs = 0;
         if (typeof window !== 'undefined' && (window as any).gameDurationMs) {
             durationMs = (window as any).gameDurationMs;
         }
-        const sfeerProgressY = this.scale.height / 4 + 150;
+        const sfeerProgressY = this.scale.height / 4 + 200;
         const sfeerProgressContainer = this.add.container(this.scale.width / 2, sfeerProgressY);
         sfeerProgressContainer.setAlpha(0);
         sfeerProgressContainer.setDepth(12);
@@ -130,11 +179,7 @@ export class GameOver extends Scene {
         );
         sfeerProgressContainer.add(sfeerProgressBg);
         
-        // Get sfeer progress from window
-        let currentProgress = 0;
-        if (typeof window !== 'undefined' && (window as any).sfeerProgress !== undefined) {
-            currentProgress = (window as any).sfeerProgress;
-        }
+        // currentProgress is already declared above and set from window.sfeerProgress
         
         // Progress fill
         const progressFillWidth = (sfeerProgressWidth - 20) * currentProgress;
@@ -214,72 +259,93 @@ export class GameOver extends Scene {
         ).setOrigin(0.5).setDepth(12).setAlpha(0);
         gameoverContainer.add(distanceText);
         
-        // Stop Game scene immediately
-        this.scene.stop('Game');
-        
-        // Wait 1 second before showing black overlay and elements
-        this.time.delayedCall(500, () => {
-            // Show elements with fade in
-            this.tweens.add({
-                targets: blackOverlayTop,
-                alpha: 1,
-                duration: 800,
-                ease: 'Cubic.Out',
-                onComplete: () => {
-                    // Pop in elements one by one
-                    const popDuration = 500;
-                    const popDelay = 150;
-                    
-                    // Title
-                    this.tweens.add({
-                        targets: titleContainer,
-                        alpha: 1,
-                        scale: { from: 0.8, to: 1 },
-                        duration: popDuration,
-                        ease: 'Back.easeOut'
-                    });
-                    
-                    // Description
-                    this.time.delayedCall(popDelay, () => {
-                        this.tweens.add({
-                            targets: this.description,
-                            alpha: 1,
-                            scale: { from: 0.8, to: 1 },
-                            duration: popDuration,
-                            ease: 'Back.easeOut'
-                        });
-                    });
-                    
-                    // Leaderboard
-                    this.time.delayedCall(popDelay * 2, () => {
-                        this.tweens.add({
-                            targets: [sfeerProgressContainer, distanceText],
-                            alpha: 1,
-                            scale: { from: 0.7, to: 1 },
-                            duration: popDuration,
-                            ease: 'Back.easeOut'
-                        });
-                    });
-                    
-                    // Button
-                    this.time.delayedCall(popDelay * 3, () => {
-                        this.tweens.add({
-                            targets: [this.againButton, this.againText],
-                            alpha: 1,
-                            scale: { from: 0.8, to: 1 },
-                            duration: popDuration,
-                            ease: 'Back.easeOut'
-                        });
-                    });
+        // Swipe-in animatie van onder naar boven
+        this.tweens.add({
+            targets: gameoverContainer,
+            y: 0,
+            duration: GAMEOVER_SWIPE_DURATION,
+            ease: 'Cubic.easeOut',
+            onStart: () => {
+                if (!this.hasSwipedIn) {
+                    this.hasSwipedIn = true;
+                    EventBus.emit('gameover-swipe-in');
                 }
-            });
+            },
+            onComplete: () => {
+                gameoverContainer.y = 0;
+                // Fade-in black overlay en pop-in elementen (zoals Victory)
+                this.time.delayedCall(500, () => {
+                    this.tweens.add({
+                        targets: blackOverlayTop,
+                        alpha: 1,
+                        duration: 1200,
+                        ease: 'Cubic.easeInOut',
+                        onComplete: () => {
+                            const popDuration = 500;
+                            const popDelay = 150;
+                            // Title
+                            this.tweens.add({
+                                targets: titleContainer,
+                                alpha: 1,
+                                scale: { from: 0.8, to: 1 },
+                                duration: popDuration,
+                                ease: 'Back.easeOut'
+                            });
+                            // Description
+                            this.time.delayedCall(popDelay, () => {
+                                this.tweens.add({
+                                    targets: this.description,
+                                    alpha: 1,
+                                    scale: { from: 0.8, to: 1 },
+                                    duration: popDuration,
+                                    ease: 'Back.easeOut'
+                                });
+                            });
+                            // Sfeer naam
+                            this.time.delayedCall(popDelay * 2, () => {
+                                this.tweens.add({
+                                    targets: this.sfeerNaamText,
+                                    alpha: 1,
+                                    scale: { from: 0.8, to: 1 },
+                                    duration: popDuration,
+                                    ease: 'Back.easeOut'
+                                });
+                            });
+                            // Progress bar
+                            this.time.delayedCall(popDelay * 3, () => {
+                                this.tweens.add({
+                                    targets: [sfeerProgressContainer, distanceText],
+                                    alpha: 1,
+                                    scale: { from: 0.7, to: 1 },
+                                    duration: popDuration,
+                                    ease: 'Back.easeOut'
+                                });
+                            });
+                            // Button
+                            this.time.delayedCall(popDelay * 4, () => {
+                                this.tweens.add({
+                                    targets: [this.againButton, this.againText],
+                                    alpha: 1,
+                                    scale: { from: 0.8, to: 1 },
+                                    duration: popDuration,
+                                    ease: 'Back.easeOut'
+                                });
+                            });
+                            // Stop Game pas na alle animaties
+                            this.time.delayedCall(popDelay * 5, () => {
+                                this.scene.stop('Game');
+                            });
+                        }
+                    });
+                });
+            }
         });
 
         const paddingX = 24;
         const paddingY = 16;
         const startText = this.add.text(0, 0, 'Opnieuw', {
             fontFamily: 'Bungee',
-            fontSize: '40px',
+            fontSize: '64px',
             color: '#ffffff',
         }).setOrigin(0.5, 0.5).setDepth(50);
 
@@ -309,17 +375,18 @@ export class GameOver extends Scene {
         // Shining effects
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
-        shineTopLeft.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -60, 16.844, 5.877, 3);
+        shineTopLeft.fillRoundedRect(-btnWidth / 2 +55, -btnHeight / 2 -90, 16.844, 5.877, 3);
         shineTopLeft.rotation = -33.256 * (Math.PI / 180);
         const shineTopLeft2 = this.add.graphics();
         shineTopLeft2.fillStyle(0xFFFFFF, 0.4);
-        shineTopLeft2.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -50, 9, 6, 3);
+        shineTopLeft2.fillRoundedRect(-btnWidth / 2 +55, -btnHeight / 2 -80, 9, 6, 3);
         shineTopLeft2.rotation = -33.256 * (Math.PI / 180);
         
         const shineBottomRight = this.add.graphics();
         shineBottomRight.fillStyle(0xFFFFFF, 0.4);
-        shineBottomRight.fillRoundedRect(btnWidth / 2 -60, btnHeight / 2 + 50, 9, 6, 3);
+        shineBottomRight.fillRoundedRect(btnWidth / 2 -65, btnHeight / 2 + 85, 9, 6, 3);
         shineBottomRight.rotation = -33.256 * (Math.PI / 180);
+
         const circleRadius = circleSize / 3;
         const contentWidth = circleRadius * 2 + iconMargin + startText.width;
         const contentStartX = -contentWidth / 2;

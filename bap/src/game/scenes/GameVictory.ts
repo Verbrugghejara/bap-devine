@@ -39,7 +39,7 @@ export class GameVictory extends Scene {
                         this.scene.stop('Game');
                         this.scene.stop('GameVictory');
                         this.scene.start('MainMenu');
-                    }, 30000);
+                    }, 60000);
                 }
         
         const victoryContainer = this.add.container(0, -this.scale.height);
@@ -95,7 +95,7 @@ export class GameVictory extends Scene {
 
         this.description = this.add.text(
             this.scale.width / 2,
-            this.scale.height / 4 - 50,
+            this.scale.height / 4 - 40,
             'SNELSTE TIJD:  02:41',
             {
                 fontFamily: 'Bungee',
@@ -194,7 +194,7 @@ export class GameVictory extends Scene {
                 this.scene.stop('Game');
 
                 // Na 1 seconde, fade-in aliensVictoryImg en scale groter
-                this.time.delayedCall(1000, () => {
+                this.time.delayedCall(500, () => {
                     this.tweens.add({
                         targets: aliensVictoryImg,
                         // alpha: 1,
@@ -296,7 +296,7 @@ export class GameVictory extends Scene {
         
         const shineBottomRight = this.add.graphics();
         shineBottomRight.fillStyle(0xFFFFFF, 0.4);
-        shineBottomRight.fillRoundedRect(btnWidth / 2 -60, btnHeight / 2 + 85, 9, 6, 3);
+        shineBottomRight.fillRoundedRect(btnWidth / 2 -65, btnHeight / 2 + 85, 9, 6, 3);
         shineBottomRight.rotation = -33.256 * (Math.PI / 180);
 
         

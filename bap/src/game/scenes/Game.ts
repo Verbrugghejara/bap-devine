@@ -26,6 +26,7 @@ export class Game extends Scene {
     private isVictorySequence: boolean = false;
     private isBalloonLeaving: boolean = false;
     private isVictorySwiping: boolean = false;
+    private isGameOverSwiping: boolean = false;
     private lastSfeerIndex: number = 0;
 
     // --- Input State ---
@@ -88,6 +89,10 @@ export class Game extends Scene {
     blauwYOffsetTilted: number = 25;
     roodYOffsetTilted: number = 20;
 
+    // --- Game Over Sequence ---
+    isGameOverSequence: boolean = false;
+    gameOverSwipeStarted: boolean = false;
+
     // ==================== LIFECYCLE METHODS ====================
     constructor() {
         super('Game');
@@ -95,6 +100,7 @@ export class Game extends Scene {
         EventBus.on('pause-game-scene', this.handlePauseGameScene, this);
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.on('victory-swipe-in', this.handleVictorySwipeIn, this);
+        EventBus.on('gameover-swipe-in', this.handleGameOverSwipeIn, this);
     }
 
 
@@ -120,6 +126,10 @@ export class Game extends Scene {
             this.updateVictorySequence();
             return;
         }
+        if (this.isGameOverSequence) {
+            this.updateGameOverSequence();
+            return;
+        }
         this.updateScroll();
         this.updateBackgrounds();
         this.updateObstaclePositions();
@@ -142,6 +152,7 @@ export class Game extends Scene {
         EventBus.off('pause-game-scene', this.handlePauseGameScene, this);
         EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
+        EventBus.off('gameover-swipe-in', this.handleGameOverSwipeIn, this);
         closeRotaryClient();
     }
 
@@ -193,6 +204,7 @@ export class Game extends Scene {
         this.pauseStartTime = null;
         this.countdownDone = false;
         this.isVictorySequence = false;
+        this.isGameOverSequence = false;
         this.isBalloonLeaving = false;
         this.powerUps = [];
         this.powerUpsSpawned = new Set();
@@ -440,10 +452,11 @@ export class Game extends Scene {
                 this.windRood.destroy();
                 this.windRood = null;
             }
-            this.time.delayedCall(1000, () => {
-                EventBus.emit('hide-gameui');
-                this.scene.start('GameOver');
-            });
+            // Start death sequence
+            this.isGamePaused = false;
+            this.gameOverSwipeStarted = false;
+            EventBus.emit('hide-gameui');
+            this.isGameOverSequence = true; 
         }
     }
 
@@ -655,6 +668,33 @@ export class Game extends Scene {
             }
         });
     }
+    private handleGameOverSwipeIn() {
+        if (this.isGameOverSwiping) return;
+        this.isGameOverSwiping = true;
+        
+        const GAMEOVER_SWIPE_DURATION = 1400;
+        // Swipe alleen backgrounds, sfeerRects en ballonContainer (geen obstakels of powerUps)
+        const allGameObjects = [
+            this.bgTroposfeer,
+            this.bgStratosfeer,
+            this.bgMesosfeer,
+            this.bgThermosfeer,
+            this.bgExosfeer,
+            this.ballonContainer,
+            ...this.sfeerRects
+        ].filter(obj => obj !== null);
+
+        this.tweens.add({
+            targets: allGameObjects,
+            y: `-=${this.scale.height}`,
+            duration: GAMEOVER_SWIPE_DURATION,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                this.isGameOverSwiping = false;
+                this.isGameOverSequence = false;
+            }
+        });
+    }
 
     private handleResumeGameScene() {
         if (this.isGamePaused) {
@@ -698,12 +738,12 @@ export class Game extends Scene {
     }
 
     private checkPauseTimeout() {
-        // if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 30000) {
-        //     EventBus.emit('hide-pauseui');
-        //     this.scene.start('MainMenu');
-        //     this.isGamePaused = false;
-        //     this.pauseStartTime = null;
-        // }
+        if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 60000) {
+            EventBus.emit('hide-pauseui');
+            this.scene.start('MainMenu');
+            this.isGamePaused = false;
+            this.pauseStartTime = null;
+        }
     }
 
     // ==================== UPDATE METHODS ====================
@@ -717,6 +757,106 @@ export class Game extends Scene {
                 this.scene.launch('GameVictory');
                 EventBus.emit('victory-swipe-in');
             }
+        }
+    }
+
+        // ==================== GAME OVER SEQUENCE ====================
+    private updateGameOverSequence() {
+        // 1. Tijdens het vallen van de ballon: alleen de huidige sfeer als stilstaande achtergrond
+        const sfeerBgs = [this.bgTroposfeer, this.bgStratosfeer, this.bgMesosfeer, this.bgThermosfeer, this.bgExosfeer];
+        // for (let i = 0; i < sfeerBgs.length; i++) {
+        //     const bg = sfeerBgs[i];
+        //     if (bg) {
+        //         if (i === this.huidigeSfeerIndex) {
+        //             bg.y = this.scale.height;
+        //             bg.setVisible(true);
+        //             bg.setAlpha(1);
+        //             bg.setDepth(-200);
+        //         } else {
+        //             bg.setVisible(false);
+        //             bg.setAlpha(0);
+        //         }
+        //     }
+        // }
+
+        // 2. Ballon valt naar beneden zolang hij bestaat
+        if (this.ballonContainer) {
+            this.ballonContainer.y += 18; // Snelheid van vallen
+            // Als ballon uit beeld is, verwijder hem en start sfeer scroll-back (swipe-in gebeurt pas na scroll)
+            if (
+                this.ballonHealth <= 0 &&
+                this.ballonContainer &&
+                !this.gameOverSwipeStarted &&
+                this.ballonContainer.y - (this.ballon?.height ?? 100) > this.scale.height + 100
+            ) {
+                // Verwijder ballonContainer en ballon
+                this.ballonContainer.destroy();
+                this.ballonContainer = null;
+                this.ballon = null;
+                this.gameOverSwipeStarted = true;
+            }
+        }
+
+        // 3. Als ballon weg is en swipe nog niet gestart, swipe de huidige bg en sfeerRects naar boven
+        if (
+            this.ballonHealth <= 0 &&
+            !this.ballonContainer &&
+            this.gameOverSwipeStarted
+        ) {
+            this.gameOverSwipeStarted = false; // voorkom dubbele animatie
+            // Swipe alleen sferen en backgrounds naar boven (geen obstakels of powerups)
+            const startOffset = this.sfeerOffsetY;
+            let lastTweenValue = startOffset;
+            this.tweens.addCounter({
+                from: startOffset,
+                to: 1920,
+                duration: 1400,
+                ease: 'Cubic.easeIn',
+                onUpdate: tween => {
+                    const currentValue = tween.getValue() ?? 0;
+                    const delta = currentValue - lastTweenValue;
+                    this.sfeerOffsetY = currentValue;
+                    lastTweenValue = currentValue;
+                    // Update sfeer rects
+                    for (let i = 0; i < this.sfeerRects.length; i++) {
+                        const baseY = this.sfeerBaseY[i];
+                        this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
+                    }
+                    // Stack backgrounds zoals in updateBackgrounds
+                    if (this.bgTroposfeer) {
+                        this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
+                    }
+                    if (this.bgStratosfeer && this.bgTroposfeer) {
+                        this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
+                    }
+                    if (this.bgMesosfeer && this.bgStratosfeer) {
+                        this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
+                    }
+                    if (this.bgThermosfeer && this.bgMesosfeer) {
+                        this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
+                    }
+                    if (this.bgExosfeer && this.bgThermosfeer) {
+                        this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
+                    }
+
+                    // Obstakels en powerUps meescrollen
+                    for (const obstacle of this.obstacles) {
+                        if (obstacle && obstacle.active) {
+                            obstacle.y += delta;
+                        }
+                    }
+                    for (const powerUp of this.powerUps) {
+                        if (powerUp && powerUp.active) {
+                            powerUp.y += delta;
+                        }
+                    }
+                },
+                onComplete: () => {
+                    // Start GameOver scene (deze swipet zichzelf in)
+                    this.scene.launch('GameOver');
+                    EventBus.emit('gameover-swipe-in');
+                }
+            });
         }
     }
 
@@ -747,6 +887,7 @@ export class Game extends Scene {
     }
 
     private updateBackgrounds() {
+        // Normale stacking: backgrounds meescrollen met sfeerOffsetY
         if (this.bgTroposfeer) {
             this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
         }
@@ -761,7 +902,6 @@ export class Game extends Scene {
         }
         if (this.bgExosfeer && this.bgThermosfeer) {
             this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
-            
             // Extend exosfeer upwards if needed
             const cameraTop = this.cameras.main.scrollY;
             const exosfeerTop = this.bgExosfeer.y - this.bgExosfeer.displayHeight;
@@ -1729,5 +1869,9 @@ export class Game extends Scene {
         // Wind logica nu in updateWindEffects
     }
 
+
+    
+
     // setWindPositions verwijderd, logica zit nu in updateWindEffects
 }
+
