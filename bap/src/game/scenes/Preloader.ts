@@ -100,11 +100,11 @@ export class Preloader extends Scene
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
         this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
         
-        this.load.spritesheet('alien-tropo', 'aliens/alienTropo.png', { frameWidth: 1477.34, frameHeight: 1516.63 });
-        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 1477, frameHeight: 1516 });
-        this.load.spritesheet('alien-meso', 'aliens/alienMeso.png', { frameWidth: 1383.34, frameHeight: 1420.13 });
-        this.load.spritesheet('alien-thermo', 'aliens/alienThermo.png', { frameWidth: 1840, frameHeight: 1898 });
-        this.load.spritesheet('alien-exo', 'aliens/alienExo.png', { frameWidth: 1432, frameHeight: 1623 });
+        this.load.spritesheet('alien-tropo', 'aliens/alienTropo.png', { frameWidth: 519, frameHeight: 533 });
+        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 698, frameHeight: 717 });
+        this.load.spritesheet('alien-meso', 'aliens/alienMeso.png', { frameWidth: 487, frameHeight: 500 });
+        this.load.spritesheet('alien-thermo', 'aliens/alienThermo.png', { frameWidth: 649, frameHeight: 669 });
+        this.load.spritesheet('alien-exo', 'aliens/alienExo.png', { frameWidth: 505, frameHeight: 573 });
         
         this.load.video('home-animation','mainMenuVideo.mp4')
         this.load.video('storytelling-animation','storyTelling.mp4')
@@ -130,32 +130,32 @@ export class Preloader extends Scene
         // Animaties pas aanmaken als alles geladen is
         // this.load.on('complete', () => {
             this.anims.create({
-                key: 'alien-exo',
-                frames: this.anims.generateFrameNumbers('alien-exo', { start: 0, end: 20 }),
-                frameRate: 10,
-                repeat: -1
-            });
-            this.anims.create({
-                key: 'alien-thermo',
-                frames: this.anims.generateFrameNumbers('alien-thermo', { start: 0, end: 20 }),
-                frameRate: 10,
-                repeat: -1
-            });
-            this.anims.create({
-                key: 'alien-meso',
-                frames: this.anims.generateFrameNumbers('alien-meso', { start: 0, end: 20 }),
+                key: 'alien-tropo',
+                frames: this.anims.generateFrameNumbers('alien-tropo', { start: 0, end: 20 }), // 21 frames (0-20)
                 frameRate: 10,
                 repeat: -1
             });
             this.anims.create({
                 key: 'alien-strato',
-                frames: this.anims.generateFrameNumbers('alien-strato', { start: 0, end: 20 }),
+                frames: this.anims.generateFrameNumbers('alien-strato', { start: 0, end: 20 }), // 21 frames (0-20)
                 frameRate: 10,
                 repeat: -1
             });
             this.anims.create({
-                key: 'alien-tropo',
-                frames: this.anims.generateFrameNumbers('alien-tropo', { start: 0, end: 20 }),
+                key: 'alien-meso',
+                frames: this.anims.generateFrameNumbers('alien-meso', { start: 0, end: 20 }), // 21 frames (0-20)
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'alien-thermo',
+                frames: this.anims.generateFrameNumbers('alien-thermo', { start: 0, end: 20 }), // 21 frames (0-20)
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'alien-exo',
+                frames: this.anims.generateFrameNumbers('alien-exo', { start: 0, end: 20 }), // 21 frames (0-20)
                 frameRate: 10,
                 repeat: -1
             });

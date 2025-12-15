@@ -162,6 +162,7 @@ export class MainMenu extends Scene {
             this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
         }
         EventBus.emit("current-scene-ready", this);
+        
     }
 
     update() {

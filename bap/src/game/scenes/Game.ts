@@ -89,6 +89,19 @@ export class Game extends Scene {
     private freezeActive: boolean = false;
     private shieldActive: boolean = false;
 
+
+    // --- Aliens ---
+
+    private aliens: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
+    private alienConfigs = [
+        { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 0.3 },
+        { key: 'alien-strato', sfeer: 1, x: 130, y: 4720, scale: 0.7 },
+        { key: 'alien-meso', sfeer: 2, x: 100, y: 8900 , scale: 1},
+        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5300 , scale: 1},
+        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 1},
+    ];
+    private alienSpawnTimer: Phaser.Time.TimerEvent | null = null;
+
     // --- Wind Offset for Testing ---
     blauwYOffsetTilted: number = 25;
     roodYOffsetTilted: number = 20;
@@ -120,6 +133,26 @@ export class Game extends Scene {
         this.createBalloon();
         this.setupObstacles();
         this.setupInput();
+        // Start alien easter egg spawner
+        this.startAlienSpawner();
+        // Spawn tropo-alien direct bij start
+        const tropoConfig = this.alienConfigs.find(a => a.key === 'alien-tropo');
+        if (tropoConfig && this.textures.exists(tropoConfig.key)) {
+            const sfeerCenterY = this.sfeerBaseY[tropoConfig.sfeer] + this.sfeerOffsetY;
+            const sfeerHeight = this.sfeerHoogtes[tropoConfig.sfeer];
+            const y = sfeerCenterY - (sfeerHeight / 2) + tropoConfig.y;
+            const scale = tropoConfig.scale;
+            const alien = this.physics.add.sprite(tropoConfig.x, y, tropoConfig.key, 0)
+                .setScale(scale)
+                .setDepth(999)
+                .setOrigin(0.5);
+            (alien.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+            (alien as any).alienKey = tropoConfig.key;
+            if (this.anims.exists(tropoConfig.key)) {
+                alien.play(tropoConfig.key);
+            }
+            this.aliens.push(alien);
+        }
         // // TEST: Speel troposfeer sound direct af
         // if (this.sound && this.sound.locked === false) {
         //         this.sound.play('troposfeer', { loop: true, volume: 1 });
@@ -158,9 +191,64 @@ export class Game extends Scene {
         this.updateWindEffects();
         this.checkObstacleCollisions();
         this.checkNearObstacle(10); // Check for proximity to obstacles and notify UI
+        this.updateAliens();
     }
+        // ==================== ALIEN EASTER EGGS ====================
+        private startAlienSpawner() {
+            // Geen timer meer: aliens worden direct gespawned bij sfeerwissel
+            // Functie blijft voor compatibiliteit, maar doet niets meer
+            if (this.alienSpawnTimer) {
+                this.alienSpawnTimer.remove(false);
+                this.alienSpawnTimer = null;
+            }
+        }
 
+        private spawnAlien() {
+            // Kies random alien config
+            // Spawn alleen de alien van de huidige sfeer, maar niet als hij al bestaat
+            const sfeerAliens = this.alienConfigs.filter(a => a.sfeer === this.huidigeSfeerIndex);
+            if (sfeerAliens.length === 0) return;
+            const config = Phaser.Utils.Array.GetRandom(sfeerAliens);
+            // Check of deze alien al bestaat (op key)
+            if (this.aliens.some(a => (a as any).alienKey === config.key)) return;
+            if (!this.textures.exists(config.key)) return;
+            const scale = config.scale;
+            let y;
+            if (config.key === 'alien-tropo') {
+                // Forceer tropo-alien in het midden van het scherm
+                y = this.scale.height / 2;
+            } else {
+                const sfeerCenterY = this.sfeerBaseY[config.sfeer] + this.sfeerOffsetY;
+                const sfeerHeight = this.sfeerHoogtes[config.sfeer];
+                y = sfeerCenterY - (sfeerHeight / 2) + config.y;
+            }
+            const alien = this.physics.add.sprite(config.x, y, config.key, 0)
+                .setScale(scale)
+                .setDepth(999)
+                .setOrigin(0.5);
+            (alien.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+            (alien as any).alienKey = config.key;
+            // Speel animatie af als die bestaat
+            if (this.anims.exists(config.key)) {
+                alien.play(config.key);
+            }
+            this.aliens.push(alien);
+        }
 
+        private updateAliens() {
+            // Laat aliens naar beneden bewegen
+            for (const alien of this.aliens) {
+                alien.y += this.smoothScrollSpeed;
+            }
+            // Verwijder aliens die uit beeld zijn
+            for (let i = this.aliens.length - 1; i >= 0; i--) {
+                if (this.aliens[i].y > this.scale.height + 200) {
+                    this.aliens[i].destroy();
+                    this.aliens.splice(i, 1);
+                }
+            }
+        }
+    
     shutdown() {
         clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = null;
@@ -186,24 +274,24 @@ export class Game extends Scene {
         }
     }
 
-        private handlePlayStartledSound() {
-            this.sound.play('alien-startled', { volume: 0.7 });
-        }
-        private handlePlayCountdownSound() {
-            // if (this.sound && this.sound.get('count-down')) {
-            this.sound.play('count-down', { volume: 0.3 });
-            // }
-        }
+    private handlePlayStartledSound() {
+        this.sound.play('alien-startled', { volume: 0.7 });
+    }
+    private handlePlayCountdownSound() {
+        // if (this.sound && this.sound.get('count-down')) {
+        this.sound.play('count-down', { volume: 0.3 });
+        // }
+    }
 
-        private handlePlayStartdownSound() {
-            console.log('Playing start sound');
-            this.sound.setDetune(1200);
-            this.sound.play('count-down', { volume: 0.3 });
-            this.time.delayedCall(1000, () => {
-
-                this.sound.setDetune(0);                    });
-            // this.sound.setDetune(0);
-        }
+    private handlePlayStartdownSound() {
+        console.log('Playing start sound');
+        this.sound.setDetune(1200);
+        this.sound.play('count-down', { volume: 0.3 });
+        this.time.delayedCall(1000, () => {
+            this.sound.setDetune(0);
+        });
+        // this.sound.setDetune(0);
+    }
             // if (this.sound && this.sound.get('count-down')) {
     // ==================== NEAR OBSTACLE CHECK ====================
     /**
@@ -261,6 +349,7 @@ export class Game extends Scene {
         this.powerUpEndTime = 0;
         this.freezeActive = false;
         this.shieldActive = false;
+        this.aliens = [];
         
         sfeerProgress.value = 0;
         EventBus.emit('show-countdown');
@@ -1036,6 +1125,7 @@ export class Game extends Scene {
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
             this.checkPowerUpSpawn(sfeerIndex);
+            this.spawnAlien(); // Spawn de alien direct bij sfeerwissel
             this.lastSfeerIndex = sfeerIndex;
         }
         // --- SFEER SOUND FADING ---
@@ -2193,5 +2283,6 @@ export class Game extends Scene {
     
 
     // setWindPositions verwijderd, logica zit nu in updateWindEffects
+
 }
 
