@@ -59,6 +59,13 @@ export class Tutorial extends Scene {
     }
 
     create() {
+        // Witte overlay fade-in
+        const whiteOverlay = this.add.graphics();
+        whiteOverlay.fillStyle(0xffffff, 1);
+        whiteOverlay.fillRect(0, 0, this.scale.width, this.scale.height);
+        whiteOverlay.setDepth(9999);
+        whiteOverlay.setAlpha(1);
+
         this.initializeState();
         this.createBackground();
         this.createTitle();
@@ -71,6 +78,17 @@ export class Tutorial extends Scene {
         // Reset rotary button state zodat een ingedrukte knop niet direct effect heeft
         this.wasButtonPressed = this.rotary?.buttonPressed || false;
         this.sceneIsReady = true;
+
+        // Fade-out overlay zodra scene zichtbaar is
+        this.tweens.add({
+            targets: whiteOverlay,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                whiteOverlay.destroy();
+            }
+        });
     }
 
     update() {
