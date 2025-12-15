@@ -33,6 +33,11 @@ const config: Phaser.Types.Core.GameConfig = {
     //     target: 60,
     //     forceSetTimeOut: false
     // },
+    audio: {
+    disableWebAudio: false,
+
+    noAudio: false,
+  },
     render: {
         pixelArt: false,
         antialias: true

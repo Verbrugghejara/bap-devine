@@ -99,19 +99,66 @@ export class Preloader extends Scene
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
         this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
+        
+        this.load.spritesheet('alien-tropo', 'aliens/alienTropo.png', { frameWidth: 1477.34, frameHeight: 1516.63 });
+        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 1477, frameHeight: 1516 });
+        this.load.spritesheet('alien-meso', 'aliens/alienMeso.png', { frameWidth: 1383.34, frameHeight: 1420.13 });
+        this.load.spritesheet('alien-thermo', 'aliens/alienThermo.png', { frameWidth: 1840, frameHeight: 1898 });
+        this.load.spritesheet('alien-exo', 'aliens/alienExo.png', { frameWidth: 1432, frameHeight: 1623 });
+        
         this.load.video('home-animation','mainMenuVideo.mp4')
         this.load.video('storytelling-animation','storyTelling.mp4')
-        // Vogel walk spritesheet (gebruik 128x128 en 8 frames als test)
-        // this.load.spritesheet('bird-walk', 'bird/Walk.png', { frameWidth: 128, frameHeight: 128 });
-
-        // for (let i = 0; i <= 449; i++) {
-        //     const key = `home-animation${i.toString().padStart(3, '0')}`;
-        //     this.load.image(key, `assets/homeAnimation/${key}.png`);
-        // }
+        
+        this.load.audio('button-click', 'audio/buttonClick.mp3');
+        this.load.audio('hit', 'audio/hit.mp3');
+        this.load.audio('pick-up', 'audio/pickUp.mp3');
+        this.load.audio('game-over', 'audio/gameOver.mp3');
+        this.load.audio('game-victory', 'audio/gameVictory.mp3');
+        this.load.audio('count-down', 'audio/countDown.mp3');
+        this.load.audio('alien-happy', 'audio/alienHappy.mp3');
+        this.load.audio('alien-sad', 'audio/alienSad.mp3');
+        this.load.audio('alien-startled', 'audio/alienStartled.mp3');
+        this.load.audio('alien-angry', 'audio/alienAngry.mp3');
+        this.load.audio('alien-cheers', 'audio/alienCheers.mp3');
+        this.load.audio('alien-scream', 'audio/alienScream.mp3');
+        this.load.audio('hit-metal', 'audio/hitMetal.mp3');
+        this.load.audio('troposfeer', 'audio/troposfeer.mp3');
+        this.load.audio('stratosfeer', 'audio/stratosfeer.mp3');
+        this.load.audio('space', 'audio/space.mp3');
     }
     create() {
         // Animaties pas aanmaken als alles geladen is
         // this.load.on('complete', () => {
+            this.anims.create({
+                key: 'alien-exo',
+                frames: this.anims.generateFrameNumbers('alien-exo', { start: 0, end: 20 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'alien-thermo',
+                frames: this.anims.generateFrameNumbers('alien-thermo', { start: 0, end: 20 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'alien-meso',
+                frames: this.anims.generateFrameNumbers('alien-meso', { start: 0, end: 20 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'alien-strato',
+                frames: this.anims.generateFrameNumbers('alien-strato', { start: 0, end: 20 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            this.anims.create({
+                key: 'alien-tropo',
+                frames: this.anims.generateFrameNumbers('alien-tropo', { start: 0, end: 20 }),
+                frameRate: 10,
+                repeat: -1
+            });
             this.anims.create({
                 key: 'ufo-breaking',
                 frames: this.anims.generateFrameNumbers('ufo-breaking', { start: 0, end: 11 }),

@@ -489,6 +489,7 @@ export class Tutorial extends Scene {
                 this.skipHoldStart = null;
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
+                this.sound.play('button-click');
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {

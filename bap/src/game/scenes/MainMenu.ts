@@ -139,6 +139,12 @@ export class MainMenu extends Scene {
             const shineBottomRight = this.startButton.list[4];
             const circle = this.startButton.list[5];
             const startText = this.startButton.list[6];
+            console.log('Start button clicked');
+            // Speel button-click audio af
+            // if (this.sound && this.sound.context && this.sound.locked === false && this.sound.get('button-click')) {
+                this.sound.play('button-click');
+            // }
+
             this.tweens.add({
                 targets: [bg, shineTopLeft, shineTopLeft2, shineBottomRight, circle, startText],
                 y: 8,
@@ -169,6 +175,10 @@ export class MainMenu extends Scene {
             const shineBottomRight = this.startButton.list[4];
             const circle = this.startButton.list[5];
             const startText = this.startButton.list[6];
+
+            // Play button-click sound when hardware button is pressed
+            this.sound.play('button-click');
+
             this.tweens.add({
                 targets: [bg, shineTopLeft, shineTopLeft2, shineBottomRight, circle, startText],
                 y: 8,
@@ -179,7 +189,7 @@ export class MainMenu extends Scene {
                 }
             });
         }
-        
+
         this.wasButtonPressed = buttonPressed;
     }
 

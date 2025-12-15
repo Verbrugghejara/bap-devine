@@ -241,6 +241,7 @@ export class StoryTelling extends Scene {
                 this.skipHoldStart = null;
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
+                this.sound.play('button-click');
                 this.scene.start('TutorialBlue');
             }
         } else if (!this.isTransitioning) {

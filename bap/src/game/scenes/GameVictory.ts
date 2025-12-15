@@ -205,6 +205,7 @@ export class GameVictory extends Scene {
                             // Pop in elements one by one
                             const popDuration = 500;
                             const popDelay = 150;
+                            this.sound.play('game-victory', { volume: 0.1 });
 
                             // Title
                             this.tweens.add({

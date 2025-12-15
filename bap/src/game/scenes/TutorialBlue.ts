@@ -502,6 +502,10 @@ export class Tutorial extends Scene {
                 this.skipHoldStart = null;
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
+                // Play button-click sound when skip is triggered
+                // if (this.sound && this.sound.get('button-click')) {
+                    this.sound.play('button-click');
+                // }
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {

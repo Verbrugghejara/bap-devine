@@ -269,6 +269,7 @@ export class GameOver extends Scene {
                 if (!this.hasSwipedIn) {
                     this.hasSwipedIn = true;
                     EventBus.emit('gameover-swipe-in');
+      
                 }
             },
             onComplete: () => {
@@ -284,6 +285,8 @@ export class GameOver extends Scene {
                             const popDuration = 500;
                             const popDelay = 150;
                             // Title
+                            this.sound.play('game-over', { volume: 0.3 });
+
                             this.tweens.add({
                                 targets: titleContainer,
                                 alpha: 1,

@@ -19,10 +19,16 @@ function startCountdown() {
     clearInterval(interval);
     // Pauzeer de game scene
     EventBus.emit('pause-game-scene');
+    // Speel direct de eerste countdown sound
+    EventBus.emit('play-countdown-sound');
     interval = setInterval(() => {
         if (typeof countDownNumber.value === 'number' && countDownNumber.value > 1) {
             countDownNumber.value--;
+            // Speel countdown sound bij elke stap
+            EventBus.emit('play-countdown-sound');
         } else {
+            // console.log('Playing start sound');
+            EventBus.emit('play-start-sound');
             countDownNumber.value = 'start';
             fadeOut.value = true;
             clearInterval(interval);

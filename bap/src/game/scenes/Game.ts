@@ -16,6 +16,10 @@ function angleDiff(a: number, b: number): number {
 
 
 export class Game extends Scene {
+        private hasPlayedScream: boolean = false;
+        private troposfeerSound: Phaser.Sound.BaseSound | null = null;
+        private stratosfeerSound: Phaser.Sound.BaseSound | null = null;
+        private spaceSound: Phaser.Sound.BaseSound | null = null;
     // ==================== PROPERTIES ====================
     // --- Game State ---
     private gameStartTime: number = 0;
@@ -101,6 +105,10 @@ export class Game extends Scene {
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.on('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.on('gameover-swipe-in', this.handleGameOverSwipeIn, this);
+        // Listen for countdown sound event from UI
+        EventBus.on('play-countdown-sound', this.handlePlayCountdownSound, this);
+        EventBus.on('play-start-sound', this.handlePlayStartdownSound, this);
+        EventBus.on('play-startled-sound', this.handlePlayStartledSound, this);
     }
 
 
@@ -112,6 +120,13 @@ export class Game extends Scene {
         this.createBalloon();
         this.setupObstacles();
         this.setupInput();
+        // // TEST: Speel troposfeer sound direct af
+        // if (this.sound && this.sound.locked === false) {
+        //         this.sound.play('troposfeer', { loop: true, volume: 1 });
+            
+        // } else {
+        //     console.warn('Phaser sound is locked of niet beschikbaar.');
+        // }
         EventBus.emit('current-scene-ready', this);
     }
 
@@ -153,9 +168,43 @@ export class Game extends Scene {
         EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.off('gameover-swipe-in', this.handleGameOverSwipeIn, this);
+        EventBus.off('play-countdown-sound', this.handlePlayCountdownSound, this);
+        EventBus.off('play-start-sound', this.handlePlayStartdownSound, this);
+        EventBus.off('play-startled-sound', this.handlePlayStartledSound, this);
         closeRotaryClient();
+        // Play countdown sound when event is received from UI
+        // Stop troposfeer sound indien nog bezig
+        if (this.troposfeerSound) {
+            this.troposfeerSound.stop();
+            this.troposfeerSound.destroy();
+            this.troposfeerSound = null;
+        }
+        if (this.stratosfeerSound) {
+            this.stratosfeerSound.stop();
+            this.stratosfeerSound.destroy();
+            this.stratosfeerSound = null;
+        }
     }
 
+        private handlePlayStartledSound() {
+            this.sound.play('alien-startled', { volume: 0.7 });
+        }
+        private handlePlayCountdownSound() {
+            // if (this.sound && this.sound.get('count-down')) {
+            this.sound.play('count-down', { volume: 0.3 });
+            // }
+        }
+
+        private handlePlayStartdownSound() {
+            console.log('Playing start sound');
+            this.sound.setDetune(1200);
+            this.sound.play('count-down', { volume: 0.3 });
+            this.time.delayedCall(1000, () => {
+
+                this.sound.setDetune(0);                    });
+            // this.sound.setDetune(0);
+        }
+            // if (this.sound && this.sound.get('count-down')) {
     // ==================== NEAR OBSTACLE CHECK ====================
     /**
      * Checks if the balloon is near any obstacle (within a given distance).
@@ -228,6 +277,13 @@ export class Game extends Scene {
             
             // Spawn initial power-up for troposfeer
             this.checkPowerUpSpawn(0);
+            // Start troposfeer sound
+            // if (this.sound && this.sound.locked === false) {
+            //     // if (this.sound.get('troposfeer')) {
+            //         this.sound.play('troposfeer', { loop: true, volume: 0.4 });
+                    
+            //     // }
+            // }
         }, 5000);
         
         this.rotary = getRotaryClient();
@@ -401,10 +457,26 @@ export class Game extends Scene {
     }
 
     private damageBallon() {
+        this.sound.play('hit', { volume: 0.3 });
+        this.time.delayedCall(1000, () => {
+            if (this.ballonHealth > 1) {
+
+                this.sound.play('alien-angry', { volume: 0.5 });
+            }
+
+        });
+                
         this.ballonHealth--;
+        // Speel geluid af als je op 1 hartje komt
+        if (this.ballonHealth === 1) {
+            this.sound.play('alien-sad', { volume: 0.7 });
+        }
         this.ballonInvulnerable = true;
         EventBus.emit('update-health', this.ballonHealth);
         EventBus.emit('show-hit-emotion');
+        // Play hit sound at lower volume
+        // if (this.sound && this.sound.get('hit')) {
+        // }
         
         if (this.ballon) {
             this.tweens.add({
@@ -781,6 +853,10 @@ export class Game extends Scene {
 
         // 2. Ballon valt naar beneden zolang hij bestaat
         if (this.ballonContainer) {
+            if (!this.hasPlayedScream) {
+                this.sound.play('alien-scream', { volume: 0.3 });
+                this.hasPlayedScream = true;
+            }
             this.ballonContainer.y += 18; // Snelheid van vallen
             // Als ballon uit beeld is, verwijder hem en start sfeer scroll-back (swipe-in gebeurt pas na scroll)
             if (
@@ -962,6 +1038,237 @@ export class Game extends Scene {
             this.checkPowerUpSpawn(sfeerIndex);
             this.lastSfeerIndex = sfeerIndex;
         }
+        // --- SFEER SOUND FADING ---
+        // Troposfeer fade in/out
+        if (this.sound && this.sound.locked === false && sfeerIndex === 0) {
+            if (!this.troposfeerSound || !(this.troposfeerSound as any).isPlaying) {
+                this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 0 });
+                this.troposfeerSound.play();
+                const soundRef = this.troposfeerSound;
+                const fadeObj = { value: 0 };
+                this.tweens.add({
+                    targets: fadeObj,
+                    value: 0.2,
+                    duration: 1000,
+                    onUpdate: () => {
+                        try {
+                            if (
+                                soundRef &&
+                                typeof (soundRef as any).setVolume === 'function' &&
+                                !(soundRef as any).destroyed
+                            ) {
+                                (soundRef as any).setVolume(fadeObj.value);
+                            }
+                        } catch (e) {}
+                    },
+                    onComplete: () => {
+                        // soundRef blijft behouden zolang de tween loopt
+                    }
+                });
+            } else if (this.troposfeerSound && (this.troposfeerSound as any).volume < 0.2) {
+                const soundRef = this.troposfeerSound;
+                const fadeObj = { value: (soundRef as any).volume || 0 };
+                this.tweens.add({
+                    targets: fadeObj,
+                    value: 0.2,
+                    duration: 1000,
+                    onUpdate: () => {
+                        try {
+                            if (
+                                soundRef &&
+                                typeof (soundRef as any).setVolume === 'function' &&
+                                !(soundRef as any).destroyed
+                            ) {
+                                (soundRef as any).setVolume(fadeObj.value);
+                            }
+                        } catch (e) {}
+                    },
+                    onComplete: () => {
+                        // soundRef blijft behouden zolang de tween loopt
+                    }
+                });
+            }
+        } else if (this.troposfeerSound && (this.troposfeerSound as any).isPlaying) {
+            const soundRef = this.troposfeerSound;
+            const fadeObj = { value: (soundRef as any).volume || 0.2 };
+            this.tweens.add({
+                targets: fadeObj,
+                value: 0,
+                duration: 1000,
+                onUpdate: () => {
+                    try {
+                        if (
+                            soundRef &&
+                            typeof (soundRef as any).setVolume === 'function' &&
+                            !(soundRef as any).destroyed
+                        ) {
+                            (soundRef as any).setVolume(fadeObj.value);
+                        }
+                    } catch (e) {}
+                },
+                onComplete: () => {
+                    if (soundRef) {
+                        soundRef.stop();
+                        soundRef.destroy();
+                        if (this.troposfeerSound === soundRef) this.troposfeerSound = null;
+                    }
+                }
+            });
+        }
+
+        // Stratosfeer fade in/out
+        if (this.sound && this.sound.locked === false && sfeerIndex === 1) {
+            if (!this.stratosfeerSound || !(this.stratosfeerSound as any).isPlaying) {
+                this.stratosfeerSound = this.sound.add('stratosfeer', { loop: true, volume: 0 });
+                this.stratosfeerSound.play();
+                const soundRef = this.stratosfeerSound;
+                const fadeObj = { value: 0 };
+                this.tweens.add({
+                    targets: fadeObj,
+                    value: 0.2,
+                    duration: 1000,
+                    onUpdate: () => {
+                        try {
+                            if (
+                                soundRef &&
+                                typeof (soundRef as any).setVolume === 'function' &&
+                                !(soundRef as any).destroyed
+                            ) {
+                                (soundRef as any).setVolume(fadeObj.value);
+                            }
+                        } catch (e) {}
+                    },
+                    onComplete: () => {
+                        // soundRef blijft behouden zolang de tween loopt
+                    }
+                });
+            } else if (this.stratosfeerSound && (this.stratosfeerSound as any).volume < 0.2) {
+                const soundRef = this.stratosfeerSound;
+                const fadeObj = { value: (soundRef as any).volume || 0 };
+                this.tweens.add({
+                    targets: fadeObj,
+                    value: 0.2,
+                    duration: 1000,
+                    onUpdate: () => {
+                        try {
+                            if (
+                                soundRef &&
+                                typeof (soundRef as any).setVolume === 'function' &&
+                                !(soundRef as any).destroyed
+                            ) {
+                                (soundRef as any).setVolume(fadeObj.value);
+                            }
+                        } catch (e) {}
+                    },
+                    onComplete: () => {
+                        // soundRef blijft behouden zolang de tween loopt
+                    }
+                });
+            }
+        } else if (this.stratosfeerSound && (this.stratosfeerSound as any).isPlaying) {
+            const soundRef = this.stratosfeerSound;
+            const fadeObj = { value: (soundRef as any).volume || 0.2 };
+            this.tweens.add({
+                targets: fadeObj,
+                value: 0,
+                duration: 1000,
+                onUpdate: () => {
+                    try {
+                        if (
+                            soundRef &&
+                            typeof (soundRef as any).setVolume === 'function' &&
+                            !(soundRef as any).destroyed
+                        ) {
+                            (soundRef as any).setVolume(fadeObj.value);
+                        }
+                    } catch (e) {}
+                },
+                onComplete: () => {
+                    if (soundRef) {
+                        soundRef.stop();
+                        soundRef.destroy();
+                        if (this.stratosfeerSound === soundRef) this.stratosfeerSound = null;
+                    }
+                }
+            });
+        }
+
+        // Space (mesosfeer, thermosfeer, exosfeer) fade in/out
+        if (this.sound && this.sound.locked === false && (sfeerIndex === 2 || sfeerIndex === 3 || sfeerIndex === 4)) {
+            if (!this.spaceSound || !(this.spaceSound as any).isPlaying) {
+                this.spaceSound = this.sound.add('space', { loop: true, volume: 0 });
+                this.spaceSound.play();
+                const soundRef = this.spaceSound;
+                const fadeObj = { value: 0 };
+                this.tweens.add({
+                    targets: fadeObj,
+                    value: 0.2,
+                    duration: 1000,
+                    onUpdate: () => {
+                        try {
+                            if (
+                                soundRef &&
+                                typeof (soundRef as any).setVolume === 'function' &&
+                                !(soundRef as any).destroyed
+                            ) {
+                                (soundRef as any).setVolume(fadeObj.value);
+                            }
+                        } catch (e) {}
+                    },
+                    onComplete: () => {
+                        // soundRef blijft behouden zolang de tween loopt
+                    }
+                });
+            } else if (this.spaceSound && (this.spaceSound as any).volume < 0.2) {
+                const soundRef = this.spaceSound;
+                const fadeObj = { value: (soundRef as any).volume || 0 };
+                this.tweens.add({
+                    targets: fadeObj,
+                    value: 0.2,
+                    duration: 1000,
+                    onUpdate: () => {
+                        try {
+                            if (
+                                soundRef &&
+                                typeof (soundRef as any).setVolume === 'function' &&
+                                !(soundRef as any).destroyed
+                            ) {
+                                (soundRef as any).setVolume(fadeObj.value);
+                            }
+                        } catch (e) {}
+                    },
+                    onComplete: () => {
+                        // soundRef blijft behouden zolang de tween loopt
+                    }
+                });
+            }
+        } else if (this.spaceSound && (this.spaceSound as any).isPlaying) {
+            const soundRef = this.spaceSound;
+            const fadeObj = { value: (soundRef as any).volume || 0.2 };
+            this.tweens.add({
+                targets: fadeObj,
+                value: 0,
+                duration: 1000,
+                onUpdate: () => {
+                    try {
+                        if (
+                            soundRef &&
+                            typeof (soundRef as any).setVolume === 'function' &&
+                            !(soundRef as any).destroyed
+                        ) {
+                            (soundRef as any).setVolume(fadeObj.value);
+                        }
+                    } catch (e) {}
+                },
+                onComplete: () => {
+                    if (soundRef) {
+                        soundRef.stop();
+                        soundRef.destroy();
+                        if (this.spaceSound === soundRef) this.spaceSound = null;
+                    }
+                }
+            });
+        }
         EventBus.emit('update-sfeer-index', sfeerIndex);
     }
 
@@ -988,6 +1295,8 @@ export class Game extends Scene {
                     (window as any).gameDurationMs = duration;
                 }
             }
+            // Speel victory sound
+            this.sound.play('alien-cheers', { volume: 0.8 });
             this.isVictorySequence = true;
             this.isBalloonLeaving = true;
             EventBus.emit('hide-gameui');
@@ -1292,6 +1601,8 @@ export class Game extends Scene {
                 // ...existing code...
                 // If shield is active, destroy obstacle but don't damage balloon
                 if (this.shieldActive) {
+                                        // Speel shield-hit geluid af
+                    this.sound.play('hit-metal', { volume: 0.5 });
                     this.setPropellorPositions('normal');
                     const x = obstacle.x;
                     const y = obstacle.y;
@@ -1721,7 +2032,17 @@ export class Game extends Scene {
             if (this.checkOverlap(powerUp, this.ballon)) {
                 const type = (powerUp as any).powerUpType;
                 this.activatePowerUp(type);
-                
+
+                // Play sound for health power-up
+                if (type === 'health') {
+                    this.sound.play('pick-up', { volume: 0.5 });
+                    this.time.delayedCall(1000, () => {
+                        this.sound.play('alien-happy', { volume: 0.5 });
+
+                    });
+                } else {
+                    this.sound.play('pick-up', { volume: 0.2 });
+                }
                 // Visual feedback
                 this.tweens.add({
                     targets: powerUp,
@@ -1730,7 +2051,6 @@ export class Game extends Scene {
                     duration: 300,
                     onComplete: () => powerUp.destroy()
                 });
-                
                 this.powerUps.splice(i, 1);
             }
         }
