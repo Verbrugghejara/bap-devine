@@ -641,7 +641,8 @@ export class Tutorial extends Scene {
                 this.balloon.y + this.propellorOffsetY,
                 'wind-blauw'
             ).setDepth(1002).setScale(0.4);
-            
+            this.sound.play('wind', { volume: 0.1 });
+
             this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
             this.windBlauw.once('animationcomplete', () => {
                 if (this.windBlauw) {

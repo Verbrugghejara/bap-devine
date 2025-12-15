@@ -622,6 +622,7 @@ export class Tutorial extends Scene {
                 'wind-rood'
             ).setDepth(1002).setScale(0.4);
             
+            this.sound.play('wind', { volume: 0.1 });
             this.windRood.play({ key: 'wind-rood', repeat: 0 });
             this.windRood.once('animationcomplete', () => {
                 if (this.windRood) {

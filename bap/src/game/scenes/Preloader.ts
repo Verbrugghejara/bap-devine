@@ -125,6 +125,7 @@ export class Preloader extends Scene
         this.load.audio('troposfeer', 'audio/troposfeer.mp3');
         this.load.audio('stratosfeer', 'audio/stratosfeer.mp3');
         this.load.audio('space', 'audio/space.mp3');
+        this.load.audio('wind', 'audio/wind.mp3');
     }
     create() {
         // Animaties pas aanmaken als alles geladen is
