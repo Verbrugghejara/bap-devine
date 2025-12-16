@@ -96,10 +96,51 @@ export class GameVictory extends Scene {
         titleContainer.add([titleBg, this.title]);
         victoryContainer.add(titleContainer);
 
+        // --- SNELSTE TIJD LOGICA ---
+        let durationMs = 0;
+        if (typeof window !== 'undefined' && (window as any).gameDurationMs) {
+            durationMs = (window as any).gameDurationMs;
+        }
+        let bestTimeMs = null;
+        let bestTimeDate = null;
+        let todayKey = '';
+        if (typeof window !== 'undefined' && window.localStorage) {
+            // Gebruik yyyy-mm-dd als key
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            todayKey = `bestTime_${yyyy}-${mm}-${dd}`;
+            const stored = window.localStorage.getItem(todayKey);
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    bestTimeMs = parsed.time;
+                    bestTimeDate = parsed.date;
+                } catch {}
+            }
+            // Als er nog geen tijd is, of deze tijd is sneller, sla op
+            if (bestTimeMs === null || durationMs < bestTimeMs) {
+                bestTimeMs = durationMs;
+                bestTimeDate = Date.now();
+                window.localStorage.setItem(todayKey, JSON.stringify({ time: bestTimeMs, date: bestTimeDate }));
+            }
+        }
+
+        // Toon snelste tijd in description
+        let bestMinutes = 0;
+        let bestSeconds = 0;
+        let bestTimeText = 'SNELSTE TIJD:  --:--';
+        if (bestTimeMs !== null) {
+            const bestTotalSeconds = Math.floor(bestTimeMs / 1000);
+            bestMinutes = Math.floor(bestTotalSeconds / 60);
+            bestSeconds = bestTotalSeconds % 60;
+            bestTimeText = `SNELSTE TIJD:  ${bestMinutes.toString().padStart(2, '0')}:${bestSeconds.toString().padStart(2, '0')}`;
+        }
         this.description = this.add.text(
             this.scale.width / 2,
             this.scale.height / 4 - 40,
-            'SNELSTE TIJD:  02:41',
+            bestTimeText,
             {
                 fontFamily: 'Bungee',
                 fontSize: 48,
@@ -114,10 +155,6 @@ export class GameVictory extends Scene {
             .setAlpha(0);
         victoryContainer.add(this.description);
 
-        let durationMs = 0;
-        if (typeof window !== 'undefined' && (window as any).gameDurationMs) {
-            durationMs = (window as any).gameDurationMs;
-        }
         const totalSeconds = Math.floor(durationMs / 1000);
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
@@ -127,11 +164,13 @@ export class GameVictory extends Scene {
         const leaderboardY = this.scale.height / 2 - 350;
         
         // Create container for entire leaderboard
+        // --- SNELSTE TIJD LOGICA ---
+        // (declaraties en berekeningen hierboven, hergebruik variabelen)
         const leaderboardContainer = this.add.container(this.scale.width / 2, leaderboardY);
         leaderboardContainer.setAlpha(0);
         leaderboardContainer.setDepth(12);
         
-        // Background
+                    // ...existing code...
         const leaderboardBg = this.add.graphics();
         leaderboardBg.fillStyle(0xffffff, 1);
         leaderboardBg.fillRoundedRect(
@@ -149,8 +188,13 @@ export class GameVictory extends Scene {
         const nameX = iconStartX + 200;
         const timeXRight = leaderboardWidth / 2 - 64;
         
-        // Trophy icon for JIJ
-        const trophyIcon1 = this.add.image(iconStartX, row1Y, 'winner')
+        // Trophy icon of second icon afhankelijk van highscore
+        let isNewHighscore = false;
+        if (bestTimeMs === durationMs || bestTimeMs === null) {
+            isNewHighscore = true;
+        }
+        const iconKey = isNewHighscore ? 'winner' : 'second';
+        const trophyIcon1 = this.add.image(iconStartX, row1Y, iconKey)
             .setOrigin(0.5)
             .setScale(0.8);
         leaderboardContainer.add(trophyIcon1);

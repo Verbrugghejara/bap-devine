@@ -53,6 +53,7 @@ export class Preloader extends Scene
         this.load.image('progress-indicator', 'progressIndicator.png');
         this.load.image('timer', 'timer.png');
         this.load.image('winner', 'winner.png');
+        this.load.image('second', 'tropheeSilver.png');
         this.load.image('second', 'second.png');
         this.load.image('alien', 'alienHoofd.png');
         this.load.image('plane-freeze', 'planeFreeze.png');
@@ -101,7 +102,7 @@ export class Preloader extends Scene
         this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
         
         this.load.spritesheet('alien-tropo', 'aliens/alienTropo.png', { frameWidth: 188, frameHeight: 193 });
-        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 187, frameHeight: 304 });
+        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 723, frameHeight: 463 });
         this.load.spritesheet('alien-meso', 'aliens/alienMeso.png', { frameWidth: 467, frameHeight: 493 });
         this.load.spritesheet('alien-thermo', 'aliens/alienThermo.png', { frameWidth: 526, frameHeight: 633 });
         this.load.spritesheet('alien-exo', 'aliens/alienExo.png', { frameWidth: 578, frameHeight: 611 });

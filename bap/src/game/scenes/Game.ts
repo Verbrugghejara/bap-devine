@@ -98,10 +98,10 @@ export class Game extends Scene {
     private aliens: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private alienConfigs = [
         { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 1 },
-        { key: 'alien-strato', sfeer: 1, x: 130, y: 4720, scale: 3 },
+        { key: 'alien-strato', sfeer: 1, x: 100, y: 4720, scale: 1 },
         { key: 'alien-meso', sfeer: 2, x: 100, y: 8900 , scale: 1},
         { key: 'alien-thermo', sfeer: 3, x: 80, y: 5350 , scale: 1},
-        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 1},
+        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 0.7},
     ];
     private alienSpawnTimer: Phaser.Time.TimerEvent | null = null;
 
@@ -1084,8 +1084,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
-        // const scrollSpeeds = [200, 200, 200, 200, 200];
+        const scrollSpeeds = [200, 7, 9, 11, 12];
+        // const scrollSpeeds = [200, 200, 200, 200, 12];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;
@@ -1109,16 +1109,7 @@ export class Game extends Scene {
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
         }
         // Obstakels en powerUps meescrollen met sfeerOffsetY
-        for (const obstacle of this.obstacles) {
-            if (obstacle && obstacle.active) {
-                obstacle.y += this.smoothScrollSpeed;
-            }
-        }
-        for (const powerUp of this.powerUps) {
-            if (powerUp && powerUp.active) {
-                powerUp.y += this.smoothScrollSpeed;
-            }
-        }
+        // (de y-positie wordt alleen hier aangepast, niet elders)
     }
 
     private updateBackgrounds() {
