@@ -639,11 +639,11 @@ onUnmounted(() => {
   display: inline-flex;
 padding: 16px 32px;
 align-items: center;
-gap: 24px;
-border-radius: 32px;
+gap: 48px;
+border-radius: 16px;
 background: #fff;
 display: flex;
-min-width: 240px;
+min-width: 196px;
 height: 65px;
 }
 

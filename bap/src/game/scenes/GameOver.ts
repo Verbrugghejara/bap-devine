@@ -285,6 +285,7 @@ export class GameOver extends Scene {
                     this.hasSwipedIn = true;
                     EventBus.emit('gameover-swipe-in');
                 }
+                this.sound.stopAll();
             },
             onUpdate: () => {
                 // Zorg dat de video altijd onderaan blijft, ook als container beweegt
@@ -303,6 +304,7 @@ export class GameOver extends Scene {
                             const popDuration = 500;
                             const popDelay = 150;
                             // Title
+                            this.sound.play('troposfeer', { loop: true, volume: 0.5 });
                             this.sound.play('game-over', { volume: 0.3 });
 
                             this.tweens.add({

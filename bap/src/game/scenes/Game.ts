@@ -16,6 +16,7 @@ function angleDiff(a: number, b: number): number {
 
 
 export class Game extends Scene {
+            private hasPlayedVictoryCheer: boolean = false;
         private hasPlayedScream: boolean = false;
         private troposfeerSound: Phaser.Sound.BaseSound | null = null;
         private stratosfeerSound: Phaser.Sound.BaseSound | null = null;
@@ -79,6 +80,7 @@ export class Game extends Scene {
     private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private lastObstacleSides: { [key: string]: number[] } = {};
     private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    private firstMeteorSpawned: boolean = false;
     private wasNearObstacle: boolean = false;
 
     // --- Power-ups ---
@@ -285,7 +287,7 @@ export class Game extends Scene {
     }
 
     private handlePlayStartdownSound() {
-        console.log('Playing start sound');
+
         this.sound.setDetune(1200);
         this.sound.play('count-down', { volume: 0.3 });
         this.time.delayedCall(1000, () => {
@@ -374,7 +376,7 @@ export class Game extends Scene {
                     
             //     // }
             // }
-        }, 5000);
+        }, 3000);
         
         this.rotary = getRotaryClient();
     }
@@ -536,7 +538,10 @@ export class Game extends Scene {
                 targets: this.ballonContainer,
                 y: targetY,
                 duration: 1200,
-                ease: 'Cubic.easeOut',
+                ease: 'Cubic.easeOut',onStart: () => {
+                    this.sound.detune = 0;
+                    this.sound.play('alien-cheers', { volume: 0.4 });
+                },
                 onComplete: () => {
                     this.scene.resume(); // Start nu pas de rest van de game
                 }
@@ -626,6 +631,7 @@ export class Game extends Scene {
 
     private setupObstacles() {
         this.obstacles = [];
+        this.firstMeteorSpawned = false;
         this.spawnObstacle();
 
         // Obstakels blijven spawnen
@@ -652,13 +658,27 @@ export class Game extends Scene {
 
     private getObstacleSpawnDelay(): number {
         // Lagere delays voor meer obstakels
+        // if (this.huidigeSfeerIndex === 2) { // Mesosfeer - meteors
+        //     if (this.firstMeteorSpawned) {
+        //         console.log('extra lange delay voor eerste meteoriet');
+        //         // Eerste meteoriet: extra lang wachten
+        //         // this.firstMeteorSpawned = false; // Reset voor volgende keer
+        //         return Phaser.Math.Between(5000, 5500);
+        //     } else {
+        //         // Daarna sneller
+        //         console.log('normale delay voor volgende meteorieten');
+        //         return Phaser.Math.Between(2500, 4000);
+        //     }
+        // }
         const delays = [
             Phaser.Math.Between(2500, 5000),  // Troposfeer - birds
             Phaser.Math.Between(2500, 4000),  // Stratosfeer - planes (meer vliegtuigen)
-            Phaser.Math.Between(3500, 5000),   // Mesosfeer - meteors (langzamere spawn)
+            Phaser.Math.Between(2500, 4000),   // Mesosfeer - meteors (fallback, zou niet gebruikt moeten worden)
             Phaser.Math.Between(2500, 3500),  // Thermosfeer - satellites
             Phaser.Math.Between(2500, 4000)   // Exosfeer - ufos
         ];
+        console.log('-------------------------------------');
+        console.log('Obstacle Spawn Delay:', delays[this.huidigeSfeerIndex]);
         return delays[this.huidigeSfeerIndex] || 2000;
     }
 
@@ -675,33 +695,42 @@ export class Game extends Scene {
 
     private spawnObstacle() {
         if (this.isGamePaused) return;
-        
+
         const config = this.getObstacleConfig();
         if (!this.textures.exists(config.texture)) return;
-        
+
         try {
             let x, y, direction, speed;
-            
+
             // Calculate current sfeer's screen Y position range
             const currentSfeerCenterY = this.sfeerBaseY[this.huidigeSfeerIndex] + this.sfeerOffsetY;
             const currentSfeerHeight = this.sfeerHoogtes[this.huidigeSfeerIndex];
             const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
             // const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
-            
+
             // Start spawning only when we're 10% into the sfeer
-            const startSpawnThreshold = currentSfeerHeight * 0.1;
-            if (currentSfeerTop > -startSpawnThreshold) {
-                // We haven't progressed enough into this sfeer yet
-                return;
+            if (this.huidigeSfeerIndex === 2) {
+                let startSpawnThreshold = 768*2; // Original threshold
+                if (currentSfeerTop > -startSpawnThreshold) {
+                    // We haven't progressed enough into this sfeer yet
+                    return;
+                }
+            }
+            else {
+                const startSpawnThreshold = 500;
+                if (currentSfeerTop > -startSpawnThreshold) {
+                    // We haven't progressed enough into this sfeer yet
+                    return;
+                }
             }
 
             // Laat obstakels tot bijna het einde van de sfeer spawnen (laatste 5% niet meer)
-            const stopSpawnThreshold = currentSfeerHeight * 0.05;
-            if (currentSfeerTop < -currentSfeerHeight + stopSpawnThreshold) {
-                // We're too close to the end of this sfeer
-                return;
-            }
-            
+            // const stopSpawnThreshold = currentSfeerHeight * 0.05;
+            // if (currentSfeerTop < -currentSfeerHeight + stopSpawnThreshold) {
+            //     // We're too close to the end of this sfeer
+            //     return;
+            // }
+
             if (config.movementType === 'vertical') {
                 direction = Math.random() < 0.5 ? 1 : -1; // Random left or right
                 // Adjust spawn position based on direction to avoid going off screen
@@ -714,6 +743,11 @@ export class Game extends Scene {
                 }
                 y = -100;
                 speed = Phaser.Math.Between(8, 12);
+                // Markeer dat de eerste meteoriet is gespawned
+                if (this.huidigeSfeerIndex === 2 && config.texture === 'meteor-falling' && !this.firstMeteorSpawned) {
+                    console.log('Eerste meteoriet gespawned!');
+                    this.firstMeteorSpawned = true;
+                }
             } else {
                 // --- ALLE HORIZONTALE OBSTAKELS: van beide kanten, max 2x zelfde kant ---
                 let fromLeft;
@@ -758,7 +792,7 @@ export class Game extends Scene {
                 }
                 speed = Phaser.Math.Between(minSpeed, maxSpeed);
             }
-            
+
             const obstacle = this.physics.add.sprite(x, y, config.texture)
                 .setScale(
                     (config.movementType === 'horizontal' && direction === -1) || (config.movementType === 'vertical' && direction === -1) ? -config.scale : config.scale, 
@@ -766,29 +800,29 @@ export class Game extends Scene {
                 )
                 .setDepth(50)
                 .setOrigin(0.5);
-            
+
             (obstacle.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-            
+
             if (config.hasAnimation && this.anims.exists(config.animKey)) {
                 obstacle.play(config.animKey);
             }
-            
+
             (obstacle as any).direction = direction;
             (obstacle as any).speed = speed;
             (obstacle as any).obstacleType = config.texture;
             (obstacle as any).movementType = config.movementType;
-            
+
             // Add flying animation for birds
             if (config.texture === 'bird-walk') {
                 (obstacle as any).flyingOffset = 0;
                 (obstacle as any).flyingSpeed = Phaser.Math.Between(2, 4);
             }
-            
+
             this.obstacles.push(obstacle);
         } catch (e) {
             console.error('[Game] Failed to spawn obstacle:', e);
         }
-        
+
     }
 
     private checkOverlap(a: any, b: any): boolean {
@@ -913,7 +947,10 @@ export class Game extends Scene {
     private updateVictorySequence() {
         if (this.isBalloonLeaving && this.ballonContainer) {
             this.ballonContainer.y -= 12;
-            
+            if (!this.hasPlayedVictoryCheer) {
+                this.sound.play('alien-cheers', { volume: 0.5 });
+                this.hasPlayedVictoryCheer = true;
+            }
             if (this.ballonContainer.y + (this.ballon?.height ?? 100) < -50) {
                 this.isBalloonLeaving = false;
                 this.scene.launch('GameVictory');
@@ -1031,8 +1068,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
-        // const scrollSpeeds = [200, 200, 200, 200, 200];
+        // const scrollSpeeds = [5, 7, 9, 11, 12];
+        const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;
@@ -1114,6 +1151,31 @@ export class Game extends Scene {
         }
         
         if (this.huidigeSfeerIndex !== sfeerIndex) {
+            // Reset meteoriet-flag als je de mesosfeer verlaat
+            if (this.huidigeSfeerIndex === 2 && sfeerIndex !== 2) {
+                this.firstMeteorSpawned = false;
+            }
+            // Reset obstacleSpawnTimer bij binnenkomst mesosfeer
+            if (sfeerIndex === 2 && this.huidigeSfeerIndex !== 2) {
+                if (this.obstacleSpawnTimer) {
+                    this.obstacleSpawnTimer.remove(false);
+                }
+                this.obstacleSpawnTimer = this.time.addEvent({
+                    delay: this.getObstacleSpawnDelay(),
+                    loop: true,
+                    callback: () => {
+                        this.spawnObstacle();
+                        if (this.obstacleSpawnTimer) {
+                            this.obstacleSpawnTimer.reset({
+                                delay: this.getObstacleSpawnDelay(),
+                                callback: this.obstacleSpawnTimer.callback,
+                                callbackScope: this.obstacleSpawnTimer.callbackScope,
+                                loop: true
+                            });
+                        }
+                    }
+                });
+            }
             // Toon interlude iets eerder: aan het einde van de vorige sfeer
             if (this.countdownDone && sfeerIndex > 0 && sfeerIndex > this.lastSfeerIndex) {
                 // Bepaal progressie in vorige sfeer
@@ -1124,7 +1186,7 @@ export class Game extends Scene {
                 const prevSfeerBottom = prevSfeerBaseY + prevSfeerHeight / 2;
                 const centerWorldY = (this.scale.height / 2) - this.sfeerOffsetY;
                 const progressInPrevSfeer = 1 - ((centerWorldY - prevSfeerTop) / prevSfeerHeight);
-                if (progressInPrevSfeer > 0.85) {
+                if (progressInPrevSfeer > 0.70) {
                     EventBus.emit('show-interlude', sfeerIndex);
                 }
             }
@@ -1386,13 +1448,14 @@ export class Game extends Scene {
         if (progress >= 1 && this.countdownDone && !this.isVictorySequence) {
             this.gameEndTime = Date.now();
             const duration = this.gameEndTime - this.gameStartTime;
+
             if (typeof window !== 'undefined') {
                 if ((window as any).gameDurationMs === undefined) {
                     (window as any).gameDurationMs = duration;
                 }
             }
-            // Speel victory sound
-            this.sound.play('alien-cheers', { volume: 0.8 });
+            // Speel victory sound alleen hier
+            // this.sound.play('alien-cheers', { volume: 0.8 });
             this.isVictorySequence = true;
             this.isBalloonLeaving = true;
             EventBus.emit('hide-gameui');
@@ -1826,7 +1889,6 @@ export class Game extends Scene {
                     }
                     // UFO breaking animation
                     if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
-                        console.log('UFO breaking animation triggered');
                         const breakingUfo = this.physics.add.sprite(x, y, 'ufo-breaking')
                             .setScale(0.5, 0.5)
                             .setDepth(50)
@@ -2316,7 +2378,6 @@ export class Game extends Scene {
     }
 
     private setPropellorPositions(mode: 'normal' | 'tilted') {
-        console.log('[setPropellorPositions]', mode);
         if (!this.propellorBlauw || !this.propellorRood) return;
         // Sync wind mode
         // Let op: setRotation gebruikt radialen, setAngle gebruikt graden

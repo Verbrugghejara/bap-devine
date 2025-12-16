@@ -156,7 +156,7 @@ export class GameVictory extends Scene {
         leaderboardContainer.add(trophyIcon1);
         
         // Alien icon for JIJ
-        const alienIcon1 = this.add.image(iconStartX + 100, row1Y, 'alien')
+        const alienIcon1 = this.add.image(iconStartX + 140, row1Y, 'alien')
             .setOrigin(0.5)
             .setScale(0.5);
         leaderboardContainer.add(alienIcon1);

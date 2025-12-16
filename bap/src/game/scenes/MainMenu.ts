@@ -19,6 +19,8 @@ export class MainMenu extends Scene {
 
 
     create() {
+        this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+
             this.rotary = getRotaryClient();
         const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'home-animation')
             .setOrigin(0.5)
