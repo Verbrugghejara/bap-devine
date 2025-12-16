@@ -224,7 +224,7 @@ export class Game extends Scene {
             }
             const alien = this.physics.add.sprite(config.x, y, config.key, 0)
                 .setScale(scale)
-                .setDepth(999)
+                .setDepth(1)
                 .setOrigin(0.5);
             (alien.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
             (alien as any).alienKey = config.key;
@@ -654,7 +654,7 @@ export class Game extends Scene {
         const delays = [
             Phaser.Math.Between(2500, 5000),  // Troposfeer - birds
             Phaser.Math.Between(2500, 4000),  // Stratosfeer - planes (meer vliegtuigen)
-            Phaser.Math.Between(2500, 3500),   // Mesosfeer - meteors
+            Phaser.Math.Between(3500, 5000),   // Mesosfeer - meteors (langzamere spawn)
             Phaser.Math.Between(2500, 3500),  // Thermosfeer - satellites
             Phaser.Math.Between(2500, 4000)   // Exosfeer - ufos
         ];
@@ -687,19 +687,19 @@ export class Game extends Scene {
             const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
             // const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
             
-            // Start spawning only when we're 20% into the sfeer
+            // Start spawning only when we're 10% into the sfeer
             const startSpawnThreshold = currentSfeerHeight * 0.1;
             if (currentSfeerTop > -startSpawnThreshold) {
                 // We haven't progressed enough into this sfeer yet
                 return;
             }
-            
-            // Stop spawning when we're near the end of the current sfeer (last 30% of the sfeer)
-            // const stopSpawnThreshold = currentSfeerHeight * 0.2;
-            // if (currentSfeerTop < -currentSfeerHeight + stopSpawnThreshold) {
-            //     // We're too close to the end of this sfeer
-            //     return;
-            // }
+
+            // Laat obstakels tot bijna het einde van de sfeer spawnen (laatste 5% niet meer)
+            const stopSpawnThreshold = currentSfeerHeight * 0.05;
+            if (currentSfeerTop < -currentSfeerHeight + stopSpawnThreshold) {
+                // We're too close to the end of this sfeer
+                return;
+            }
             
             if (config.movementType === 'vertical') {
                 direction = Math.random() < 0.5 ? 1 : -1; // Random left or right
@@ -833,7 +833,7 @@ export class Game extends Scene {
         if (this.isGameOverSwiping) return;
         this.isGameOverSwiping = true;
         
-        const GAMEOVER_SWIPE_DURATION = 1400;
+        const GAMEOVER_SWIPE_DURATION = 1200; // Sync met hoofdgame
         // Swipe alleen backgrounds, sfeerRects en ballonContainer (geen obstakels of powerUps)
         const allGameObjects = [
             this.bgTroposfeer,
@@ -972,11 +972,15 @@ export class Game extends Scene {
             // Swipe alleen sferen en backgrounds naar boven (geen obstakels of powerups)
             const startOffset = this.sfeerOffsetY;
             let lastTweenValue = startOffset;
+            // Swipe naar de onderkant van de troposfeer, min 2x schermhoogte (voor GameOver video van 2 schermen hoog)
+            const troposfeerHeight = this.sfeerHoogtes[0];
+            const troposfeerEnd = troposfeerHeight - (this.scale.height * 2);
+            const targetOffset = Math.max(troposfeerEnd, 0);
             this.tweens.addCounter({
                 from: startOffset,
-                to: 1920,
-                duration: 1400,
-                ease: 'Cubic.easeIn',
+                to: targetOffset,
+                duration: 4000, // Sync with GameOver.ts
+                ease: 'Sine.easeIn', // Sync with GameOver.ts
                 onUpdate: tween => {
                     const currentValue = tween.getValue() ?? 0;
                     const delta = currentValue - lastTweenValue;
@@ -1026,7 +1030,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
+        const scrollSpeeds = [200, 200, 9, 11, 12];
+        // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;
@@ -1132,7 +1137,7 @@ export class Game extends Scene {
         // Troposfeer fade in/out
         if (this.sound && this.sound.locked === false && sfeerIndex === 0) {
             if (!this.troposfeerSound || !(this.troposfeerSound as any).isPlaying) {
-                this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 0 });
+                this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
                 this.troposfeerSound.play();
                 const soundRef = this.troposfeerSound;
                 const fadeObj = { value: 0 };
@@ -1209,7 +1214,7 @@ export class Game extends Scene {
         // Stratosfeer fade in/out
         if (this.sound && this.sound.locked === false && sfeerIndex === 1) {
             if (!this.stratosfeerSound || !(this.stratosfeerSound as any).isPlaying) {
-                this.stratosfeerSound = this.sound.add('stratosfeer', { loop: true, volume: 0 });
+                this.stratosfeerSound = this.sound.add('stratosfeer', { loop: true, volume: 0.2 });
                 this.stratosfeerSound.play();
                 const soundRef = this.stratosfeerSound;
                 const fadeObj = { value: 0 };
@@ -1286,7 +1291,7 @@ export class Game extends Scene {
         // Space (mesosfeer, thermosfeer, exosfeer) fade in/out
         if (this.sound && this.sound.locked === false && (sfeerIndex === 2 || sfeerIndex === 3 || sfeerIndex === 4)) {
             if (!this.spaceSound || !(this.spaceSound as any).isPlaying) {
-                this.spaceSound = this.sound.add('space', { loop: true, volume: 0 });
+                this.spaceSound = this.sound.add('space', { loop: true, volume: 0.2 });
                 this.spaceSound.play();
                 const soundRef = this.spaceSound;
                 const fadeObj = { value: 0 };
@@ -1642,6 +1647,7 @@ export class Game extends Scene {
                 if (distanceToBalloon < 1100) {
                     obstacle.setData('frozen', true);
                     
+                        this.sound.play('freeze', { volume: 0.6 });
                     // Change plane texture to frozen version if it's a plane
                     if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
                         obstacle.setTexture('plane-freeze');
@@ -2217,6 +2223,7 @@ export class Game extends Scene {
                             obstacle.setTexture('plane-flying');
                             if (this.anims.exists('plane-flying')) {
                                 obstacle.play('plane-flying');
+
                             }
                         }
                     }

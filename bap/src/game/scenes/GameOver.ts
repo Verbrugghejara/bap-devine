@@ -44,17 +44,32 @@ export class GameOver extends Scene {
                 }
         
         // Swipe-in: identiek aan Game swipe-out, start onderaan beeld en beweeg naar y=0
-        const GAMEOVER_SWIPE_DURATION = 1400; // Match Game.ts
-        const gameoverContainer = this.add.container(0, this.scale.height);
+        const GAMEOVER_SWIPE_DURATION = 3000; // Exact sync met Game.ts
+        const gameoverContainer = this.add.container(0, this.scale.height*2);
         gameoverContainer.setDepth(9999);
 
         
         
-        const bgGameOver = this.add.image(this.scale.width / 2, this.scale.height / 2, 'bg-gameover')
-            .setOrigin(0.5, 0.5)
-            .setDisplaySize(this.scale.width, this.scale.height)
+        const video = this.add.video(this.scale.width / 2, this.scale.height, 'gameover-animation')
+            .setOrigin(0.5, 1)
             .setDepth(1);
-        gameoverContainer.add(bgGameOver);
+        video.setLoop(true);
+        video.setMute(true);
+        video.play(true);
+        gameoverContainer.add(video);
+
+        // Zorg dat de video pas schaalt als de metadata geladen is
+        video.on('play', () => {
+            let vidWidth = video.width;
+            let vidHeight = video.height;
+            // Probeer echte video-afmetingen te pakken
+            if (video.video && video.video.videoWidth && video.video.videoHeight) {
+                vidWidth = video.video.videoWidth;
+                vidHeight = video.video.videoHeight;
+            }
+            const scale = this.scale.width / vidWidth;
+            video.setScale(scale);
+        });
         
         // Black overlay on top of background (starts invisible)
         const blackOverlayTop = this.add.graphics();
@@ -264,13 +279,16 @@ export class GameOver extends Scene {
             targets: gameoverContainer,
             y: 0,
             duration: GAMEOVER_SWIPE_DURATION,
-            ease: 'Cubic.easeOut',
+            ease: 'Cubic.easeOut', // Exact sync met Game.ts
             onStart: () => {
                 if (!this.hasSwipedIn) {
                     this.hasSwipedIn = true;
                     EventBus.emit('gameover-swipe-in');
-      
                 }
+            },
+            onUpdate: () => {
+                // Zorg dat de video altijd onderaan blijft, ook als container beweegt
+                // (video zit in container, dus volgt vanzelf)
             },
             onComplete: () => {
                 gameoverContainer.y = 0;

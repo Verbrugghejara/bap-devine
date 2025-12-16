@@ -54,12 +54,15 @@ export class GameVictory extends Scene {
             .setDepth(1);
         victoryContainer.add(bgVictory);
         
-        // Aliens victory image als overlay (start onzichtbaar)
-        const aliensVictoryImg = this.add.image(this.scale.width / 2, this.scale.height, 'aliens-gamevictory')
+        // Aliens victory video als overlay (Phaser video object)
+        const aliensVictoryVideo = this.add.video(this.scale.width / 2, this.scale.height, 'win-animation')
             .setOrigin(0.5, 1)
             .setDepth(8)
-            .setScale(1)
-        victoryContainer.add(aliensVictoryImg);
+            .setScale(1);
+        aliensVictoryVideo.setLoop(true);
+        aliensVictoryVideo.setMute(true);
+        aliensVictoryVideo.play(true);
+        victoryContainer.add(aliensVictoryVideo);
         
         // Title container
         const titleContainer = this.add.container(this.scale.width / 2, this.scale.height / 4 - 250);
@@ -196,7 +199,7 @@ export class GameVictory extends Scene {
                 // Na 1 seconde, fade-in aliensVictoryImg en scale groter
                 this.time.delayedCall(500, () => {
                     this.tweens.add({
-                        targets: aliensVictoryImg,
+                        targets: aliensVictoryVideo,
                         // alpha: 1,
                         scale: 1.25,
                         duration: 800,
@@ -402,9 +405,6 @@ export class GameVictory extends Scene {
                     if (typeof window !== 'undefined') {
                         (window as any).sfeerProgress = 0;
                     }
-                    EventBus.emit('update-health', 3);
-                    EventBus.emit('show-gameui');
-                    this.scene.stop('GameVictory');
                     this.scene.start('Game');
                 }
             });

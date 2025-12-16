@@ -108,6 +108,8 @@ export class Preloader extends Scene
         
         this.load.video('home-animation','mainMenuVideo.mp4')
         this.load.video('storytelling-animation','storyTelling.mp4')
+        this.load.video('gameover-animation','gameOverAnimation.mp4')
+        this.load.video('win-animation','winAnimation.mp4')
         
         this.load.audio('button-click', 'audio/buttonClick.mp3');
         this.load.audio('hit', 'audio/hit.mp3');
@@ -126,6 +128,7 @@ export class Preloader extends Scene
         this.load.audio('stratosfeer', 'audio/stratosfeer.mp3');
         this.load.audio('space', 'audio/space.mp3');
         this.load.audio('wind', 'audio/wind.mp3');
+        this.load.audio('freeze', 'audio/freeze.mp3');
     }
     create() {
         // Animaties pas aanmaken als alles geladen is
