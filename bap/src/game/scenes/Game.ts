@@ -97,10 +97,10 @@ export class Game extends Scene {
 
     private aliens: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private alienConfigs = [
-        { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 0.3 },
-        { key: 'alien-strato', sfeer: 1, x: 130, y: 4720, scale: 0.7 },
+        { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 1 },
+        { key: 'alien-strato', sfeer: 1, x: 130, y: 4720, scale: 3 },
         { key: 'alien-meso', sfeer: 2, x: 100, y: 8900 , scale: 1},
-        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5300 , scale: 1},
+        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5350 , scale: 1},
         { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 1},
     ];
     private alienSpawnTimer: Phaser.Time.TimerEvent | null = null;
@@ -1058,6 +1058,12 @@ export class Game extends Scene {
                     for (const powerUp of this.powerUps) {
                         if (powerUp && powerUp.active) {
                             powerUp.y += delta;
+                        }
+                    }
+                    // Aliens meescrollen
+                    for (const alien of this.aliens) {
+                        if (alien && alien.active) {
+                            alien.y += delta;
                         }
                     }
                 },

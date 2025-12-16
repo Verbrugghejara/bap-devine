@@ -100,11 +100,11 @@ export class Preloader extends Scene
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
         this.load.spritesheet('wind-rood', 'wind/windRed.png', { frameWidth: 200, frameHeight: 160 });
         
-        this.load.spritesheet('alien-tropo', 'aliens/alienTropo.png', { frameWidth: 519, frameHeight: 533 });
-        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 698, frameHeight: 717 });
-        this.load.spritesheet('alien-meso', 'aliens/alienMeso.png', { frameWidth: 487, frameHeight: 500 });
-        this.load.spritesheet('alien-thermo', 'aliens/alienThermo.png', { frameWidth: 649, frameHeight: 669 });
-        this.load.spritesheet('alien-exo', 'aliens/alienExo.png', { frameWidth: 505, frameHeight: 573 });
+        this.load.spritesheet('alien-tropo', 'aliens/alienTropo.png', { frameWidth: 188, frameHeight: 193 });
+        this.load.spritesheet('alien-strato', 'aliens/alienStrato.png', { frameWidth: 187, frameHeight: 304 });
+        this.load.spritesheet('alien-meso', 'aliens/alienMeso.png', { frameWidth: 467, frameHeight: 493 });
+        this.load.spritesheet('alien-thermo', 'aliens/alienThermo.png', { frameWidth: 526, frameHeight: 633 });
+        this.load.spritesheet('alien-exo', 'aliens/alienExo.png', { frameWidth: 578, frameHeight: 611 });
         
         this.load.video('home-animation','mainMenuVideo.mp4')
         this.load.video('storytelling-animation','storyTelling.mp4')
