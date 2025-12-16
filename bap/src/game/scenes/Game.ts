@@ -82,7 +82,8 @@ export class Game extends Scene {
     private wasNearObstacle: boolean = false;
 
     // --- Power-ups ---
-    private powerUps: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
+    // powerUpContainer verwijderd, alleen powerUps array wordt gebruikt
+    private powerUps: Phaser.GameObjects.Container[] = [];
     private powerUpsSpawned: Set<string> = new Set();
     private activePowerUp: string | null = null;
     private powerUpEndTime: number = 0;
@@ -1030,7 +1031,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [200, 200, 9, 11, 12];
+        const scrollSpeeds = [5, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
@@ -2070,45 +2071,98 @@ export class Game extends Scene {
         const y = sfeerCenterY - (sfeerHeight / 2) + randomOffset;
 
         try {
-            const powerUp = this.physics.add.sprite(x, y, texture)
+            // Kies kleur per type
+            let circleColor = 0x00d9ff; // default blauw
+            switch (type) {
+                case 'health': circleColor = 0xE73228; break; // groen
+                case 'freeze': circleColor = 0x35BBF0; break; // blauw
+                case 'shield': circleColor = 0x26B31F; break; // geel
+                case 'timer':  circleColor = 0xFFB703; break; // paars
+            }
+            // Maak twee cirkels achter de power-up
+            const circle1 = this.add.circle(0, 0, 100, circleColor, 0.5)
+                .setDepth(98)
+                .setOrigin(0.5)
+                .setScale(0)
+                .setAlpha(1);
+
+            const circle2 = this.add.circle(0, 0, 100, circleColor, 0.5)
+                .setDepth(98)
+                .setOrigin(0.5)
+                .setScale(0)
+                .setAlpha(1);
+
+            const powerUp = this.physics.add.sprite(0, 0, texture)
                 .setScale(1.5)
                 .setDepth(100)
                 .setOrigin(0.5);
 
+            // Voeg cirkels en sprite toe aan container (cirkels eerst)
+            const container = this.add.container(x, y, [circle1, circle2, powerUp]);
+            container.setDepth(100);
+            (container as any).powerUpSprite = powerUp;
+            (container as any).circle1 = circle1;
+            (container as any).circle2 = circle2;
+            (container as any).powerUpType = type;
+            (container as any).uniqueKey = uniqueKey;
+            (container as any).baseY = y;
+            (container as any).bobOffset = 0;
+            (container as any).x = x;
+            (container as any).y = y;
+            (container as any).circleAnimOffset = Math.random() * Math.PI * 2; // voor variatie
             (powerUp.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-            (powerUp as any).powerUpType = type;
-            (powerUp as any).uniqueKey = uniqueKey;
-            (powerUp as any).baseY = y; // Store base Y position for bobbing animation
-            (powerUp as any).bobOffset = 0; // Current bob offset
+            this.add.existing(container);
+            this.powerUps.push(container);
 
-            this.powerUps.push(powerUp);
-            
-            // Add glow effect
-            this.tweens.add({
-                targets: powerUp,
-                alpha: 0.7,
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
         } catch (e) {
             console.error('[Game] Failed to spawn power-up:', e);
         }
     }
 
     private updatePowerUpPositions() {
+
         const time = this.time.now;
-        
-        for (const powerUp of this.powerUps) {
-            // Update base Y with scroll
-            (powerUp as any).baseY += this.smoothScrollSpeed;
-            
-            // Calculate bob offset (sine wave for smooth up/down motion)
-            (powerUp as any).bobOffset = Math.sin(time * 0.003) * 20;
-            
-            // Apply both base position and bob offset
-            powerUp.y = (powerUp as any).baseY + (powerUp as any).bobOffset;
+        for (const container of this.powerUps) {
+            (container as any).baseY += this.smoothScrollSpeed;
+            (container as any).bobOffset = Math.sin(time * 0.003) * 20;
+            container.x = (container as any).x;
+            container.y = (container as any).baseY + (container as any).bobOffset;
+
+            // Puls: cirkels gaan van klein (0) naar groot (1), resetten naar 0
+            // Fade-out in laatste 7% van de animatie, zodat de pauze minimaal is
+            const speed = 1 / 1800; // 1.8 seconden per pulse
+            if ((container as any).circle1 && (container as any).circle2) {
+                const baseTime = this.time.now * speed + (container as any).circleAnimOffset;
+                // Circle 1
+                let p1 = baseTime % 1;
+                if (p1 < 0) p1 += 1;
+                let scale1 = p1;
+                let alpha1 = 1;
+                if (scale1 > 0.93) {
+                    alpha1 = 1 - ((scale1 - 0.93) / 0.07); // fade out van 1 naar 0 tussen 0.93 en 1
+                }
+                if (scale1 >= 1 || scale1 === 0) {
+                    scale1 = 0;
+                    alpha1 = 0;
+                }
+                (container as any).circle1.setScale(scale1);
+                (container as any).circle1.setAlpha(Math.max(0, Math.min(1, alpha1)));
+
+                // Circle 2, kwart fase offset (0.25)
+                let p2 = (baseTime + 0.25) % 1;
+                if (p2 < 0) p2 += 1;
+                let scale2 = p2;
+                let alpha2 = 1;
+                if (scale2 > 0.93) {
+                    alpha2 = 1 - ((scale2 - 0.93) / 0.07);
+                }
+                if (scale2 >= 1 || scale2 === 0) {
+                    scale2 = 0;
+                    alpha2 = 0;
+                }
+                (container as any).circle2.setScale(scale2);
+                (container as any).circle2.setAlpha(Math.max(0, Math.min(1, alpha2)));
+            }
         }
 
         // Remove power-ups that are off screen
@@ -2124,9 +2178,10 @@ export class Game extends Scene {
         if (!this.ballon) return;
 
         for (let i = this.powerUps.length - 1; i >= 0; i--) {
-            const powerUp = this.powerUps[i];
+            const container = this.powerUps[i];
+            const powerUp = (container as any).powerUpSprite;
             if (this.checkOverlap(powerUp, this.ballon)) {
-                const type = (powerUp as any).powerUpType;
+                const type = (container as any).powerUpType;
                 this.activatePowerUp(type);
 
                 // Play sound for health power-up
@@ -2134,18 +2189,17 @@ export class Game extends Scene {
                     this.sound.play('pick-up', { volume: 0.5 });
                     this.time.delayedCall(1000, () => {
                         this.sound.play('alien-happy', { volume: 0.5 });
-
                     });
                 } else {
                     this.sound.play('pick-up', { volume: 0.2 });
                 }
                 // Visual feedback
                 this.tweens.add({
-                    targets: powerUp,
+                    targets: container,
                     scale: 0,
                     alpha: 0,
                     duration: 300,
-                    onComplete: () => powerUp.destroy()
+                    onComplete: () => container.destroy()
                 });
                 this.powerUps.splice(i, 1);
             }

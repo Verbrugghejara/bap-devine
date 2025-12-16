@@ -235,7 +235,7 @@
             <img v-if="activePowerUp === 'shield'" src="/assets/powerUps/shield.png" alt="Shield" />
           </div>
           <div class="powerup-progress">
-            <div class="powerup-bar" :style="{ width: (powerUpProgress * 100) + '%' }">
+            <div class="powerup-bar" :style="{ width: (powerUpProgress * 100) + '%', background: powerUpBarColor }">
               <div class="powerup-bar-highlight"></div>
             </div>
           </div>
@@ -255,6 +255,7 @@
 <script setup lang="ts">
 // Angry alien (hit) event logic
 import { ref, watch } from 'vue';
+import { computed } from 'vue';
 // ...existing code...
 const hitTimeout = ref<number | null>(null);
 EventBus.on('show-hit-emotion', () => {
@@ -296,6 +297,18 @@ const timerText = ref('0:00');
 const distanceText = ref('0');
 const activePowerUp = ref<string | null>(null);
 const powerUpProgress = ref(0);
+// Geef elke powerup een andere kleur
+const powerUpBarColor = computed(() => {
+  switch (activePowerUp.value) {
+    case 'freeze':
+      return '#35BBF0'; // blauw
+    case 'shield':
+      return '#26B31F'; // goud/geel
+    // Voeg hier extra powerups toe indien nodig
+    default:
+      return '#26B31F'; // standaard groen
+  }
+});
 const showTimerUpdate = ref(false);
 
 // (already imported above)

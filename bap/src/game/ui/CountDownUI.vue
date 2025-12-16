@@ -14,7 +14,7 @@ const fadeOut = ref(false);
 let interval: any = null;
 
 function startCountdown() {
-    countDownNumber.value = 5;
+    countDownNumber.value = 3;
     fadeOut.value = false;
     clearInterval(interval);
     // Pauzeer de game scene
