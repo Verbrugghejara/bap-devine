@@ -288,10 +288,12 @@ export class GameOver extends Scene {
                 this.sound.stopAll();
             },
             onUpdate: () => {
+                this.sound.stopAll();
                 // Zorg dat de video altijd onderaan blijft, ook als container beweegt
                 // (video zit in container, dus volgt vanzelf)
             },
             onComplete: () => {
+                console.log(this.sound)
                 gameoverContainer.y = 0;
                 // Fade-in black overlay en pop-in elementen (zoals Victory)
                 this.time.delayedCall(500, () => {
@@ -464,26 +466,59 @@ export class GameOver extends Scene {
             this.timeoutStarted = false;
             
             const bg = this.againButton.list[1];
-            const circle = this.againButton.list[4];
-            const startText = this.againButton.list[5];
+            const shineTopLeft = this.againButton.list[2];
+            const shineTopLeft2 = this.againButton.list[3];
+            const shineBottomRight = this.againButton.list[4];
+            const circle = this.againButton.list[5];
+            const startText = this.againButton.list[6];
             this.tweens.add({
-                targets: [bg, circle, startText],
+                targets: [bg, circle,shineTopLeft,shineTopLeft2,shineBottomRight, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,
                 onComplete: () => {
+
+                    this.sound.stopAll();
                     if (typeof window !== 'undefined') {
                         (window as any).sfeerProgress = 0;
                     }
+
+                    this.sound.stopAll();
+                    const soundManagerAny = this.sound as any;
+                    let tropoSounds: any[] = [];
+                    if (this.sound.get && this.sound.get('troposfeer')) {
+                        tropoSounds.push(this.sound.get('troposfeer'));
+                    }
+                    if (Array.isArray(soundManagerAny.sounds)) {
+                        tropoSounds = tropoSounds.concat(
+                            soundManagerAny.sounds.filter((s: any) => s && s.key === 'troposfeer')
+                        );
+                    }
+                    // Uniek maken
+                    tropoSounds = [...new Set(tropoSounds)];
+                    for (const s of tropoSounds) {
+                        if (s && s.stop) s.stop();
+                        if (s && s.destroy) s.destroy();
+                    }
+                    // Emit UI reset event
+                        EventBus.emit('reset-game-ui');
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
                     this.scene.stop('GameOver');
                     this.scene.start('Game');
+                    this.sound.play('button-click');
+
                 }
             });
         };
         this.againButton.on('pointerdown', () => {
             triggerButton();
+        });
+        // Keyboard event: triggerButton bij enter of spatie
+        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+            if (event.code === 'Enter' || event.code === 'Space') {
+                triggerButton();
+            }
         });
     }
 
@@ -498,12 +533,16 @@ export class GameOver extends Scene {
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
-            
+
+            // Animate all button parts (same as pointerdown)
             const bg = this.againButton.list[1];
-            const circle = this.againButton.list[4];
-            const startText = this.againButton.list[5];
+            const shineTopLeft = this.againButton.list[2];
+            const shineTopLeft2 = this.againButton.list[3];
+            const shineBottomRight = this.againButton.list[4];
+            const circle = this.againButton.list[5];
+            const startText = this.againButton.list[6];
             this.tweens.add({
-                targets: [bg, circle, startText],
+                targets: [bg, circle, shineTopLeft, shineTopLeft2, shineBottomRight, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,
@@ -511,10 +550,31 @@ export class GameOver extends Scene {
                     if (typeof window !== 'undefined') {
                         (window as any).sfeerProgress = 0;
                     }
+
+                    this.sound.stopAll();
+                    const soundManagerAny = this.sound as any;
+                    let tropoSounds: any[] = [];
+                    if (this.sound.get && this.sound.get('troposfeer')) {
+                        tropoSounds.push(this.sound.get('troposfeer'));
+                    }
+                    if (Array.isArray(soundManagerAny.sounds)) {
+                        tropoSounds = tropoSounds.concat(
+                            soundManagerAny.sounds.filter((s: any) => s && s.key === 'troposfeer')
+                        );
+                    }
+                    // Uniek maken
+                    tropoSounds = [...new Set(tropoSounds)];
+                    for (const s of tropoSounds) {
+                        if (s && s.stop) s.stop();
+                        if (s && s.destroy) s.destroy();
+                    }
+
+                        EventBus.emit('reset-game-ui');
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
                     this.scene.stop('GameOver');
                     this.scene.start('Game');
+                    this.sound.play('button-click');
                 }
             });
         }

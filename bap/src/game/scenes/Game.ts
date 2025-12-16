@@ -623,6 +623,23 @@ export class Game extends Scene {
                 this.windRood = null;
             }
             // Start death sequence
+            // console.log('Ballon health op 0, starten game over sequence.');
+            // const soundManagerAny = this.sound as any;
+            //         let tropoSounds: any[] = [];
+            //         if (this.sound.get && this.sound.get('stratosfeer')) {
+            //             tropoSounds.push(this.sound.get('stratosfeer'));
+            //         }
+            //         if (Array.isArray(soundManagerAny.sounds)) {
+            //             tropoSounds = tropoSounds.concat(
+            //                 soundManagerAny.sounds.filter((s: any) => s && s.key === 'stratosfeer')
+            //             );
+            //         }
+            //         // Uniek maken
+            //         tropoSounds = [...new Set(tropoSounds)];
+            //         for (const s of tropoSounds) {
+            //             if (s && s.stop) s.stop();
+            //             if (s && s.destroy) s.destroy();
+            //         }
             this.isGamePaused = false;
             this.gameOverSwipeStarted = false;
             EventBus.emit('hide-gameui');
@@ -1085,7 +1102,7 @@ export class Game extends Scene {
 
     private updateScroll() {
         const scrollSpeeds = [200, 7, 9, 11, 12];
-        // const scrollSpeeds = [200, 200, 200, 200, 12];
+        // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;

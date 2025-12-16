@@ -21,6 +21,7 @@ export class GameVictory extends Scene {
     }
 
     create() {
+                        
                 this.rotary = getRotaryClient();
                 console.log('GameVictory create() called, timeoutStarted:', this.timeoutStarted);
                 // Only set timeout once
@@ -400,28 +401,59 @@ export class GameVictory extends Scene {
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
+
+            // Emit UI reset event
             
+
             const bg = this.againButton.list[1];
-            const circle = this.againButton.list[4];
-            const startText = this.againButton.list[5];
+            const shineTopLeft = this.againButton.list[2];
+            const shineTopLeft2 = this.againButton.list[3];
+            const shineBottomRight = this.againButton.list[4];
+            const circle = this.againButton.list[5];
+            const startText = this.againButton.list[6];
             this.tweens.add({
-                targets: [bg, circle, startText],
+                targets: [bg, circle, shineTopLeft, shineTopLeft2, shineBottomRight, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,
                 onComplete: () => {
+                    this.sound.stopAll();
                     if (typeof window !== 'undefined') {
                         (window as any).sfeerProgress = 0;
                     }
+                    const soundManagerAny = this.sound as any;
+                    let spaceSounds: any[] = [];
+                    if (this.sound.get && this.sound.get('space')) {
+                        spaceSounds.push(this.sound.get('space'));
+                    }
+                    if (Array.isArray(soundManagerAny.sounds)) {
+                        spaceSounds = spaceSounds.concat(
+                            soundManagerAny.sounds.filter((s: any) => s && s.key === 'space')
+                        );
+                    }
+                    // Uniek maken
+                    spaceSounds = [...new Set(spaceSounds)];
+                    for (const s of spaceSounds) {
+                        if (s && s.stop) s.stop();
+                        if (s && s.destroy) s.destroy();
+                    }
+                    EventBus.emit('reset-game-ui');
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
                     this.scene.stop('GameVictory');
                     this.scene.start('Game');
+                    this.sound.play('button-click');
                 }
             });
         };
         this.againButton.on('pointerdown', () => {
             triggerButton();
+        });
+        // Keyboard event: triggerButton bij enter of spatie
+        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+            if (event.code === 'Enter' || event.code === 'Space') {
+                triggerButton();
+            }
         });
     }
 
@@ -436,20 +468,46 @@ export class GameVictory extends Scene {
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
-            
+
+            // Zelfde animatie en logica als pointerdown
             const bg = this.againButton.list[1];
-            const circle = this.againButton.list[4];
-            const startText = this.againButton.list[5];
+            const shineTopLeft = this.againButton.list[2];
+            const shineTopLeft2 = this.againButton.list[3];
+            const shineBottomRight = this.againButton.list[4];
+            const circle = this.againButton.list[5];
+            const startText = this.againButton.list[6];
             this.tweens.add({
-                targets: [bg, circle, startText],
+                targets: [bg, circle, shineTopLeft, shineTopLeft2, shineBottomRight, startText],
                 y: 8,
                 duration: 80,
                 yoyo: true,
                 onComplete: () => {
+                    this.sound.stopAll();
                     if (typeof window !== 'undefined') {
                         (window as any).sfeerProgress = 0;
                     }
+                    const soundManagerAny = this.sound as any;
+                    let spaceSounds: any[] = [];
+                    if (this.sound.get && this.sound.get('space')) {
+                        spaceSounds.push(this.sound.get('space'));
+                    }
+                    if (Array.isArray(soundManagerAny.sounds)) {
+                        spaceSounds = spaceSounds.concat(
+                            soundManagerAny.sounds.filter((s: any) => s && s.key === 'space')
+                        );
+                    }
+                    // Uniek maken
+                    spaceSounds = [...new Set(spaceSounds)];
+                    for (const s of spaceSounds) {
+                        if (s && s.stop) s.stop();
+                        if (s && s.destroy) s.destroy();
+                    }
+                    EventBus.emit('reset-game-ui');
+                    EventBus.emit('update-health', 3);
+                    EventBus.emit('show-gameui');
+                    this.scene.stop('GameVictory');
                     this.scene.start('Game');
+                    this.sound.play('button-click');
                 }
             });
         }

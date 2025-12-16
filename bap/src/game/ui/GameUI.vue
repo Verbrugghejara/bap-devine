@@ -95,7 +95,7 @@
 
         <div class="sfeer-label">
           <div class="sfeer-circle-outer"
-            :style="{ borderColor: SFEER_COLORS[sfeerIndex].e, transition: 'background 0.3s' }">
+            :style="{ borderColor: SFEER_COLORS[sfeerIndex].d, transition: 'background 0.3s' }">
             <svg v-if="sfeerIndex == 0 " xmlns="http://www.w3.org/2000/svg" width="96" height="86" viewBox="0 0 96 86" fill="none">
               <path d="M10.2591 36.3221C12.831 38.894 13.9893 41.9056 12.8462 43.0486C11.7032 44.1917 8.69161 43.0334 6.11972 40.4615C3.54782 37.8896 2.38953 34.8781 3.53259 33.735C4.67566 32.5919 7.68722 33.7502 10.2591 36.3221Z" fill="#481328"/>
               <path d="M6.58575 38.8491C10.223 38.8491 13.1715 40.1596 13.1715 41.7761C13.1715 43.3927 10.223 44.7031 6.58575 44.7031C2.94854 44.7031 0 43.3927 0 41.7761C0 40.1596 2.94854 38.8491 6.58575 38.8491Z" fill="#481328"/>
@@ -297,6 +297,30 @@ const timerText = ref('0:00');
 const distanceText = ref('0');
 const activePowerUp = ref<string | null>(null);
 const powerUpProgress = ref(0);
+
+// Reset UI state when game restarts
+function resetGameUI() {
+  sfeerProgress.value = 0;
+  sfeerIndex.value = 0;
+  // Force update for all watchers/computed
+  EventBus.emit('update-sfeer-index', 0);
+  EventBus.emit('update-sfeer-progress', 0);
+  sfeerText.value = 'TROPOSFEER';
+  timerText.value = '0:00';
+  distanceText.value = '0';
+  powerUpProgress.value = 0;
+  // Reset alien/progress SVG state
+  currentAlienSVG.value = 'default';
+  alienEnlarged.value = false;
+  transitionClass.value = '';
+  healthUpdated.value = false;
+}
+onMounted(() => {
+  EventBus.on('reset-game-ui', resetGameUI);
+});
+onUnmounted(() => {
+  EventBus.off('reset-game-ui', resetGameUI);
+});
 // Geef elke powerup een andere kleur
 const powerUpBarColor = computed(() => {
   switch (activePowerUp.value) {

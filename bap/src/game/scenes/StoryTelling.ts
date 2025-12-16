@@ -149,6 +149,11 @@ export class StoryTelling extends Scene {
             console.log('Skip button clicked!');
             this.scene.start('TutorialBlue');
         });
+        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+            if (event.code === 'Enter' || event.code === 'Space') {
+                this.scene.start('TutorialBlue');
+            }
+        });
     }
     
     update() {
