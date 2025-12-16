@@ -1010,69 +1010,76 @@ export class Game extends Scene {
             this.gameOverSwipeStarted
         ) {
             this.gameOverSwipeStarted = false; // voorkom dubbele animatie
-            // Swipe alleen sferen en backgrounds naar boven (geen obstakels of powerups)
-            const startOffset = this.sfeerOffsetY;
-            let lastTweenValue = startOffset;
-            // Swipe naar de onderkant van de troposfeer, min 2x schermhoogte (voor GameOver video van 2 schermen hoog)
-            const troposfeerHeight = this.sfeerHoogtes[0];
-            const troposfeerEnd = troposfeerHeight - (this.scale.height * 2);
-            const targetOffset = Math.max(troposfeerEnd, 0);
-            this.tweens.addCounter({
-                from: startOffset,
-                to: targetOffset,
-                duration: 4000, // Sync with GameOver.ts
-                ease: 'Sine.easeIn', // Sync with GameOver.ts
-                onUpdate: tween => {
-                    const currentValue = tween.getValue() ?? 0;
-                    const delta = currentValue - lastTweenValue;
-                    this.sfeerOffsetY = currentValue;
-                    lastTweenValue = currentValue;
-                    // Update sfeer rects
-                    for (let i = 0; i < this.sfeerRects.length; i++) {
-                        const baseY = this.sfeerBaseY[i];
-                        this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
-                    }
-                    // Stack backgrounds zoals in updateBackgrounds
-                    if (this.bgTroposfeer) {
-                        this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
-                    }
-                    if (this.bgStratosfeer && this.bgTroposfeer) {
-                        this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
-                    }
-                    if (this.bgMesosfeer && this.bgStratosfeer) {
-                        this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
-                    }
-                    if (this.bgThermosfeer && this.bgMesosfeer) {
-                        this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
-                    }
-                    if (this.bgExosfeer && this.bgThermosfeer) {
-                        this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
-                    }
-
-                    // Obstakels en powerUps meescrollen
-                    for (const obstacle of this.obstacles) {
-                        if (obstacle && obstacle.active) {
-                            obstacle.y += delta;
+            if (this.huidigeSfeerIndex === 0) {
+                // In troposfeer: swipe direct naar GameOver
+                this.scene.launch('GameOver');
+                EventBus.emit('gameover-swipe-in');
+            } else {
+                // Andere sferen: sfeer scroll-back animatie
+                const startOffset = this.sfeerOffsetY;
+                let lastTweenValue = startOffset;
+                const troposfeerHeight = this.sfeerHoogtes[0];
+                const troposfeerEnd = troposfeerHeight - (this.scale.height * 2);
+                const targetOffset = Math.max(troposfeerEnd, 0);
+                this.tweens.addCounter({
+                    from: startOffset,
+                    to: targetOffset,
+                    duration: (() => {
+                        switch (this.huidigeSfeerIndex) {
+                            case 1: return 1000; // stratosfeer
+                            case 2: return 2000; // mesosfeer
+                            case 3: return 2500; // thermosfeer
+                            case 4: return 3000; // exosfeer
+                            default: return 2000;
                         }
-                    }
-                    for (const powerUp of this.powerUps) {
-                        if (powerUp && powerUp.active) {
-                            powerUp.y += delta;
+                    })(),
+                    ease: 'Sine.easeIn',
+                    onUpdate: tween => {
+                        const currentValue = tween.getValue() ?? 0;
+                        const delta = currentValue - lastTweenValue;
+                        this.sfeerOffsetY = currentValue;
+                        lastTweenValue = currentValue;
+                        for (let i = 0; i < this.sfeerRects.length; i++) {
+                            const baseY = this.sfeerBaseY[i];
+                            this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
                         }
-                    }
-                    // Aliens meescrollen
-                    for (const alien of this.aliens) {
-                        if (alien && alien.active) {
-                            alien.y += delta;
+                        if (this.bgTroposfeer) {
+                            this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
                         }
+                        if (this.bgStratosfeer && this.bgTroposfeer) {
+                            this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
+                        }
+                        if (this.bgMesosfeer && this.bgStratosfeer) {
+                            this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
+                        }
+                        if (this.bgThermosfeer && this.bgMesosfeer) {
+                            this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
+                        }
+                        if (this.bgExosfeer && this.bgThermosfeer) {
+                            this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
+                        }
+                        for (const obstacle of this.obstacles) {
+                            if (obstacle && obstacle.active) {
+                                obstacle.y += delta;
+                            }
+                        }
+                        for (const powerUp of this.powerUps) {
+                            if (powerUp && powerUp.active) {
+                                powerUp.y += delta;
+                            }
+                        }
+                        for (const alien of this.aliens) {
+                            if (alien && alien.active) {
+                                alien.y += delta;
+                            }
+                        }
+                    },
+                    onComplete: () => {
+                        this.scene.launch('GameOver');
+                        EventBus.emit('gameover-swipe-in');
                     }
-                },
-                onComplete: () => {
-                    // Start GameOver scene (deze swipet zichzelf in)
-                    this.scene.launch('GameOver');
-                    EventBus.emit('gameover-swipe-in');
-                }
-            });
+                });
+            }
         }
     }
 
@@ -1100,6 +1107,17 @@ export class Game extends Scene {
         for (let i = 0; i < this.sfeerRects.length; i++) {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
+        }
+        // Obstakels en powerUps meescrollen met sfeerOffsetY
+        for (const obstacle of this.obstacles) {
+            if (obstacle && obstacle.active) {
+                obstacle.y += this.smoothScrollSpeed;
+            }
+        }
+        for (const powerUp of this.powerUps) {
+            if (powerUp && powerUp.active) {
+                powerUp.y += this.smoothScrollSpeed;
+            }
         }
     }
 
