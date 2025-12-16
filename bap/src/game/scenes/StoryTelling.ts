@@ -51,7 +51,9 @@ export class StoryTelling extends Scene {
             }
         });
 
-        video.setMute(true);
+        // video.setMute(true);
+        video.setMute(false);
+        video.setVolume(0.3); // Zet het volume lager
         video.play(false);
     }
     private createSkipButton() {
