@@ -46,8 +46,7 @@ export class Tutorial extends Scene {
     private progress: number = 0;
     private didRotateThisFrame: boolean = false;
     
-    // Event handlers
-    private _changeSceneHandler?: (sceneKey: string) => void;
+    // Geen event handlers meer nodig
 
     // ==================== LIFECYCLE METHODS ====================
 
@@ -65,7 +64,8 @@ export class Tutorial extends Scene {
         this.createBalloonAndPropellors();
         this.createProgressBar();
         this.createSkipButton();
-        this.setupEventListeners();
+        // setupEventListeners verwijderd, niet meer nodig
+        this.sound.play('troposfeer', { loop: true, volume: 0.5 });
     }
 
     update() {
@@ -81,9 +81,7 @@ export class Tutorial extends Scene {
     }
 
     shutdown() {
-        if (this._changeSceneHandler) {
-            EventBus.off('change-scene', this._changeSceneHandler);
-        }
+        // Geen event handlers meer
     }
 
     // ==================== INITIALIZATION ====================
@@ -114,19 +112,7 @@ export class Tutorial extends Scene {
         }
     }
 
-    private setupEventListeners() {
-        EventBus.emit('current-scene-ready', this);
-        
-        this._changeSceneHandler = (sceneKey: string) => {
-            if (sceneKey === 'Game') {
-                EventBus.off('change-scene', this._changeSceneHandler!);
-                if (this.scene && this.scene.isActive && this.scene.isActive('Tutorial')) {
-                    this.scene.start('Game');
-                }
-            }
-        };
-        EventBus.on('change-scene', this._changeSceneHandler);
-    }
+    // setupEventListeners verwijderd
 
     // ==================== UI CREATION ====================
 
@@ -374,6 +360,12 @@ export class Tutorial extends Scene {
         // Click handler
         skipButton.on('pointerdown', () => {
             this.scene.start('Game');
+            const tropo = this.sound.get('troposfeer');
+                    console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
+                    if (tropo) {
+                        tropo.stop();
+                        tropo.destroy();
+                    }
         });
     }
 
@@ -490,6 +482,12 @@ export class Tutorial extends Scene {
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
                 this.sound.play('button-click');
+                const tropo = this.sound.get('troposfeer');
+                    console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
+                    if (tropo) {
+                        tropo.stop();
+                        tropo.destroy();
+                    }
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {

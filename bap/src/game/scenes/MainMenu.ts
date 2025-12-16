@@ -196,10 +196,18 @@ export class MainMenu extends Scene {
         this.wasButtonPressed = buttonPressed;
     }
 
+
     changeScene() {
 
         this.scene.start('StoryTelling');
 
+        const tropo = this.sound.get('troposfeer');
+        console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
+        if (tropo) {
+            tropo.stop();
+            tropo.destroy();
+        }
+        
     }
 
 }

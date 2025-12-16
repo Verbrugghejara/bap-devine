@@ -138,7 +138,10 @@ export class Game extends Scene {
         this.setupInput();
         // Start alien easter egg spawner
         this.startAlienSpawner();
+        // this.sound.stopAll();
         // Spawn tropo-alien direct bij start
+        this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
+                    this.troposfeerSound.play();
         const tropoConfig = this.alienConfigs.find(a => a.key === 'alien-tropo');
         if (tropoConfig && this.textures.exists(tropoConfig.key)) {
             const sfeerCenterY = this.sfeerBaseY[tropoConfig.sfeer] + this.sfeerOffsetY;
@@ -1068,8 +1071,8 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        // const scrollSpeeds = [5, 7, 9, 11, 12];
-        const scrollSpeeds = [200, 200, 200, 200, 200];
+        const scrollSpeeds = [5, 7, 9, 11, 12];
+        // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;
@@ -1190,242 +1193,78 @@ export class Game extends Scene {
                     EventBus.emit('show-interlude', sfeerIndex);
                 }
             }
+            // --- SFEER SOUND DIRECT SWITCH ---
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
             this.checkPowerUpSpawn(sfeerIndex);
             this.spawnAlien(); // Spawn de alien direct bij sfeerwissel
             this.lastSfeerIndex = sfeerIndex;
-        }
-        // --- SFEER SOUND FADING ---
-        // Troposfeer fade in/out
-        if (this.sound && this.sound.locked === false && sfeerIndex === 0) {
-            if (!this.troposfeerSound || !(this.troposfeerSound as any).isPlaying) {
-                this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
-                this.troposfeerSound.play();
-                const soundRef = this.troposfeerSound;
-                const fadeObj = { value: 0 };
-                this.tweens.add({
-                    targets: fadeObj,
-                    value: 0.2,
-                    duration: 1000,
-                    onUpdate: () => {
-                        try {
-                            if (
-                                soundRef &&
-                                typeof (soundRef as any).setVolume === 'function' &&
-                                !(soundRef as any).destroyed
-                            ) {
-                                (soundRef as any).setVolume(fadeObj.value);
-                            }
-                        } catch (e) {}
-                    },
-                    onComplete: () => {
-                        // soundRef blijft behouden zolang de tween loopt
-                    }
-                });
-            } else if (this.troposfeerSound && (this.troposfeerSound as any).volume < 0.2) {
-                const soundRef = this.troposfeerSound;
-                const fadeObj = { value: (soundRef as any).volume || 0 };
-                this.tweens.add({
-                    targets: fadeObj,
-                    value: 0.2,
-                    duration: 1000,
-                    onUpdate: () => {
-                        try {
-                            if (
-                                soundRef &&
-                                typeof (soundRef as any).setVolume === 'function' &&
-                                !(soundRef as any).destroyed
-                            ) {
-                                (soundRef as any).setVolume(fadeObj.value);
-                            }
-                        } catch (e) {}
-                    },
-                    onComplete: () => {
-                        // soundRef blijft behouden zolang de tween loopt
-                    }
-                });
-            }
-        } else if (this.troposfeerSound && (this.troposfeerSound as any).isPlaying) {
-            const soundRef = this.troposfeerSound;
-            const fadeObj = { value: (soundRef as any).volume || 0.2 };
-            this.tweens.add({
-                targets: fadeObj,
-                value: 0,
-                duration: 1000,
-                onUpdate: () => {
-                    try {
-                        if (
-                            soundRef &&
-                            typeof (soundRef as any).setVolume === 'function' &&
-                            !(soundRef as any).destroyed
-                        ) {
-                            (soundRef as any).setVolume(fadeObj.value);
-                        }
-                    } catch (e) {}
-                },
-                onComplete: () => {
-                    if (soundRef) {
-                        soundRef.stop();
-                        soundRef.destroy();
-                        if (this.troposfeerSound === soundRef) this.troposfeerSound = null;
-                    }
-                }
-            });
-        }
+            console.log('------------------------------------');
+            console.log(this.sound);
 
-        // Stratosfeer fade in/out
-        if (this.sound && this.sound.locked === false && sfeerIndex === 1) {
-            if (!this.stratosfeerSound || !(this.stratosfeerSound as any).isPlaying) {
-                this.stratosfeerSound = this.sound.add('stratosfeer', { loop: true, volume: 0.2 });
-                this.stratosfeerSound.play();
-                const soundRef = this.stratosfeerSound;
-                const fadeObj = { value: 0 };
-                this.tweens.add({
-                    targets: fadeObj,
-                    value: 0.2,
-                    duration: 1000,
-                    onUpdate: () => {
-                        try {
-                            if (
-                                soundRef &&
-                                typeof (soundRef as any).setVolume === 'function' &&
-                                !(soundRef as any).destroyed
-                            ) {
-                                (soundRef as any).setVolume(fadeObj.value);
-                            }
-                        } catch (e) {}
-                    },
-                    onComplete: () => {
-                        // soundRef blijft behouden zolang de tween loopt
-                    }
-                });
-            } else if (this.stratosfeerSound && (this.stratosfeerSound as any).volume < 0.2) {
-                const soundRef = this.stratosfeerSound;
-                const fadeObj = { value: (soundRef as any).volume || 0 };
-                this.tweens.add({
-                    targets: fadeObj,
-                    value: 0.2,
-                    duration: 1000,
-                    onUpdate: () => {
-                        try {
-                            if (
-                                soundRef &&
-                                typeof (soundRef as any).setVolume === 'function' &&
-                                !(soundRef as any).destroyed
-                            ) {
-                                (soundRef as any).setVolume(fadeObj.value);
-                            }
-                        } catch (e) {}
-                    },
-                    onComplete: () => {
-                        // soundRef blijft behouden zolang de tween loopt
-                    }
-                });
-            }
-        } else if (this.stratosfeerSound && (this.stratosfeerSound as any).isPlaying) {
-            const soundRef = this.stratosfeerSound;
-            const fadeObj = { value: (soundRef as any).volume || 0.2 };
-            this.tweens.add({
-                targets: fadeObj,
-                value: 0,
-                duration: 1000,
-                onUpdate: () => {
-                    try {
-                        if (
-                            soundRef &&
-                            typeof (soundRef as any).setVolume === 'function' &&
-                            !(soundRef as any).destroyed
-                        ) {
-                            (soundRef as any).setVolume(fadeObj.value);
-                        }
-                    } catch (e) {}
-                },
-                onComplete: () => {
-                    if (soundRef) {
-                        soundRef.stop();
-                        soundRef.destroy();
-                        if (this.stratosfeerSound === soundRef) this.stratosfeerSound = null;
-                    }
+            console.log(this.sound.locked)
+            if (this.sound.locked === false) {
+                // Crossfade logica: fade huidige sfeer sound uit, nieuwe in, met overlap
+                const FADE_TIME = 1500; // ms
+                let oldSound: Phaser.Sound.BaseSound | null = null;
+                let newSound: Phaser.Sound.BaseSound | null = null;
+                let newKey = '';
+                if (sfeerIndex === 0) {
+                    newKey = 'troposfeer';
+                    oldSound = this.stratosfeerSound || this.spaceSound;
+                } else if (sfeerIndex === 1) {
+                    newKey = 'stratosfeer';
+                    oldSound = this.troposfeerSound || this.spaceSound;
+                } else if (sfeerIndex === 2 || sfeerIndex === 3 || sfeerIndex === 4) {
+                    newKey = 'space';
+                    oldSound = this.troposfeerSound || this.stratosfeerSound;
                 }
-            });
-        }
 
-        // Space (mesosfeer, thermosfeer, exosfeer) fade in/out
-        if (this.sound && this.sound.locked === false && (sfeerIndex === 2 || sfeerIndex === 3 || sfeerIndex === 4)) {
-            if (!this.spaceSound || !(this.spaceSound as any).isPlaying) {
-                this.spaceSound = this.sound.add('space', { loop: true, volume: 0.2 });
-                this.spaceSound.play();
-                const soundRef = this.spaceSound;
-                const fadeObj = { value: 0 };
-                this.tweens.add({
-                    targets: fadeObj,
-                    value: 0.2,
-                    duration: 1000,
-                    onUpdate: () => {
-                        try {
-                            if (
-                                soundRef &&
-                                typeof (soundRef as any).setVolume === 'function' &&
-                                !(soundRef as any).destroyed
-                            ) {
-                                (soundRef as any).setVolume(fadeObj.value);
-                            }
-                        } catch (e) {}
-                    },
-                    onComplete: () => {
-                        // soundRef blijft behouden zolang de tween loopt
-                    }
-                });
-            } else if (this.spaceSound && (this.spaceSound as any).volume < 0.2) {
-                const soundRef = this.spaceSound;
-                const fadeObj = { value: (soundRef as any).volume || 0 };
-                this.tweens.add({
-                    targets: fadeObj,
-                    value: 0.2,
-                    duration: 1000,
-                    onUpdate: () => {
-                        try {
-                            if (
-                                soundRef &&
-                                typeof (soundRef as any).setVolume === 'function' &&
-                                !(soundRef as any).destroyed
-                            ) {
-                                (soundRef as any).setVolume(fadeObj.value);
-                            }
-                        } catch (e) {}
-                    },
-                    onComplete: () => {
-                        // soundRef blijft behouden zolang de tween loopt
-                    }
-                });
-            }
-        } else if (this.spaceSound && (this.spaceSound as any).isPlaying) {
-            const soundRef = this.spaceSound;
-            const fadeObj = { value: (soundRef as any).volume || 0.2 };
-            this.tweens.add({
-                targets: fadeObj,
-                value: 0,
-                duration: 1000,
-                onUpdate: () => {
-                    try {
-                        if (
-                            soundRef &&
-                            typeof (soundRef as any).setVolume === 'function' &&
-                            !(soundRef as any).destroyed
-                        ) {
-                            (soundRef as any).setVolume(fadeObj.value);
-                        }
-                    } catch (e) {}
-                },
-                onComplete: () => {
-                    if (soundRef) {
-                        soundRef.stop();
-                        soundRef.destroy();
-                        if (this.spaceSound === soundRef) this.spaceSound = null;
-                    }
+                // Start nieuwe sound op volume 0
+                if (newKey) {
+                    newSound = this.sound.add(newKey, { loop: true, volume: 0 });
+                    newSound.play();
                 }
-            });
+
+                // Fade out oude sound, fade in nieuwe sound
+                if (oldSound && oldSound.isPlaying) {
+                    this.tweens.add({
+                        targets: oldSound,
+                        volume: 0,
+                        duration: FADE_TIME,
+                        onComplete: () => {
+                            oldSound.stop();
+                            oldSound.destroy();
+                            if (oldSound === this.troposfeerSound) this.troposfeerSound = null;
+                            if (oldSound === this.stratosfeerSound) this.stratosfeerSound = null;
+                            if (oldSound === this.spaceSound) this.spaceSound = null;
+                        }
+                    });
+                }
+                if (newSound) {
+                    this.tweens.add({
+                        targets: newSound,
+                        volume: 1,
+                        duration: FADE_TIME
+                    });
+                }
+
+                // Update references
+                if (sfeerIndex === 0) {
+                    this.troposfeerSound = newSound;
+                    if (this.stratosfeerSound) { this.stratosfeerSound = null; }
+                    if (this.spaceSound) { this.spaceSound = null; }
+                } else if (sfeerIndex === 1) {
+                    this.stratosfeerSound = newSound;
+                    if (this.troposfeerSound) { this.troposfeerSound = null; }
+                    if (this.spaceSound) { this.spaceSound = null; }
+                } else if (sfeerIndex === 2 || sfeerIndex === 3 || sfeerIndex === 4) {
+                    this.spaceSound = newSound;
+                    if (this.troposfeerSound) { this.troposfeerSound = null; }
+                    if (this.stratosfeerSound) { this.stratosfeerSound = null; }
+                }
+            }
+            
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);
     }
