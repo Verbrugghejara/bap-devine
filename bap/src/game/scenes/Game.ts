@@ -105,11 +105,11 @@ export class Game extends Scene {
 
     private aliens: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private alienConfigs = [
-        { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 1 },
-        { key: 'alien-strato', sfeer: 1, x: 100, y: 4720, scale: 1 },
-        { key: 'alien-meso', sfeer: 2, x: 100, y: 8900 , scale: 1},
-        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5350 , scale: 1},
-        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 0.7},
+        { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 0 },
+        { key: 'alien-strato', sfeer: 1, x: 100, y: 4800, scale: 0.6 },
+        { key: 'alien-meso', sfeer: 2, x: 80, y: 8900 , scale: 0.5},
+        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5450 , scale: 0.6},
+        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 0.5},
     ];
     private alienSpawnTimer: Phaser.Time.TimerEvent | null = null;
 
