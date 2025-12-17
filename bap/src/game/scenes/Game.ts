@@ -1202,7 +1202,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [50, 7, 9, 11, 12];
+        const scrollSpeeds = [5, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
