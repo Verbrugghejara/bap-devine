@@ -67,8 +67,6 @@ import { onMounted, onUnmounted } from 'vue';
 .pause-ui {
     position: fixed;
     background: #00000025;
-    /* width: 100vw;
-    height: 100vh; */
     top: 0;
     left: 0;
     right: 0;
@@ -98,13 +96,11 @@ import { onMounted, onUnmounted } from 'vue';
     color: #FFF;
     background: #35BBF0;
     font-family: 'Bungee', Arial, Helvetica, sans-serif;
-    /* box-shadow: 0 6px 0 0 #B5342D; */
     display: flex;
     padding: 24px 100px;
     justify-content: center;
     align-items: center;
     z-index: 2;
-    /* margin:  auto; */
 }
 h1 {
     margin: 0;
@@ -123,12 +119,10 @@ h1 {
     width: 700px;
     height: 1100px;
     padding: 48px 64px;
-    /* box-shadow: 0 8px 32px rgba(0,0,0,0.3); */
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* justify-content: space-around; */
     z-index: 1;
     border-radius: 32px;
     background:  #FFF;

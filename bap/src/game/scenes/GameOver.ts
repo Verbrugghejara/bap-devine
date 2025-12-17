@@ -23,21 +23,17 @@ export class GameOver extends Scene {
 
     create() {
                 this.rotary = getRotaryClient();
-                console.log('GameOver create() called, timeoutStarted:', this.timeoutStarted);
-                // Only set timeout once
+
                 if (!this.timeoutStarted) {
                     this.timeoutStarted = true;
-                    console.log('Setting up 30s timeout for first time');
                     
                     this.autoNavigateTimeout = setTimeout(() => {
-                        console.log('30 seconds passed! Navigating to MainMenu now...');
                         if (this.autoNavigateTimeout) {
                             clearTimeout(this.autoNavigateTimeout);
                             this.autoNavigateTimeout = null;
                         }
                         this.timeoutStarted = false;
                         this.sound.stopAll();
-                        // Stop en destroy alle troposfeer sounds expliciet
                         const soundManagerAny = this.sound as any;
                         let tropoSounds: any[] = [];
                         if (this.sound.get && this.sound.get('troposfeer')) {
@@ -53,15 +49,13 @@ export class GameOver extends Scene {
                             if (s && s.stop) s.stop();
                             if (s && s.destroy) s.destroy();
                         }
-                        console.log('Stopping GameOver and starting MainMenu');
                         this.scene.stop('Game');
                         this.scene.stop('GameOver');
                         this.scene.start('MainMenu');
                     }, 60000);
                 }
         
-        // Swipe-in: identiek aan Game swipe-out, start onderaan beeld en beweeg naar y=0
-        const GAMEOVER_SWIPE_DURATION = 3000; // Exact sync met Game.ts
+        const GAMEOVER_SWIPE_DURATION = 3000; 
         const gameoverContainer = this.add.container(0, this.scale.height*2);
         gameoverContainer.setDepth(9999);
 
@@ -75,11 +69,9 @@ export class GameOver extends Scene {
         video.play(true);
         gameoverContainer.add(video);
 
-        // Zorg dat de video pas schaalt als de metadata geladen is
         video.on('play', () => {
             let vidWidth = video.width;
             let vidHeight = video.height;
-            // Probeer echte video-afmetingen te pakken
             if (video.video && video.video.videoWidth && video.video.videoHeight) {
                 vidWidth = video.video.videoWidth;
                 vidHeight = video.video.videoHeight;
@@ -88,7 +80,6 @@ export class GameOver extends Scene {
             video.setScale(scale);
         });
         
-        // Black overlay on top of background (starts invisible)
         const blackOverlayTop = this.add.graphics();
         blackOverlayTop.fillStyle(0x000000, 0.25);
         blackOverlayTop.fillRect(0, 0, this.scale.width, this.scale.height);
@@ -96,7 +87,6 @@ export class GameOver extends Scene {
         blackOverlayTop.setAlpha(0);
         gameoverContainer.add(blackOverlayTop);
         
-        // Title container
         const titleContainer = this.add.container(this.scale.width / 2, this.scale.height / 4 - 250);
         titleContainer.setAlpha(0);
         titleContainer.setDepth(10);
@@ -128,22 +118,18 @@ export class GameOver extends Scene {
         titleContainer.add([titleBg, this.title]);
         gameoverContainer.add(titleContainer);
 
-        // Bepaal behaalde sfeer op basis van progress
         let currentProgress = 0;
         if (typeof window !== 'undefined' && (window as any).sfeerProgress !== undefined) {
             currentProgress = (window as any).sfeerProgress;
         }
-        // Sfeergrenzen bepalen
 
         let sfeerIndex = 0;
         if (Array.isArray(SFEER_LABELS) && SFEER_LABELS.length > 0) {
-            // Simuleer de progressiegrenzen zoals in Game.ts
-            // We nemen aan: 0-0.2 troposfeer, 0.2-0.4 stratosfeer, 0.4-0.6 mesosfeer, 0.6-0.8 thermosfeer, 0.8-1 exosfeer
             const grenzen = [0, 0.2, 0.4, 0.6, 0.8, 1.01];
             for (let i = 0; i < grenzen.length - 1; i++) {
                 if (
                     (currentProgress >= grenzen[i] && currentProgress < grenzen[i + 1]) ||
-                    (i === grenzen.length - 2 && currentProgress >= grenzen[i]) // for progress == 1
+                    (i === grenzen.length - 2 && currentProgress >= grenzen[i]) 
                 ) {
                     sfeerIndex = i;
                     break;
@@ -168,9 +154,7 @@ export class GameOver extends Scene {
             .setDepth(11)
             .setAlpha(0);
         gameoverContainer.add(this.description);
-        console.log('GameOver sfeerIndex:', sfeerIndex, 'sfeerNaam:', sfeerNaam);
 
-        // Sfeer naam los eronder (nu na declaratie sfeerNaam)
         this.sfeerNaamText = this.add.text(
             this.scale.width / 2,
             this.scale.height / 4,
@@ -211,12 +195,12 @@ export class GameOver extends Scene {
         );
         sfeerProgressContainer.add(sfeerProgressBg);
         
-        // currentProgress is already declared above and set from window.sfeerProgress
+
         
-        // Progress fill
+
         const progressFillWidth = (sfeerProgressWidth - 20) * currentProgress;
         if (currentProgress > 0) {
-            // Gray background first (behind the colored fill)
+
             const progressFillbg = this.add.graphics();
             progressFillbg.fillStyle(0xEDEDED);
             progressFillbg.fillRoundedRect(
@@ -228,7 +212,7 @@ export class GameOver extends Scene {
             );
             sfeerProgressContainer.add(progressFillbg);
             
-            // Colored progress fill on top
+
             const progressFill = this.add.graphics();
             progressFill.fillStyle(0x008049);
             progressFill.fillRoundedRect(
@@ -239,7 +223,7 @@ export class GameOver extends Scene {
                 30
             );
             sfeerProgressContainer.add(progressFill);
-            // highlighted part
+
             const progressHighlight = this.add.graphics();
             progressHighlight.fillStyle(0xffffff,0.25);
             progressHighlight.fillRoundedRect(
@@ -251,7 +235,7 @@ export class GameOver extends Scene {
             );
             sfeerProgressContainer.add(progressHighlight);
             
-            // Add alien icon at the end of progress bar with rounded rectangle background
+
             if (this.textures.exists('alien')) {
                 const alienSize = 112;
                 const alienBg = this.add.graphics();
@@ -276,7 +260,7 @@ export class GameOver extends Scene {
         
         gameoverContainer.add(sfeerProgressContainer);
         
-        // Distance text below progress bar
+
         const meters = Math.round(currentProgress * 1000);
         const distanceText = this.add.text(
             this.scale.width / 2,
@@ -291,12 +275,11 @@ export class GameOver extends Scene {
         ).setOrigin(0.5).setDepth(12).setAlpha(0);
         gameoverContainer.add(distanceText);
         
-        // Swipe-in animatie van onder naar boven
         this.tweens.add({
             targets: gameoverContainer,
             y: 0,
             duration: GAMEOVER_SWIPE_DURATION,
-            ease: 'Cubic.easeOut', // Exact sync met Game.ts
+            ease: 'Cubic.easeOut', 
             onStart: () => {
                 if (!this.hasSwipedIn) {
                     this.hasSwipedIn = true;
@@ -306,13 +289,9 @@ export class GameOver extends Scene {
             },
             onUpdate: () => {
                 this.sound.stopAll();
-                // Zorg dat de video altijd onderaan blijft, ook als container beweegt
-                // (video zit in container, dus volgt vanzelf)
             },
             onComplete: () => {
-                console.log(this.sound)
                 gameoverContainer.y = 0;
-                // Fade-in black overlay en pop-in elementen (zoals Victory)
                 this.time.delayedCall(500, () => {
                     this.tweens.add({
                         targets: blackOverlayTop,
@@ -322,7 +301,6 @@ export class GameOver extends Scene {
                         onComplete: () => {
                             const popDuration = 500;
                             const popDelay = 150;
-                            // Title
                             this.sound.play('troposfeer', { loop: true, volume: 0.5 });
                             this.sound.play('game-over', { volume: 0.3 });
 
@@ -333,7 +311,6 @@ export class GameOver extends Scene {
                                 duration: popDuration,
                                 ease: 'Back.easeOut'
                             });
-                            // Description
                             this.time.delayedCall(popDelay, () => {
                                 this.tweens.add({
                                     targets: this.description,
@@ -343,7 +320,6 @@ export class GameOver extends Scene {
                                     ease: 'Back.easeOut'
                                 });
                             });
-                            // Sfeer naam
                             this.time.delayedCall(popDelay * 2, () => {
                                 this.tweens.add({
                                     targets: this.sfeerNaamText,
@@ -353,7 +329,6 @@ export class GameOver extends Scene {
                                     ease: 'Back.easeOut'
                                 });
                             });
-                            // Progress bar
                             this.time.delayedCall(popDelay * 3, () => {
                                 this.tweens.add({
                                     targets: [sfeerProgressContainer, distanceText],
@@ -363,7 +338,6 @@ export class GameOver extends Scene {
                                     ease: 'Back.easeOut'
                                 });
                             });
-                            // Button
                             this.time.delayedCall(popDelay * 4, () => {
                                 this.tweens.add({
                                     targets: [this.againButton, this.againText],
@@ -373,7 +347,6 @@ export class GameOver extends Scene {
                                     ease: 'Back.easeOut'
                                 });
                             });
-                            // Stop Game pas na alle animaties
                             this.time.delayedCall(popDelay * 5, () => {
                                 this.scene.stop('Game');
                             });
@@ -414,7 +387,7 @@ export class GameOver extends Scene {
         bg.fillStyle(0xFFB703);
         bg.fillRoundedRect(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight, 16);
 
-        // Shining effects
+
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
         shineTopLeft.fillRoundedRect(-btnWidth / 2 +55, -btnHeight / 2 -90, 16.844, 5.877, 3);
@@ -441,7 +414,7 @@ export class GameOver extends Scene {
         startText.setX(textX);
         startText.setY(0);
 
-        // Button en tekst positie onderaan gameoverContainer
+
         const buttonY = this.scale.height / 2;
         this.againButton = this.add.container(this.scale.width / 2, buttonY +100, [
             shadow,
@@ -475,14 +448,14 @@ export class GameOver extends Scene {
         gameoverContainer.add(this.againText);
 
         const triggerButton = () => {
-            // Clear the auto-navigate timeout
+
             if (this.autoNavigateTimeout) {
                 clearTimeout(this.autoNavigateTimeout);
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
             
-            // Reset ook de gameDurationMs en totalPausedDuration zodat tijd niet blijft staan
+
             if (typeof window !== 'undefined') {
                 (window as any).gameDurationMs = undefined;
                 (window as any).totalPausedDuration = undefined;
@@ -515,13 +488,13 @@ export class GameOver extends Scene {
                             soundManagerAny.sounds.filter((s: any) => s && s.key === 'troposfeer')
                         );
                     }
-                    // Uniek maken
+
                     tropoSounds = [...new Set(tropoSounds)];
                     for (const s of tropoSounds) {
                         if (s && s.stop) s.stop();
                         if (s && s.destroy) s.destroy();
                     }
-                    // Emit UI reset event
+
                     EventBus.emit('reset-game-ui');
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
@@ -534,7 +507,7 @@ export class GameOver extends Scene {
         this.againButton.on('pointerdown', () => {
             triggerButton();
         });
-        // Keyboard event: triggerButton bij enter of spatie
+
         this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
             if (event.code === 'Enter' || event.code === 'Space') {
                 triggerButton();
@@ -543,18 +516,18 @@ export class GameOver extends Scene {
     }
 
     update() {
-        // Check hardware button press
+
         const buttonPressed = this.rotary?.buttonPressed || false;
         
         if (buttonPressed && !this.wasButtonPressed) {
-            // Clear the auto-navigate timeout
+
             if (this.autoNavigateTimeout) {
                 clearTimeout(this.autoNavigateTimeout);
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
 
-            // Animate all button parts (same as pointerdown)
+
             const bg = this.againButton.list[1];
             const shineTopLeft = this.againButton.list[2];
             const shineTopLeft2 = this.againButton.list[3];
@@ -582,14 +555,14 @@ export class GameOver extends Scene {
                             soundManagerAny.sounds.filter((s: any) => s && s.key === 'troposfeer')
                         );
                     }
-                    // Uniek maken
+
                     tropoSounds = [...new Set(tropoSounds)];
                     for (const s of tropoSounds) {
                         if (s && s.stop) s.stop();
                         if (s && s.destroy) s.destroy();
                     }
 
-                        EventBus.emit('reset-game-ui');
+
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
                     this.scene.stop('GameOver');
@@ -603,7 +576,6 @@ export class GameOver extends Scene {
     }
 
     shutdown() {
-        console.log('GameOver shutdown() called');
         if (this.autoNavigateTimeout) {
             clearTimeout(this.autoNavigateTimeout);
             this.autoNavigateTimeout = null;

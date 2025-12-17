@@ -52,7 +52,7 @@ export class Tutorial extends Scene {
     private progress: number = 0;
     private didRotateThisFrame: boolean = false;
     
-    // Geen event handlers meer nodig
+
 
     // ==================== LIFECYCLE METHODS ====================
 
@@ -62,7 +62,6 @@ export class Tutorial extends Scene {
     }
 
     create() {
-        // Witte overlay fade-in
         const whiteOverlay = this.add.graphics();
         whiteOverlay.fillStyle(0xffffff, 1);
         whiteOverlay.fillRect(0, 0, this.scale.width, this.scale.height);
@@ -77,7 +76,6 @@ export class Tutorial extends Scene {
         this.createBalloonAndPropellors();
         this.createProgressBar();
         this.createSkipButton();
-        // setupEventListeners verwijderd, niet meer nodig
 
         const result = this.sound.play('troposfeer', { loop: true, volume: 0.5 });
         const soundResult = result as unknown;
@@ -86,11 +84,9 @@ export class Tutorial extends Scene {
         } else {
             this.troposfeerSound = this.sound.get('troposfeer');
         }
-        // Reset rotary button state zodat een ingedrukte knop niet direct effect heeft
         this.wasButtonPressed = this.rotary?.buttonPressed || false;
         this.sceneIsReady = true;
 
-        // Fade-out overlay zodra scene zichtbaar is
         this.tweens.add({
             targets: whiteOverlay,
             alpha: 0,
@@ -105,19 +101,16 @@ export class Tutorial extends Scene {
     update() {
         this.updateSkipButton();
         this.handleButtonInput();
-        // Geen keyboard input, alleen rotaryClient/WebSocket
         this.updateInactivePropellorShake();
         this.updateArrowsRotation();
         this.updateActivePropellorRotation();
-        this.updateBalloonMovement(); // MUST come before updatePropellorAnimations!
+        this.updateBalloonMovement(); 
         this.updatePropellorAnimations();
         this.updateWindEffect();
         this.updatePropellorPositions();
     }
 
     shutdown() {
-        console.log('TutorialBlue: shutdown() called');
-        // shutdown() aangepast, geen event handlers meer
     }
 
     // ==================== INITIALIZATION ====================
@@ -134,14 +127,12 @@ export class Tutorial extends Scene {
         this.totalDelta = 0;
         this.windBlauw = null;
         
-        // Zet troposfeer achtergrond image
         if (this.textures.exists('bg-troposfeer')) {
             const bg = this.add.image(this.scale.width / 2, this.scale.height, 'bg-troposfeer');
             const tex = this.textures.get('bg-troposfeer').getSourceImage();
             const scaleX = this.scale.width / tex.width;
             bg.setOrigin(0.5, 1).setDepth(-100).setScale(scaleX, 1);
         } else {
-            // Fallback: kleur
             this.cameras.main.setBackgroundColor(
                 '#' + SFEER_LABELS[0].colors.a.toString(16).padStart(6, '0').toUpperCase()
             );
@@ -160,11 +151,9 @@ export class Tutorial extends Scene {
         const rectX = (this.scale.width - rectWidth) / 2;
         const rectY = (this.scale.height - rectHeight) / 2;
 
-        // Shadow
         bg.fillStyle(0xE1E1E1, 1);
         bg.fillRoundedRect(rectX, rectY + shadowOffset, rectWidth, rectHeight, rectRadius);
 
-        // Main background
         bg.fillStyle(0xffffff, 1);
         bg.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, rectRadius);
     }
@@ -176,7 +165,6 @@ export class Tutorial extends Scene {
         const titleY = 400;
         const shadowOffset = 8;
         
-        // Temp title voor afmetingen
         const tempTitle = this.add.text(0, 0, 'Hoe werkt het?', {
             fontFamily: 'Bungee',
             fontSize: 64,
@@ -188,7 +176,6 @@ export class Tutorial extends Scene {
         const titleWidth = tempTitle.width + paddingX * 2;
         const titleHeight = tempTitle.height + paddingY * 2;
         
-        // Background met shadow
         const titleBg = this.add.graphics();
         titleBg.fillStyle(0x35BBF0, 1);
         titleBg.fillRoundedRect(
@@ -200,7 +187,6 @@ export class Tutorial extends Scene {
         );
         titleBg.setDepth(10);
         
-        // Echte title
         this.add.text(
             this.scale.width / 2,
             titleY,
@@ -307,7 +293,6 @@ export class Tutorial extends Scene {
         const gap = 32;
         const skipTextPadding = 12;
         
-        // Shadow
         const skipShadow = this.add.graphics();
         skipShadow.fillStyle(0x2485AB, 1);
         skipShadow.fillRoundedRect(
@@ -319,20 +304,17 @@ export class Tutorial extends Scene {
         );
         skipShadow.setDepth(1999);
         
-        // Background
         const skipBg = this.add.graphics();
         skipBg.fillStyle(0x35BBF0, 1);
         skipBg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16);
         skipBg.setDepth(2000);
         
-        // Text
         const skipText = this.add.text(0, 0, 'OVERSLAAN', {
             fontFamily: 'Bungee',
             fontSize: 50,
             color: '#ffffff',
         }).setOrigin(0, 0.5).setDepth(2001);
 
-        // Shining effects
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
         shineTopLeft.fillRoundedRect(-buttonWidth / 2 +70, -buttonHeight / 2 -105, 16.844, 5.877, 3);
@@ -348,17 +330,14 @@ export class Tutorial extends Scene {
         shineBottomRight.rotation = -33.256 * (Math.PI / 180);
 
         
-        // Circle outline
         const skipCircle = this.add.graphics();
         skipCircle.lineStyle(8, 0xffffff, 1);
         skipCircle.strokeCircle(0, 0, circleRadius);
         skipCircle.setDepth(2002);
         
-        // Circle fill
         const skipFill = this.add.graphics();
         skipFill.setDepth(2003);
         
-        // Position elements
         const skipTotalWidth = circleRadius * 2 + gap + skipText.width + skipTextPadding * 2;
         skipCircle.x = -skipTotalWidth / 2 + circleRadius + skipTextPadding;
         skipCircle.y = 0;
@@ -367,7 +346,6 @@ export class Tutorial extends Scene {
         skipText.x = skipCircle.x + circleRadius + gap;
         skipText.y = 0;
         
-        // Container
         const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg,
             shineTopLeft,
             shineTopLeft2,
@@ -376,16 +354,13 @@ export class Tutorial extends Scene {
         skipButton.setDepth(2000);
         skipButton.setInteractive({ useHandCursor: true });
         
-        // Store references
         this.skipFill = skipFill;
         this.skipCircleRadius = circleRadius;
         this.animTargets = [skipBg, skipCircle, skipFill, skipText, shineTopLeft, shineTopLeft2, shineBottomRight];
         
-        // Click handler
         skipButton.on('pointerdown', () => {
             this.scene.start('Game');
             const tropo = this.sound.get('troposfeer');
-                    console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
                     if (tropo) {
                         tropo.stop();
                         tropo.destroy();
@@ -406,17 +381,14 @@ export class Tutorial extends Scene {
         
         this.progressBar.clear();
         
-        // Background
         this.progressBar.fillStyle(0xEDEDED, 1);
         this.progressBar.fillRoundedRect(barX, barY, barWidth, barHeight, radius);
         
-        // Fill
         if (this.progress > 0) {
             const fillWidth = (barWidth - 30) * this.progress;
             this.progressBar.fillStyle(0x35BBF0, 1);
             this.progressBar.fillRoundedRect(barX, barY, fillWidth + 30, barHeight, radius);
 
-            // Highlighted part (zoals GameOver)
             this.progressBar.fillStyle(0xffffff, 0.1);
             this.progressBar.fillRoundedRect(
                 barX + 20,
@@ -427,10 +399,8 @@ export class Tutorial extends Scene {
             );
         }
 
-        // Border
         this.progressBar.strokeRoundedRect(barX, barY, barWidth, barHeight, radius);
         
-        // Check completion
         if (this.progress >= 1) {
             this.scene.start('TutorialRed');
             
@@ -463,7 +433,6 @@ export class Tutorial extends Scene {
         const buttonRaw = this.rotary?.buttonPressed;
         const buttonPressed = typeof buttonRaw === 'boolean' || typeof buttonRaw === 'number' ? !!buttonRaw : false;
 
-        // Keyboard support: Enter or Space
         const enterKey = this.input.keyboard?.addKey('ENTER');
         const spaceKey = this.input.keyboard?.addKey('SPACE');
         const enterDown = !!(enterKey && enterKey.isDown);
@@ -471,7 +440,6 @@ export class Tutorial extends Scene {
         if (typeof this._keyboardWasDown !== 'boolean') (this as any)._keyboardWasDown = false;
         const keyboardDown: boolean = enterDown || spaceDown;
 
-        // --- Rotary button logic ---
         if (this.sceneIsReady && buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
             this.skipHoldSource = 'rotary';
@@ -501,7 +469,6 @@ export class Tutorial extends Scene {
         }
         this.wasButtonPressed = buttonPressed;
 
-        // --- Keyboard logic ---
         if (this.sceneIsReady && keyboardDown && !this._keyboardWasDown && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
             this.skipHoldSource = 'keyboard';
@@ -531,7 +498,6 @@ export class Tutorial extends Scene {
         }
         (this as any)._keyboardWasDown = keyboardDown;
 
-        // Check hold progress (alleen als sceneIsReady)
         if (this.sceneIsReady && this.skipHoldStart !== null && !this.isTransitioning) {
             const elapsed = Date.now() - this.skipHoldStart;
             this.skipHoldProgress = Math.min(1, elapsed / 2800);
@@ -542,8 +508,6 @@ export class Tutorial extends Scene {
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
                 this.sound.play('button-click');
-                console.log('---------------------------')
-                console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', this.troposfeerSound);
                 if (this.troposfeerSound && typeof this.troposfeerSound.stop === 'function') {
                     this.troposfeerSound.stop();
                     if (typeof this.troposfeerSound.destroy === 'function') {
@@ -551,8 +515,6 @@ export class Tutorial extends Scene {
                     }
                     this.troposfeerSound = null;
                 }
-                console.log('---------------------------')
-                console.log(this.sound)
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {
@@ -561,15 +523,13 @@ export class Tutorial extends Scene {
     }
 
     private updateInactivePropellorShake() {
-        // Check if inactive propellor should shake
         if (this.rotary && this.rotary.lastAngles && this.rotary.lastAngles.length > 1) {
             const angle2 = this.rotary.lastAngles[1];
             if (typeof angle2 === 'number' && this.lastAngle2 !== undefined) {
                 const angle2Delta = angle2 - this.lastAngle2;
                 if (Math.abs(angle2Delta) >= 2) {
-                    // Start shake alleen als timer exact 0 is (laat uitspelen)
                     if (this.inactiveShakeTimer === 0) {
-                        this.inactiveShakeTimer = 16; // langer voor volledige heen-en-weer
+                        this.inactiveShakeTimer = 16; 
                         this.inactiveShakeDirection = Math.sign(angle2Delta) || 1;
                     }
                 }
@@ -577,14 +537,10 @@ export class Tutorial extends Scene {
             this.lastAngle2 = angle2;
         }
         
-        // Apply shake animation
         if (this.inactivePropellor) {
             if (this.inactiveShakeTimer > 0) {
-                // Shake: heen en weer, niet resetten bij nieuwe data
-                // 0 -> links, midden -> rechts, einde -> terug naar 0
                 const totalFrames = 16;
                 const progress = 1 - (this.inactiveShakeTimer / totalFrames);
-                // Ease in-out
                 const eased = Math.sin(progress * Math.PI);
                 this.inactivePropellor.rotation = eased * 0.25 * this.inactiveShakeDirection;
                 this.inactiveShakeTimer--;
@@ -613,7 +569,6 @@ export class Tutorial extends Scene {
     }
 
     private updateBalloonMovement() {
-        // Rotary input
         let rotaryDelta = 0;
         if (this.rotary && Array.isArray(this.rotary.lastAngles)) {
             const angle1 = this.rotary.lastAngles[0];
@@ -637,25 +592,20 @@ export class Tutorial extends Scene {
             }
         }
 
-        // Keyboard pijltjes
         let keyboardDelta = 0;
         const cursors = this.input.keyboard?.createCursorKeys();
         if (cursors) {
-            // Alleen naar rechts (blauw) toegestaan
             if (cursors.right.isDown) {
                 keyboardDelta = 8;
             }
         }
 
-        // Combineer input
         let totalDelta = rotaryDelta + keyboardDelta;
         if (totalDelta !== 0) {
             this.didRotateThisFrame = true;
-            // Move balloon
             const balloonStartX = 280;
             const balloonEndX = this.scale.width - 280;
             if (!this.progress) this.progress = 0;
-            // Simuleer progressie bij keyboard input
             if (keyboardDelta !== 0) {
                 this.progress = Math.min(1, Math.max(0, this.progress + keyboardDelta / (balloonEndX - balloonStartX)));
                 this.drawProgressBar();
@@ -669,7 +619,6 @@ export class Tutorial extends Scene {
     private updatePropellorAnimations() {
         const shouldSpin = this.didRotateThisFrame;
         
-        // PropellorBlauw: speel altijd 1x af bij nieuwe draai (en alleen dan)
         if (shouldSpin) {
             if (this.propellorBlauw && !this.propellorBlauw.anims.isPlaying) {
                 this.propellorBlauw.play({ key: 'propellor-blauw', repeat: 0 });
@@ -685,7 +634,6 @@ export class Tutorial extends Scene {
             }
         }
         
-        // PropellorRood: altijd gepauzeerd
         if (this.propellorRood) {
             if (this.propellorRood.anims.currentAnim && this.propellorRood.anims.currentAnim.frames.length > 0) {
                 this.propellorRood.anims.pause(this.propellorRood.anims.currentAnim.frames[0]);
@@ -713,7 +661,6 @@ export class Tutorial extends Scene {
             });
         }
         
-        // Update wind position if it exists
         if (this.windBlauw && this.windBlauw.active) {
             this.windBlauw.x = this.balloon.x + this.propellorOffsetX - 50;
             this.windBlauw.y = this.balloon.y + this.propellorOffsetY;

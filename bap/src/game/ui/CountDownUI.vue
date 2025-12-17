@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, defineEmits, defineProps } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { EventBus } from '../EventBus';
 const props = defineProps<{ start: boolean }>();
 const emit = defineEmits(['done']);
@@ -17,23 +17,18 @@ function startCountdown() {
     countDownNumber.value = 3;
     fadeOut.value = false;
     clearInterval(interval);
-    // Pauzeer de game scene
     EventBus.emit('pause-game-scene');
-    // Speel direct de eerste countdown sound
     EventBus.emit('play-countdown-sound');
     interval = setInterval(() => {
         if (typeof countDownNumber.value === 'number' && countDownNumber.value > 1) {
             countDownNumber.value--;
-            // Speel countdown sound bij elke stap
             EventBus.emit('play-countdown-sound');
         } else {
-            // console.log('Playing start sound');
             EventBus.emit('play-start-sound');
             countDownNumber.value = 'start';
             fadeOut.value = true;
             clearInterval(interval);
             setTimeout(() => {
-                // Resume de game scene
                 EventBus.emit('resume-game-scene');
                 emit('done');
             }, 900);

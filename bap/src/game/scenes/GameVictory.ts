@@ -21,14 +21,13 @@ export class GameVictory extends Scene {
     }
 
     create() {
-                                // Verwijder snelste tijd van vorige dagen uit localStorage
                                 if (typeof window !== 'undefined' && window.localStorage) {
                                     const today = new Date();
                                     const yyyy = today.getFullYear();
                                     const mm = String(today.getMonth() + 1).padStart(2, '0');
                                     const dd = String(today.getDate()).padStart(2, '0');
                                     const todayKey = `bestTime_${yyyy}-${mm}-${dd}`;
-                                    // Verzamel alle keys die met bestTime_ beginnen en niet van vandaag zijn
+
                                     const keysToRemove = [];
                                     for (let i = 0; i < window.localStorage.length; i++) {
                                         const key = window.localStorage.key(i);
@@ -42,22 +41,18 @@ export class GameVictory extends Scene {
                                 }
                         
                 this.rotary = getRotaryClient();
-                console.log('GameVictory create() called, timeoutStarted:', this.timeoutStarted);
-                // Only set timeout once
+
                 if (!this.timeoutStarted) {
                     this.timeoutStarted = true;
-                    console.log('Setting up 30s timeout for first time');
                     
                     this.autoNavigateTimeout = setTimeout(() => {
-                        console.log('30 seconds passed! Navigating to MainMenu now...');
                         if (this.autoNavigateTimeout) {
                             clearTimeout(this.autoNavigateTimeout);
                             this.autoNavigateTimeout = null;
                         }
                         this.timeoutStarted = false;
-                        console.log('Stopping GameVictory and starting MainMenu');
                         this.sound.stopAll();
-                        // Stop en destroy alle troposfeer sounds expliciet
+
                         const soundManagerAny = this.sound as any;
                         let spaceSounds: any[] = [];
                         if (this.sound.get && this.sound.get('space')) {
@@ -96,7 +91,7 @@ export class GameVictory extends Scene {
             .setDepth(5)
             .setScale(1);
         victoryContainer.add(aliensVictoryImg);
-        // Aliens victory video als overlay (Phaser video object)
+
         const aliensVictoryVideo = this.add.video(this.scale.width / 2, this.scale.height, 'win-animation')
             .setOrigin(0.5, 1)
             .setDepth(8)
@@ -106,7 +101,7 @@ export class GameVictory extends Scene {
         aliensVictoryVideo.play(true);
         victoryContainer.add(aliensVictoryVideo);
         
-        // Title container
+
         const titleContainer = this.add.container(this.scale.width / 2, this.scale.height / 4 - 250);
         titleContainer.setAlpha(0);
         titleContainer.setDepth(10);
@@ -138,11 +133,10 @@ export class GameVictory extends Scene {
         titleContainer.add([titleBg, this.title]);
         victoryContainer.add(titleContainer);
 
-        // --- SNELSTE TIJD LOGICA ---
         let durationMs = 0;
         if (typeof window !== 'undefined' && (window as any).gameDurationMs) {
             durationMs = (window as any).gameDurationMs;
-            // Trek totale pauzetijd af als die beschikbaar is
+
             if ((window as any).totalPausedDuration) {
                 durationMs -= (window as any).totalPausedDuration;
             }
@@ -151,7 +145,7 @@ export class GameVictory extends Scene {
         let bestTimeDate = null;
         let todayKey = '';
         if (typeof window !== 'undefined' && window.localStorage) {
-            // Gebruik yyyy-mm-dd als key
+
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -165,7 +159,7 @@ export class GameVictory extends Scene {
                     bestTimeDate = parsed.date;
                 } catch {}
             }
-            // Als er nog geen tijd is, of deze tijd is sneller, sla op
+
             if (bestTimeMs === null || durationMs < bestTimeMs) {
                 bestTimeMs = durationMs;
                 bestTimeDate = Date.now();
@@ -173,7 +167,7 @@ export class GameVictory extends Scene {
             }
         }
 
-        // Toon snelste tijd in description
+
         let bestMinutes = 0;
         let bestSeconds = 0;
         let bestTimeText = 'SNELSTE TIJD:  --:--';
@@ -209,14 +203,13 @@ export class GameVictory extends Scene {
         const leaderboardHeight = 200;
         const leaderboardY = this.scale.height / 2 - 350;
         
-        // Create container for entire leaderboard
-        // --- SNELSTE TIJD LOGICA ---
-        // (declaraties en berekeningen hierboven, hergebruik variabelen)
+
+
         const leaderboardContainer = this.add.container(this.scale.width / 2, leaderboardY);
         leaderboardContainer.setAlpha(0);
         leaderboardContainer.setDepth(12);
         
-                    // ...existing code...
+
         const leaderboardBg = this.add.graphics();
         leaderboardBg.fillStyle(0xffffff, 1);
         leaderboardBg.fillRoundedRect(
@@ -228,13 +221,13 @@ export class GameVictory extends Scene {
         );
         leaderboardContainer.add(leaderboardBg);
         
-        // Row 1 - JIJ
+
         const row1Y = 0;
         const iconStartX = -leaderboardWidth / 2 + 64;
         const nameX = iconStartX + 200;
         const timeXRight = leaderboardWidth / 2 - 64;
         
-        // Trophy icon of second icon afhankelijk van highscore
+
         let isNewHighscore = false;
         if (bestTimeMs === durationMs || bestTimeMs === null) {
             isNewHighscore = true;
@@ -245,13 +238,13 @@ export class GameVictory extends Scene {
             .setScale(0.8);
         leaderboardContainer.add(trophyIcon1);
         
-        // Alien icon for JIJ
+
         const alienIcon1 = this.add.image(iconStartX + 140, row1Y, 'alien')
             .setOrigin(0.5)
             .setScale(0.5);
         leaderboardContainer.add(alienIcon1);
         
-        // Name JIJ
+
         const name1 = this.add.text(nameX, row1Y, 'JIJ', {
             fontFamily: 'Bungee',
             fontSize: 60,
@@ -259,7 +252,7 @@ export class GameVictory extends Scene {
         }).setOrigin(0, 0.5);
         leaderboardContainer.add(name1);
         
-        // Time 1:23
+
         const time1 = this.add.text(timeXRight, row1Y, `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`, {
             fontFamily: 'Bungee',
             fontSize: 60,
@@ -269,7 +262,7 @@ export class GameVictory extends Scene {
         
         victoryContainer.add(leaderboardContainer);
 
-        // (verwijderd: dubbele declaratie aliensVictoryImg)
+
         
         this.tweens.add({
             targets: victoryContainer,
@@ -286,21 +279,20 @@ export class GameVictory extends Scene {
                 victoryContainer.y = 0;
                 this.scene.stop('Game');
 
-                // Na 1 seconde, fade-in aliensVictoryImg en scale groter
+
                 this.time.delayedCall(500, () => {
                     this.tweens.add({
                         targets: aliensVictoryVideo,
-                        // alpha: 1,
+
                         scale: 1.25,
                         duration: 800,
                         ease: 'Cubic.Out',
                         onComplete: () => {
-                            // Pop in elements one by one
+
                             const popDuration = 500;
                             const popDelay = 150;
                             this.sound.play('game-victory', { volume: 0.1 });
 
-                            // Title
                             this.tweens.add({
                                 targets: titleContainer,
                                 alpha: 1,
@@ -309,7 +301,6 @@ export class GameVictory extends Scene {
                                 ease: 'Back.easeOut'
                             });
 
-                            // Description
                             this.time.delayedCall(popDelay, () => {
                                 this.tweens.add({
                                     targets: this.description,
@@ -320,7 +311,6 @@ export class GameVictory extends Scene {
                                 });
                             });
 
-                            // Leaderboard
                             this.time.delayedCall(popDelay * 2, () => {
                                 this.tweens.add({
                                     targets: leaderboardContainer,
@@ -331,7 +321,6 @@ export class GameVictory extends Scene {
                                 });
                             });
 
-                            // Button
                             this.time.delayedCall(popDelay * 3, () => {
                                 this.tweens.add({
                                     targets: [this.againButton, this.againText],
@@ -378,7 +367,7 @@ export class GameVictory extends Scene {
         bg.fillStyle(0xFFB703);
         bg.fillRoundedRect(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight, 16);
 
-        // Shining effects
+
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
         shineTopLeft.fillRoundedRect(-btnWidth / 2 +55, -btnHeight / 2 -90, 16.844, 5.877, 3);
@@ -406,7 +395,6 @@ export class GameVictory extends Scene {
         startText.setX(textX);
         startText.setY(0);
 
-        // Button en tekst positie onderaan victoryContainer
         const buttonY = this.scale.height / 2 - 150;
         this.againButton = this.add.container(this.scale.width / 2, buttonY +100, [
             shadow,
@@ -440,14 +428,14 @@ export class GameVictory extends Scene {
         victoryContainer.add(this.againText);
 
         const triggerButton = () => {
-            // Clear the auto-navigate timeout
+
             if (this.autoNavigateTimeout) {
                 clearTimeout(this.autoNavigateTimeout);
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
 
-            // Reset alleen de gameDurationMs en totalPausedDuration zodat tijd niet blijft staan
+
             if (typeof window !== 'undefined') {
                 (window as any).gameDurationMs = undefined;
                 (window as any).totalPausedDuration = undefined;
@@ -496,7 +484,7 @@ export class GameVictory extends Scene {
         this.againButton.on('pointerdown', () => {
             triggerButton();
         });
-        // Keyboard event: triggerButton bij enter of spatie
+
         this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
             if (event.code === 'Enter' || event.code === 'Space') {
                 triggerButton();
@@ -505,18 +493,18 @@ export class GameVictory extends Scene {
     }
 
     update() {
-        // Check hardware button press
+
         const buttonPressed = this.rotary?.buttonPressed || false;
         
         if (buttonPressed && !this.wasButtonPressed) {
-            // Clear the auto-navigate timeout
+
             if (this.autoNavigateTimeout) {
                 clearTimeout(this.autoNavigateTimeout);
                 this.autoNavigateTimeout = null;
             }
             this.timeoutStarted = false;
 
-            // Zelfde animatie en logica als pointerdown
+
             const bg = this.againButton.list[1];
             const shineTopLeft = this.againButton.list[2];
             const shineTopLeft2 = this.againButton.list[3];
@@ -543,7 +531,7 @@ export class GameVictory extends Scene {
                             soundManagerAny.sounds.filter((s: any) => s && s.key === 'space')
                         );
                     }
-                    // Uniek maken
+
                     spaceSounds = [...new Set(spaceSounds)];
                     for (const s of spaceSounds) {
                         if (s && s.stop) s.stop();
@@ -563,7 +551,6 @@ export class GameVictory extends Scene {
     }
 
     shutdown() {
-        console.log('GameVictory shutdown() called');
         if (this.autoNavigateTimeout) {
             clearTimeout(this.autoNavigateTimeout);
             this.autoNavigateTimeout = null;

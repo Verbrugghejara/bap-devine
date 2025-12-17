@@ -32,43 +32,8 @@ export class MainMenu extends Scene {
         const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'home-animation')
             .setOrigin(0.5)
             .setDepth(1000)
-        console.log('Video object:', video);
-        video.on('play', () => {
-            console.log('Video started playing!');
-        });
         video.setMute(true);
         video.play(true);
-        // this.title = this.add.text(
-        //     this.scale.width / 2,
-        //     this.scale.height / 4 - 300,
-        //     'Reis naar de',
-        //     {
-        //         fontFamily: 'Bungee',
-        //         fontSize: 74,
-        //         color: '#' + SFEER_LABELS[0].colors.c.toString(16).padStart(6, '0').toUpperCase(),
-        //     }
-        // )
-        //     .setOrigin(0.5)
-        //     .setDepth(1)
-        //     .setShadow(0, 6, '#BC7F36', 0, false, true);
-        // this.title2 = this.add.text(
-        //     this.scale.width / 2,
-        //     this.scale.height / 4 -200,
-        //     'Bovenwereld',
-        //     {
-        //         fontFamily: 'Bungee',
-        //         fontSize: 96,
-        //         color: '#' + SFEER_LABELS[0].colors.d.toString(16).padStart(6, '0').toUpperCase(),
-        //     }
-        // )
-        //     .setOrigin(0.5)
-        //     .setDepth(1)
-        //     .setShadow(0, 6, '#860000', 0, false, true);
-        // this.balloon = this.add.image(this.scale.width / 2, this.scale.height / 2, 'balloon')
-        //     .setOrigin(0.5)
-        //     .setDepth(1)
-        //     .setScale(1.5);
-        // Padding instellen
         const paddingX = 24;
         const paddingY = 16;
         const startText = this.add.text(0, 0, 'Start', {
@@ -100,7 +65,6 @@ export class MainMenu extends Scene {
         bg.fillStyle(0xFFB703);
         bg.fillRoundedRect(-btnWidth/2, -btnHeight/2, btnWidth, btnHeight, 16);
 
-        // Shining effects
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
         shineTopLeft.fillRoundedRect(-btnWidth / 2 +45, -btnHeight / 2 -60, 16.844, 5.877, 3);
@@ -148,11 +112,7 @@ export class MainMenu extends Scene {
             const shineBottomRight = this.startButton.list[4];
             const circle = this.startButton.list[5];
             const startText = this.startButton.list[6];
-            console.log('Start button clicked');
-            // Speel button-click audio af
-            // if (this.sound && this.sound.context && this.sound.locked === false && this.sound.get('button-click')) {
                 this.sound.play('button-click');
-            // }
 
             this.tweens.add({
                 targets: [bg, shineTopLeft, shineTopLeft2, shineBottomRight, circle, startText],
@@ -175,10 +135,8 @@ export class MainMenu extends Scene {
     }
 
     update() {
-        // Check hardware button press
         const buttonPressed = this.rotary?.buttonPressed || false;
 
-        // Keyboard support: Enter or Space
         const enterKey = this.input.keyboard?.addKey('ENTER');
         const spaceKey = this.input.keyboard?.addKey('SPACE');
         const enterPressed = enterKey && Phaser.Input.Keyboard.JustDown(enterKey);
@@ -213,7 +171,6 @@ export class MainMenu extends Scene {
 
         this.scene.start('StoryTelling');
 
-            console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', this.troposfeerSound);
             if (this.troposfeerSound && typeof this.troposfeerSound.stop === 'function') {
                 this.troposfeerSound.stop();
                 if (typeof this.troposfeerSound.destroy === 'function') {

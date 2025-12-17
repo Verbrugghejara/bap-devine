@@ -50,19 +50,16 @@ let buttonCheckEnabled = ref(false);
 function handleClick() {
   if (animating.value || animatingUp.value) return;
 
-  animating.value = true; // animate down
+  animating.value = true;
 
   setTimeout(() => {
     animating.value = false;
 
-    // 🔥 Force reflow zodat de browser de state apart registreert
     void document.body.offsetHeight;
 
-    animatingUp.value = true; // animate up
-    console.log('Button clicked: down');
+    animatingUp.value = true;
     setTimeout(() => {
       animatingUp.value = false;
-    console.log('Button clicked: up');
       emit('click');
       props.onClick?.();
     }, 180);
@@ -74,7 +71,6 @@ function checkButton() {
 
   const buttonPressed = rotary?.buttonPressed || false;
 
-  // Trigger click alleen bij loslaten (van ingedrukt naar niet-ingedrukt)
   if (!buttonPressed && wasButtonPressed.value) {
     handleClick();
   }
@@ -83,7 +79,6 @@ function checkButton() {
 
 let intervalId: number | null = null;
 
-// Global key handler for Enter/Space
 function globalKeyHandler(e: KeyboardEvent) {
   if ((e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space')) {
     handleClick();
@@ -92,9 +87,8 @@ function globalKeyHandler(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', globalKeyHandler);
-  intervalId = window.setInterval(checkButton, 16); // ~60fps
+  intervalId = window.setInterval(checkButton, 16);
 
-  // Enable button checking pas als knop niet ingedrukt is (anti-accidental resume)
   const waitForRelease = () => {
     if (!(rotary?.buttonPressed)) {
       buttonCheckEnabled.value = true;

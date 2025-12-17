@@ -113,14 +113,12 @@ const sfeerText = ref('TROPOSFEER');
 const visible = ref(false);
 
 function showInterlude(index: number) {
-  sfeerIndex.value = index;
-  sfeerText.value = SFEER_LABELS[index].naam;
-  visible.value = true;
-  
-  // Hide after 3 seconds
-  setTimeout(() => {
-    visible.value = false;
-  }, 2000);
+    sfeerIndex.value = index;
+    sfeerText.value = SFEER_LABELS[index].naam;
+    visible.value = true;
+    setTimeout(() => {
+        visible.value = false;
+    }, 2000);
 }
 
 function hideInterlude() {

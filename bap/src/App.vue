@@ -22,9 +22,7 @@ const currentSceneKey = ref<string | null>(null);
 // Scene-wissel: alleen Game, GameOver, GameVictory UI tonen
 EventBus.on('change-scene', (scene: string) => {
         showPauseUI.value = false;
-    console.log('[App.vue] Scene verandert naar:', scene);
     if (phaserRef.value && phaserRef.value.scene) {
-        console.log('Beschikbare scenes:', Object.keys(phaserRef.value.scene.scene.manager.keys));
     }
     if (scene === 'MainMenu') {
         if (phaserRef.value && phaserRef.value.scene) {

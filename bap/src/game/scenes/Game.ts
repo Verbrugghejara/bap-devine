@@ -4,7 +4,7 @@ import { SFEER_LABELS } from '../utils/sfeerLabels';
 import { EventBus } from '../EventBus';
 import { sfeerProgress } from '../utils/sfeerProgressStore';
 
-// Helper voor hoekverschil
+// ==================== UTILITIES ====================
 
 // ==================== UTILITIES ====================
 function angleDiff(a: number, b: number): number {
@@ -21,10 +21,7 @@ export class Game extends Scene {
     private troposfeerSound: Phaser.Sound.BaseSound | null = null;
     private stratosfeerSound: Phaser.Sound.BaseSound | null = null;
     private spaceSound: Phaser.Sound.BaseSound | null = null;
-    // Pauze input state
     private _keyboardWasDown: boolean = false;
-    // private pauseHoldSource: 'rotary' | 'keyboard' | null = null; // verwijderd, niet gebruikt
-    // Timer pause tracking
     private totalPausedDuration: number = 0;
     private pauseBeganAt: number | null = null;
     // ==================== PROPERTIES ====================
@@ -43,11 +40,8 @@ export class Game extends Scene {
     // --- Input State ---
     private rotary: any = null;
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
-    // private enterKey: Phaser.Input.Keyboard.Key | null = null; // verwijderd, niet gebruikt
-    // private wasEnterDown: boolean = false; // verwijderd, niet gebruikt
     private wasButtonPressed: boolean = false;
     private inactivityTimeout: any = null;
-    // private _lastRotaryDiffs: number[] = [0, 0]; // verwijderd, niet gebruikt
 
     // --- Sfeer Layers ---
     private huidigeSfeerIndex: number = 0;
@@ -91,7 +85,6 @@ export class Game extends Scene {
     private wasNearObstacle: boolean = false;
 
     // --- Power-ups ---
-    // powerUpContainer verwijderd, alleen powerUps array wordt gebruikt
     private powerUps: Phaser.GameObjects.Container[] = [];
     private powerUpsSpawned: Set<string> = new Set();
     private activePowerUp: string | null = null;
@@ -125,11 +118,9 @@ export class Game extends Scene {
     constructor() {
         super('Game');
         EventBus.emit('show-countdown');
-        // EventBus.on('pause-game-scene', this.handlePauseGameScene, this); // Removed: handled by App.vue
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.on('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.on('gameover-swipe-in', this.handleGameOverSwipeIn, this);
-        // Listen for countdown sound event from UI
         EventBus.on('play-countdown-sound', this.handlePlayCountdownSound, this);
         EventBus.on('play-start-sound', this.handlePlayStartdownSound, this);
         EventBus.on('play-startled-sound', this.handlePlayStartledSound, this);
@@ -144,10 +135,7 @@ export class Game extends Scene {
         this.createBalloon();
         this.setupObstacles();
         this.setupInput();
-        // Start alien easter egg spawner
         this.startAlienSpawner();
-        // this.sound.stopAll();
-        // Spawn tropo-alien direct bij start
         const tropoConfig = this.alienConfigs.find(a => a.key === 'alien-tropo');
         if (tropoConfig && this.textures.exists(tropoConfig.key)) {
             const sfeerCenterY = this.sfeerBaseY[tropoConfig.sfeer] + this.sfeerOffsetY;
@@ -165,13 +153,6 @@ export class Game extends Scene {
             }
             this.aliens.push(alien);
         }
-        // // TEST: Speel troposfeer sound direct af
-        // if (this.sound && this.sound.locked === false) {
-        //         this.sound.play('troposfeer', { loop: true, volume: 1 });
-        //     
-        // } else {
-        //     console.warn('Phaser sound is locked of niet beschikbaar.');
-        // }
         EventBus.emit('current-scene-ready', this);
     }
 
@@ -202,14 +183,12 @@ export class Game extends Scene {
         this.updateBalloonMovement();
         this.updateWindEffects();
         this.checkObstacleCollisions();
-        this.checkNearObstacle(10); // Check for proximity to obstacles and notify UI
+        this.checkNearObstacle(10); 
         this.updateAliens();
     }
 
     // ==================== ALIEN EASTER EGGS ====================
     private startAlienSpawner() {
-        // Geen timer meer: aliens worden direct gespawned bij sfeerwissel
-        // Functie blijft voor compatibiliteit, maar doet niets meer
         if (this.alienSpawnTimer) {
             this.alienSpawnTimer.remove(false);
             this.alienSpawnTimer = null;
@@ -217,18 +196,14 @@ export class Game extends Scene {
     }
 
     private spawnAlien() {
-        // Kies random alien config
-        // Spawn alleen de alien van de huidige sfeer, maar niet als hij al bestaat
         const sfeerAliens = this.alienConfigs.filter(a => a.sfeer === this.huidigeSfeerIndex);
         if (sfeerAliens.length === 0) return;
         const config = Phaser.Utils.Array.GetRandom(sfeerAliens);
-        // Check of deze alien al bestaat (op key)
         if (this.aliens.some(a => (a as any).alienKey === config.key)) return;
         if (!this.textures.exists(config.key)) return;
         const scale = config.scale;
         let y;
         if (config.key === 'alien-tropo') {
-            // Forceer tropo-alien in het midden van het scherm
             y = this.scale.height / 2;
         } else {
             const sfeerCenterY = this.sfeerBaseY[config.sfeer] + this.sfeerOffsetY;
@@ -241,7 +216,6 @@ export class Game extends Scene {
             .setOrigin(0.5);
         (alien.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
         (alien as any).alienKey = config.key;
-        // Speel animatie af als die bestaat
         if (this.anims.exists(config.key)) {
             alien.play(config.key);
         }
@@ -249,11 +223,9 @@ export class Game extends Scene {
     }
 
         private updateAliens() {
-            // Laat aliens naar beneden bewegen
             for (const alien of this.aliens) {
                 alien.y += this.smoothScrollSpeed;
             }
-            // Verwijder aliens die uit beeld zijn
             for (let i = this.aliens.length - 1; i >= 0; i--) {
                 if (this.aliens[i].y > this.scale.height + 200) {
                     this.aliens[i].destroy();
@@ -265,7 +237,6 @@ export class Game extends Scene {
     shutdown() {
         clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = null;
-        // EventBus.off('pause-game-scene', this.handlePauseGameScene, this); // Removed: handled by App.vue
         EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.off('gameover-swipe-in', this.handleGameOverSwipeIn, this);
@@ -273,8 +244,6 @@ export class Game extends Scene {
         EventBus.off('play-start-sound', this.handlePlayStartdownSound, this);
         EventBus.off('play-startled-sound', this.handlePlayStartledSound, this);
         closeRotaryClient();
-        // Play countdown sound when event is received from UI
-        // Stop troposfeer sound indien nog bezig
         if (this.troposfeerSound) {
             this.troposfeerSound.stop();
             this.troposfeerSound.destroy();
@@ -291,9 +260,8 @@ export class Game extends Scene {
         this.sound.play('alien-startled', { volume: 0.7 });
     }
     private handlePlayCountdownSound() {
-        // if (this.sound && this.sound.get('count-down')) {
         this.sound.play('count-down', { volume: 0.3 });
-        // }
+    
     }
 
     private handlePlayStartdownSound() {
@@ -303,15 +271,8 @@ export class Game extends Scene {
         this.time.delayedCall(1000, () => {
             this.sound.setDetune(0);
         });
-        // this.sound.setDetune(0);
     }
-            // if (this.sound && this.sound.get('count-down')) {
     // ==================== NEAR OBSTACLE CHECK ====================
-    /**
-     * Checks if the balloon is near any obstacle (within a given distance).
-     * Emits an event to the UI if the state changes.
-     * @param threshold The distance in pixels to consider as 'near'.
-     */
     private checkNearObstacle(threshold: number = 10): void {
         if (!this.ballonContainer) return;
         let near = false;
@@ -371,22 +332,12 @@ export class Game extends Scene {
         setTimeout(() => {
             this.gameStartTime = Date.now();
             this.countdownDone = true;
-            // Show initial interlude for troposfeer after a short delay
             setTimeout(() => {
                 this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
                         this.troposfeerSound.play();
                 EventBus.emit('show-interlude', 0);
             }, 1000);
             
-            // Spawn initial power-up for troposfeer
-            this.checkPowerUpSpawn(0);
-            // Start troposfeer sound
-            // if (this.sound && this.sound.locked === false) {
-            //     // if (this.sound.get('troposfeer')) {
-            //         this.sound.play('troposfeer', { loop: true, volume: 0.4 });
-                    
-            //     // }
-            // }
         }, 3000);
         
         this.rotary = getRotaryClient();
@@ -400,10 +351,7 @@ export class Game extends Scene {
     }
 
     private setupInput() {
-        // Keyboard pijltjes als fallback/debug
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
-        // this.enterKey = null; // verwijderd, niet gebruikt
-        // this.wasEnterDown = false; // verwijderd, niet gebruikt
         this.wasButtonPressed = false;
     }
 
@@ -533,7 +481,6 @@ export class Game extends Scene {
             this.windBlauw = null;
             this.windRood = null;
 
-            // Start lager dan normaal
             const startY = this.scale.height * 0.90;
             const targetY = this.scale.height * 0.85;
             this.ballonContainer = this.add.container(
@@ -543,8 +490,7 @@ export class Game extends Scene {
             );
             this.ballonContainer.setDepth(1002);
 
-            // Eerst ballon los omhoog laten gaan, dan pas bg swipen
-            this.scene.pause(); // Pauzeer de scene zodat update() niet direct alles beweegt
+            this.scene.pause(); 
             this.tweens.add({
                 targets: this.ballonContainer,
                 y: targetY,
@@ -554,7 +500,7 @@ export class Game extends Scene {
                     this.sound.play('alien-cheers', { volume: 0.4 });
                 },
                 onComplete: () => {
-                    this.scene.resume(); // Start nu pas de rest van de game
+                    this.scene.resume(); 
                 }
             });
         } catch (e) {
@@ -574,16 +520,12 @@ export class Game extends Scene {
                 
         this.ballonHealth--;
         this.updateWindEffects();
-        // Speel geluid af als je op 1 hartje komt
         if (this.ballonHealth === 1) {
             this.sound.play('alien-sad', { volume: 0.7 });
         }
         this.ballonInvulnerable = true;
         EventBus.emit('update-health', this.ballonHealth);
         EventBus.emit('show-hit-emotion');
-        // Play hit sound at lower volume
-        // if (this.sound && this.sound.get('hit')) {
-        // }
         
         if (this.ballon) {
             this.tweens.add({
@@ -598,7 +540,6 @@ export class Game extends Scene {
                 }
             });
             
-            // Change balloon texture based on health (only if no power-up is active)
             if (!this.activePowerUp) {
                 if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                     this.ballon.setTexture('balloon-health2');
@@ -607,7 +548,6 @@ export class Game extends Scene {
                     this.ballon.setTexture('balloon-health1');
                 }
             }
-            // Zet propellor stand afhankelijk van health
             if (!this.activePowerUp) {
                 if (this.ballonHealth <= 1) {
                     this.setPropellorPositions('tilted');
@@ -622,7 +562,6 @@ export class Game extends Scene {
         }
         
         if (this.ballonHealth <= 0) {
-            // Wind sprites verwijderen bij game over
             if (this.windBlauw) {
                 this.windBlauw.destroy();
                 this.windBlauw = null;
@@ -631,24 +570,6 @@ export class Game extends Scene {
                 this.windRood.destroy();
                 this.windRood = null;
             }
-            // Start death sequence
-            // console.log('Ballon health op 0, starten game over sequence.');
-            // const soundManagerAny = this.sound as any;
-            //         let tropoSounds: any[] = [];
-            //         if (this.sound.get && this.sound.get('stratosfeer')) {
-            //             tropoSounds.push(this.sound.get('stratosfeer'));
-            //         }
-            //         if (Array.isArray(soundManagerAny.sounds)) {
-            //             tropoSounds = tropoSounds.concat(
-            //                 soundManagerAny.sounds.filter((s: any) => s && s.key === 'stratosfeer')
-            //             );
-            //         }
-            //         // Uniek maken
-            //         tropoSounds = [...new Set(tropoSounds)];
-            //         for (const s of tropoSounds) {
-            //             if (s && s.stop) s.stop();
-            //             if (s && s.destroy) s.destroy();
-            //         }
             this.isGamePaused = false;
             this.gameOverSwipeStarted = false;
             EventBus.emit('hide-gameui');
@@ -664,7 +585,6 @@ export class Game extends Scene {
         this.firstMeteorSpawned = false;
         this.spawnObstacle();
 
-        // Obstakels blijven spawnen
         if (this.obstacleSpawnTimer) {
             this.obstacleSpawnTimer.remove(false);
         }
@@ -673,7 +593,6 @@ export class Game extends Scene {
             loop: true,
             callback: () => {
                 this.spawnObstacle();
-                // Reset timer met nieuwe delay voor variatie
                 if (this.obstacleSpawnTimer) {
                     this.obstacleSpawnTimer.reset({
                         delay: this.getObstacleSpawnDelay(),
@@ -687,19 +606,6 @@ export class Game extends Scene {
     }
 
     private getObstacleSpawnDelay(): number {
-        // Lagere delays voor meer obstakels
-        // if (this.huidigeSfeerIndex === 2) { // Mesosfeer - meteors
-        //     if (this.firstMeteorSpawned) {
-        //         console.log('extra lange delay voor eerste meteoriet');
-        //         // Eerste meteoriet: extra lang wachten
-        //         // this.firstMeteorSpawned = false; // Reset voor volgende keer
-        //         return Phaser.Math.Between(5000, 5500);
-        //     } else {
-        //         // Daarna sneller
-        //         console.log('normale delay voor volgende meteorieten');
-        //         return Phaser.Math.Between(2500, 4000);
-        //     }
-        // }
         const delays = [
             Phaser.Math.Between(2500, 5000),  // Troposfeer - birds
             Phaser.Math.Between(2500, 4000),  // Stratosfeer - planes (meer vliegtuigen)
@@ -732,61 +638,45 @@ export class Game extends Scene {
         try {
             let x, y, direction, speed;
 
-            // Calculate current sfeer's screen Y position range
             const currentSfeerCenterY = this.sfeerBaseY[this.huidigeSfeerIndex] + this.sfeerOffsetY;
             const currentSfeerHeight = this.sfeerHoogtes[this.huidigeSfeerIndex];
             const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
-            // const currentSfeerBottom = currentSfeerCenterY + (currentSfeerHeight / 2);
 
-            // Start spawning only when we're 10% into the sfeer
             if (this.huidigeSfeerIndex === 2) {
-                let startSpawnThreshold = 768*2; // Original threshold
+                let startSpawnThreshold = 768*2; 
                 if (currentSfeerTop > -startSpawnThreshold) {
-                    // We haven't progressed enough into this sfeer yet
                     return;
                 }
             }
             if (this.huidigeSfeerIndex === 4) {
-                let startSpawnThreshold = 768*3; // Original threshold
+                let startSpawnThreshold = 768*3; 
                 if (currentSfeerTop > -startSpawnThreshold) {
-                    // We haven't progressed enough into this sfeer yet
+
                     return;
                 }
             }
             else {
                 const startSpawnThreshold = 500;
                 if (currentSfeerTop > -startSpawnThreshold) {
-                    // We haven't progressed enough into this sfeer yet
                     return;
                 }
             }
 
-            // Laat obstakels tot bijna het einde van de sfeer spawnen (laatste 5% niet meer)
-            // const stopSpawnThreshold = currentSfeerHeight * 0.05;
-            // if (currentSfeerTop < -currentSfeerHeight + stopSpawnThreshold) {
-            //     // We're too close to the end of this sfeer
-            //     return;
-            // }
 
             if (config.movementType === 'vertical') {
-                direction = Math.random() < 0.5 ? 1 : -1; // Random left or right
-                // Adjust spawn position based on direction to avoid going off screen
+                direction = Math.random() < 0.5 ? 1 : -1; 
                 if (direction === -1) {
-                    // Moving left, spawn more to the right
                     x = Phaser.Math.Between(this.scale.width * 0.5, this.scale.width - 100);
                 } else {
-                    // Moving right, spawn more to the left
+               
                     x = Phaser.Math.Between(100, this.scale.width * 0.5);
                 }
                 y = -100;
                 speed = Phaser.Math.Between(8, 12);
-                // Markeer dat de eerste meteoriet is gespawned
                 if (this.huidigeSfeerIndex === 2 && config.texture === 'meteor-falling' && !this.firstMeteorSpawned) {
-                    console.log('Eerste meteoriet gespawned!');
                     this.firstMeteorSpawned = true;
                 }
             } else {
-                // --- ALLE HORIZONTALE OBSTAKELS: van beide kanten, max 2x zelfde kant ---
                 let fromLeft;
                 const typeKey = config.texture;
                 if (!this.lastObstacleSides[typeKey]) this.lastObstacleSides[typeKey] = [];
@@ -802,13 +692,11 @@ export class Game extends Scene {
                 } else {
                     fromLeft = Math.random() < 0.5;
                 }
-                // Sla kant op
                 last.push(fromLeft ? 1 : -1);
                 if (last.length > 5) last.shift();
                 x = fromLeft ? -200 : this.scale.width + 200;
                 y = -200;
                 direction = fromLeft ? 1 : -1;
-                // Variabele snelheid per sfeer en type
                 let minSpeed = 2, maxSpeed = 3;
                 switch (this.huidigeSfeerIndex) {
                     case 0: // Troposfeer - birds
@@ -817,7 +705,7 @@ export class Game extends Scene {
                     case 1: // Stratosfeer - planes
                         minSpeed = 2; maxSpeed = 3;
                         break;
-                    case 2: // Mesosfeer - meteors (should be vertical, but just in case)
+                    case 2: // Mesosfeer - meteors 
                         minSpeed = 0.5; maxSpeed = 1;
                         break;
                     case 3: // Thermosfeer - satellites
@@ -849,7 +737,6 @@ export class Game extends Scene {
             (obstacle as any).obstacleType = config.texture;
             (obstacle as any).movementType = config.movementType;
 
-            // Add flying animation for birds
             if (config.texture === 'bird-walk') {
                 (obstacle as any).flyingOffset = 0;
                 (obstacle as any).flyingSpeed = Phaser.Math.Between(2, 4);
@@ -905,8 +792,7 @@ export class Game extends Scene {
         if (this.isGameOverSwiping) return;
         this.isGameOverSwiping = true;
         
-        const GAMEOVER_SWIPE_DURATION = 1200; // Sync met hoofdgame
-        // Swipe alleen backgrounds, sfeerRects en ballonContainer (geen obstakels of powerUps)
+        const GAMEOVER_SWIPE_DURATION = 1200; 
         const allGameObjects = [
             this.bgTroposfeer,
             this.bgStratosfeer,
@@ -934,16 +820,13 @@ export class Game extends Scene {
             this.isGamePaused = false;
 
             this.sound.play('button-click', { volume: 0.5 });
-            // Calculate total paused duration
             if (this.pauseBeganAt) {
                 this.totalPausedDuration += Date.now() - this.pauseBeganAt;
             }
-            // Resume power-up timer if paused
             if (this.activePowerUp && this.powerUpPausedRemaining !== null) {
                 this.powerUpEndTime = Date.now() + this.powerUpPausedRemaining;
                 this.powerUpPausedRemaining = null;
             }
-            // Resume obstacle spawn timer if paused
             if (this.obstacleSpawnPausedRemaining !== null) {
                 if (this.obstacleSpawnTimer) {
                     this.obstacleSpawnTimer.remove(false);
@@ -953,7 +836,6 @@ export class Game extends Scene {
                     loop: true,
                     callback: () => {
                         this.spawnObstacle();
-                        // Reset timer met nieuwe delay voor variatie
                         if (this.obstacleSpawnTimer) {
                             this.obstacleSpawnTimer.reset({
                                 delay: this.getObstacleSpawnDelay(),
@@ -966,7 +848,6 @@ export class Game extends Scene {
                 });
                 this.obstacleSpawnPausedRemaining = null;
             }
-            // Force stop snor sound on every resume, regardless of isPlaying state
             if (this.sound && this.sound.get && this.sound.get('snor')) {
                 console.log('[Game] Stopping snor sound on resume.');
                 const snorSound = this.sound.get('snor');
@@ -978,22 +859,17 @@ export class Game extends Scene {
             this.pauseStartTime = null;
             this.pauseBeganAt = null;
             EventBus.emit('hide-pauseui');
-            EventBus.emit('game-resume'); // Notify UI to resume
+            EventBus.emit('game-resume'); 
             console.log('[Game] Pausing game scene via event.');
         }
         
     }
-
-    // handlePauseGameScene removed: pausing handled by App.vue
-
     // ==================== INPUT HANDLING ====================
 
     private handlePauseInput() {
-        // Rotary button
         const buttonRaw = this.rotary?.buttonPressed;
         const buttonPressed = typeof buttonRaw === 'boolean' || typeof buttonRaw === 'number' ? !!buttonRaw : false;
 
-        // Keyboard support: Enter of Space
         const enterKey = this.input.keyboard?.addKey('ENTER');
         const spaceKey = this.input.keyboard?.addKey('SPACE');
         const enterDown = !!(enterKey && enterKey.isDown);
@@ -1009,20 +885,17 @@ export class Game extends Scene {
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
             this.pauseBeganAt = Date.now();
-            // Pause power-up timer if active
             if (this.activePowerUp && this.powerUpEndTime > Date.now()) {
                 this.powerUpPausedRemaining = this.powerUpEndTime - Date.now();
             }
-            // Pause obstacle spawn timer if active
             if (this.obstacleSpawnTimer && this.obstacleSpawnTimer.getProgress() < 1) {
                 const remaining = this.obstacleSpawnTimer.delay - (this.obstacleSpawnTimer.getElapsed());
                 this.obstacleSpawnPausedRemaining = remaining > 0 ? remaining : 0;
                 this.obstacleSpawnTimer.remove(false);
                 this.obstacleSpawnTimer = null;
             }
-            // this.pauseHoldSource = 'rotary'; // verwijderd, niet gebruikt
             EventBus.emit('show-pauseui');
-            EventBus.emit('game-pause'); // Notify UI to pause
+            EventBus.emit('game-pause'); 
         }
         this.wasButtonPressed = buttonPressed;
 
@@ -1034,20 +907,17 @@ export class Game extends Scene {
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
             this.pauseBeganAt = Date.now();
-            // Pause power-up timer if active
             if (this.activePowerUp && this.powerUpEndTime > Date.now()) {
                 this.powerUpPausedRemaining = this.powerUpEndTime - Date.now();
             }
-            // Pause obstacle spawn timer if active
             if (this.obstacleSpawnTimer && this.obstacleSpawnTimer.getProgress() < 1) {
                 const remaining = this.obstacleSpawnTimer.delay - (this.obstacleSpawnTimer.getElapsed());
                 this.obstacleSpawnPausedRemaining = remaining > 0 ? remaining : 0;
                 this.obstacleSpawnTimer.remove(false);
                 this.obstacleSpawnTimer = null;
             }
-            // this.pauseHoldSource = 'keyboard'; // verwijderd, niet gebruikt
             EventBus.emit('show-pauseui');
-            EventBus.emit('game-pause'); // Notify UI to pause
+            EventBus.emit('game-pause'); 
         }
         (this as any)._keyboardWasDown = keyboardDown;
     }
@@ -1084,38 +954,19 @@ export class Game extends Scene {
     private updateGameOverSequence() {
 
         EventBus.emit('hide-interlude');
-        // 1. Tijdens het vallen van de ballon: alleen de huidige sfeer als stilstaande achtergrond
-        // const sfeerBgs = [this.bgTroposfeer, this.bgStratosfeer, this.bgMesosfeer, this.bgThermosfeer, this.bgExosfeer]; // verwijderd, niet gebruikt
-        // for (let i = 0; i < sfeerBgs.length; i++) {
-        //     const bg = sfeerBgs[i];
-        //     if (bg) {
-        //         if (i === this.huidigeSfeerIndex) {
-        //             bg.y = this.scale.height;
-        //             bg.setVisible(true);
-        //             bg.setAlpha(1);
-        //             bg.setDepth(-200);
-        //         } else {
-        //             bg.setVisible(false);
-        //             bg.setAlpha(0);
-        //         }
-        //     }
-        // }
 
-        // 2. Ballon valt naar beneden zolang hij bestaat
         if (this.ballonContainer) {
             if (!this.hasPlayedScream) {
                 this.sound.play('alien-scream', { volume: 0.3 });
                 this.hasPlayedScream = true;
             }
-            this.ballonContainer.y += 18; // Snelheid van vallen
-            // Als ballon uit beeld is, verwijder hem en start sfeer scroll-back (swipe-in gebeurt pas na scroll)
+            this.ballonContainer.y += 18; 
             if (
                 this.ballonHealth <= 0 &&
                 this.ballonContainer &&
                 !this.gameOverSwipeStarted &&
                 this.ballonContainer.y - (this.ballon?.height ?? 100) > this.scale.height + 100
             ) {
-                // Verwijder ballonContainer en ballon
                 this.ballonContainer.destroy();
                 this.ballonContainer = null;
                 this.ballon = null;
@@ -1123,19 +974,16 @@ export class Game extends Scene {
             }
         }
 
-        // 3. Als ballon weg is en swipe nog niet gestart, swipe de huidige bg en sfeerRects naar boven
         if (
             this.ballonHealth <= 0 &&
             !this.ballonContainer &&
             this.gameOverSwipeStarted
         ) {
-            this.gameOverSwipeStarted = false; // voorkom dubbele animatie
+            this.gameOverSwipeStarted = false; 
             if (this.huidigeSfeerIndex === 0) {
-                // In troposfeer: swipe direct naar GameOver
                 this.scene.launch('GameOver');
                 EventBus.emit('gameover-swipe-in');
             } else {
-                // Andere sferen: sfeer scroll-back animatie
                 const startOffset = this.sfeerOffsetY;
                 let lastTweenValue = startOffset;
                 const troposfeerHeight = this.sfeerHoogtes[0];
@@ -1208,14 +1056,10 @@ export class Game extends Scene {
 
     private updateScroll() {
         const scrollSpeeds = [5, 7, 9, 11, 12];
-        // const scrollSpeeds = [200, 200, 200, 200, 200];
-        // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;
         }
-        // const scrollSpeeds = [200, 200, 200, 200, 200];
         
-        // Health-based speed modifier: 3 hearts = 100%, 2 hearts = 85%, 1 heart = 70%
         let healthSpeedModifier = 1.0;
         if (this.ballonHealth === 2) {
             healthSpeedModifier = 0.90;
@@ -1231,12 +1075,9 @@ export class Game extends Scene {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
         }
-        // Obstakels en powerUps meescrollen met sfeerOffsetY
-        // (de y-positie wordt alleen hier aangepast, niet elders)
     }
 
     private updateBackgrounds() {
-        // Normale stacking: backgrounds meescrollen met sfeerOffsetY
         if (this.bgTroposfeer) {
             this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
         }
@@ -1251,7 +1092,6 @@ export class Game extends Scene {
         }
         if (this.bgExosfeer && this.bgThermosfeer) {
             this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
-            // Extend exosfeer upwards if needed
             const cameraTop = this.cameras.main.scrollY;
             const exosfeerTop = this.bgExosfeer.y - this.bgExosfeer.displayHeight;
             if (cameraTop < exosfeerTop) {
@@ -1264,7 +1104,6 @@ export class Game extends Scene {
         for (const obstacle of this.obstacles) {
             obstacle.y += this.smoothScrollSpeed;
 
-            // UFO bobbing effect (op en neer bewegen)
             if ((obstacle as any).obstacleType === 'ufo') {
                 if (!(obstacle as any).bobbingOffset) {
                     (obstacle as any).bobbingOffset = Math.random() * Math.PI * 2;
@@ -1292,11 +1131,9 @@ export class Game extends Scene {
         }
         
         if (this.huidigeSfeerIndex !== sfeerIndex) {
-            // Reset meteoriet-flag als je de mesosfeer verlaat
             if (this.huidigeSfeerIndex === 2 && sfeerIndex !== 2) {
                 this.firstMeteorSpawned = false;
             }
-            // Reset obstacleSpawnTimer bij binnenkomst mesosfeer
             if (sfeerIndex === 2 && this.huidigeSfeerIndex !== 2) {
                 if (this.obstacleSpawnTimer) {
                     this.obstacleSpawnTimer.remove(false);
@@ -1317,14 +1154,11 @@ export class Game extends Scene {
                     }
                 });
             }
-            // Toon interlude iets eerder: aan het einde van de vorige sfeer
             if (this.countdownDone && sfeerIndex > 0 && sfeerIndex > this.lastSfeerIndex) {
-                // Bepaal progressie in vorige sfeer
                 const prevSfeerIndex = sfeerIndex - 1;
                 const prevSfeerHeight = this.sfeerHoogtes[prevSfeerIndex];
                 const prevSfeerBaseY = this.sfeerBaseY[prevSfeerIndex];
                 const prevSfeerTop = prevSfeerBaseY - prevSfeerHeight / 2;
-                // const prevSfeerBottom = prevSfeerBaseY + prevSfeerHeight / 2; // verwijderd, niet gebruikt
                 const centerWorldY = (this.scale.height / 2) - this.sfeerOffsetY;
                 const progressInPrevSfeer = 1 - ((centerWorldY - prevSfeerTop) / prevSfeerHeight);
                 if (progressInPrevSfeer > 0.70) {
@@ -1335,15 +1169,14 @@ export class Game extends Scene {
             this.huidigeSfeerIndex = sfeerIndex;
             EventBus.emit('update-sfeer', SFEER_LABELS[sfeerIndex].naam);
             this.checkPowerUpSpawn(sfeerIndex);
-            this.spawnAlien(); // Spawn de alien direct bij sfeerwissel
+            this.spawnAlien();
             this.lastSfeerIndex = sfeerIndex;
             console.log('------------------------------------');
             console.log(this.sound);
 
             console.log(this.sound.locked)
             if (this.sound.locked === false) {
-                // Crossfade logica: fade huidige sfeer sound uit, nieuwe in, met overlap
-                const FADE_TIME = 1500; // ms
+                const FADE_TIME = 1500; 
                 let oldSound: Phaser.Sound.BaseSound | null = null;
                 let newSound: Phaser.Sound.BaseSound | null = null;
                 let newKey = '';
@@ -1358,13 +1191,11 @@ export class Game extends Scene {
                     oldSound = this.troposfeerSound || this.stratosfeerSound;
                 }
 
-                // Start nieuwe sound op volume 0
                 if (newKey) {
                     newSound = this.sound.add(newKey, { loop: true, volume: 0 });
                     newSound.play();
                 }
 
-                // Fade out oude sound, fade in nieuwe sound
                 if (oldSound && oldSound.isPlaying) {
                     this.tweens.add({
                         targets: oldSound,
@@ -1387,7 +1218,6 @@ export class Game extends Scene {
                     });
                 }
 
-                // Update references
                 if (sfeerIndex === 0) {
                     this.troposfeerSound = newSound;
                     if (this.stratosfeerSound) { this.stratosfeerSound = null; }
@@ -1413,7 +1243,6 @@ export class Game extends Scene {
         const scrolled = Math.min(this.sfeerOffsetY, totalHeight);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
         
-        // Calculate meters: 0m at start, 1000m at top (rounded to nearest meter)
         const metersClimbed = Math.round(progress * 1000);
         
         EventBus.emit('update-sfeer-progress', progress);
@@ -1430,11 +1259,8 @@ export class Game extends Scene {
                 if ((window as any).gameDurationMs === undefined) {
                     (window as any).gameDurationMs = duration;
                 }
-                // Zet altijd de totale pauzetijd op window zodat GameVictory deze kan uitlezen
                 (window as any).totalPausedDuration = this.totalPausedDuration;
             }
-            // Speel victory sound alleen hier
-            // this.sound.play('alien-cheers', { volume: 0.8 });
             this.isVictorySequence = true;
             this.isBalloonLeaving = true;
             EventBus.emit('hide-gameui');
@@ -1443,9 +1269,7 @@ export class Game extends Scene {
 
     private updateTimer() {
         if (!this.countdownDone || this.gameStartTime === 0) return;
-        // If paused, don't update timer
         if (this.isGamePaused) return;
-        // Subtract total paused duration from elapsed
         const elapsed = Date.now() - this.gameStartTime - this.totalPausedDuration;
         const seconds = Math.floor(elapsed / 1000);
         const minutes = Math.floor(seconds / 60);
@@ -1457,13 +1281,11 @@ export class Game extends Scene {
     private updateBalloonMovement() {
         if (!this.ballonContainer) return;
         if (this.ballonHealth <= 0) return;
-        // Ballon mag altijd bewegen, ook bij 0 levens
 
         let deltaX = 0;
         let propellorLeftActive = false;
         let propellorRightActive = false;
 
-        // Rotary input
         if (this.rotary && Array.isArray(this.rotary.lastAngles) && Array.isArray(this.rotary.prevAngles)) {
             const angles = this.rotary.lastAngles;
             const prevs = this.rotary.prevAngles;
@@ -1477,7 +1299,6 @@ export class Game extends Scene {
                 const diff1 = angleDiff(angles[0], prevs[0]); // rechts
                 const diff2 = angleDiff(angles[1], prevs[1]); // links
 
-                // Rotary1: naar rechts, Rotary2: naar links
                 if (Math.abs(diff1) > threshold) {
                     EventBus.emit('rotary1-move');
                     deltaX += Math.abs(diff1); // rechts
@@ -1487,11 +1308,9 @@ export class Game extends Scene {
                     deltaX -= Math.abs(diff2); // links
                 }
 
-                // this._lastRotaryDiffs = [diff1, diff2]; // verwijderd, niet gebruikt
             }
         }
 
-        // Keyboard pijltjes als fallback
         if (this.cursors) {
             if (this.cursors.left?.isDown) {
                 deltaX -= 8;
@@ -1501,7 +1320,6 @@ export class Game extends Scene {
             }
         }
 
-        // Propellor animatie: als ballon naar links/rechts beweegt
         if (deltaX < 0) {
             propellorLeftActive = true;
         }
@@ -1509,19 +1327,15 @@ export class Game extends Scene {
             propellorRightActive = true;
         }
 
-        // Update propellor animations (override sensorXActive)
         this.updatePropellorAnimation(this.propellorBlauw, propellorRightActive);
         this.updatePropellorAnimation(this.propellorRood, propellorLeftActive);
 
-        // Update wind effects
         this.updateWindSprite(propellorRightActive, propellorLeftActive);
 
-        // Apply movement
         if (deltaX !== 0) {
             this.ballonContainer.x += deltaX;
         }
 
-        // Keep balloon in bounds
         const bounds = this.ballonContainer.getBounds();
         if (bounds.left < 0) this.ballonContainer.x += -bounds.left;
         if (bounds.right > this.scale.width) this.ballonContainer.x -= (bounds.right - this.scale.width);
@@ -1550,7 +1364,6 @@ export class Game extends Scene {
     private updateWindSprite(sensor1Active: boolean, sensor2Active: boolean) {
         if (!this.ballonContainer) return;
         
-        // Wind blauw
         if (sensor1Active) {
             if (!this.windBlauw) {
                 let x = this.ballonContainer.x + this.propellorOffsetXBlauw + 30;
@@ -1565,7 +1378,6 @@ export class Game extends Scene {
                     'wind-blauw'
                 ).setDepth(1002).setScale(0.4);
                 this.windBlauw.play({ key: 'wind-blauw', repeat: 0 });
-                // Forceer juiste rotatie direct na aanmaken
                 if (this.ballonHealth === 1) {
                     this.windBlauw.setRotation(0.26);
                 } else {
@@ -1578,7 +1390,6 @@ export class Game extends Scene {
                     }
                 });
             } else {
-                // Forceer juiste rotatie als sprite al bestaat
                 if (this.ballonHealth === 1) {
                     this.windBlauw.setRotation(0.26);
                 } else {
@@ -1592,7 +1403,6 @@ export class Game extends Scene {
             }
         }
         
-        // Wind rood
         if (sensor2Active) {
             if (!this.windRood) {
                 let x = this.ballonContainer.x + this.propellorOffsetXRood - 30;
@@ -1607,7 +1417,6 @@ export class Game extends Scene {
                     'wind-rood'
                 ).setDepth(1002).setScale(0.4);
                 this.windRood.play({ key: 'wind-rood', repeat: 0 });
-                // Forceer juiste rotatie direct na aanmaken
                 if (this.ballonHealth === 1) {
                     this.windRood.setRotation(0.26);
                 } else {
@@ -1620,7 +1429,6 @@ export class Game extends Scene {
                     }
                 });
             } else {
-                // Forceer juiste rotatie als sprite al bestaat
                 if (this.ballonHealth === 1) {
                     this.windRood.setRotation(0.26);
                 } else {
@@ -1635,16 +1443,13 @@ export class Game extends Scene {
         }
     }
 
-    // Offset-waarden voor makkelijk testen (nu als class properties)
 
     private updateWindEffects() {
         if (this.ballonHealth <= 0) {
-            // Wind moet niet meer zichtbaar zijn
             if (this.windBlauw) { this.windBlauw.setVisible(false); }
             if (this.windRood) { this.windRood.setVisible(false); }
             return;
         }
-        // ...existing code...
         if (this.windBlauw && this.ballonContainer) {
             if (this.ballonHealth === 2) {
                 this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
@@ -1682,11 +1487,8 @@ export class Game extends Scene {
             const direction = (obstacle as any).direction;
             const movementType = (obstacle as any).movementType || 'horizontal';
             
-            // Check if obstacle should be frozen
             const isFrozen = obstacle.getData('frozen');
             
-            // Once frozen, stay frozen until power-up ends
-            // Only check distance for obstacles that aren't already frozen
             if (!isFrozen && this.freezeActive) {
                 this.setPropellorPositions('normal');
                 const distanceToBalloon = Phaser.Math.Distance.Between(
@@ -1698,7 +1500,6 @@ export class Game extends Scene {
                     obstacle.setData('frozen', true);
                     
                         this.sound.play('freeze', { volume: 0.6 });
-                    // Change plane texture to frozen version if it's a plane
                     if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
                         console.log('Freezing plane obstacle');
                         obstacle.setTexture('plane-freeze');
@@ -1707,11 +1508,9 @@ export class Game extends Scene {
                 }
             }
             
-            // Update obstacle position only if not frozen
             if (!isFrozen) {
                 if (movementType === 'vertical') {
                     obstacle.y += speed;
-                    // Add horizontal drift for meteors
                     if ((obstacle as any).obstacleType === 'meteor-falling') {
                         obstacle.x += direction * 3;
                     }
@@ -1719,7 +1518,6 @@ export class Game extends Scene {
                     if (!direction) (obstacle as any).direction = 1;
                     obstacle.x += speed * direction;
                     
-                    // Add flying animation for birds
                     if ((obstacle as any).obstacleType === 'bird-walk') {
                         (obstacle as any).flyingOffset += (obstacle as any).flyingSpeed * 0.1;
                         obstacle.y += Math.sin((obstacle as any).flyingOffset) * 1.5;
@@ -1727,7 +1525,6 @@ export class Game extends Scene {
                 }
             }
             
-            // Remove if off screen
             if (movementType === 'vertical') {
                 if (obstacle.y > this.scale.height + obstacle.displayHeight + 100) {
                     obstacle.destroy();
@@ -1743,12 +1540,8 @@ export class Game extends Scene {
                 }
             }
             
-            // Check collision
             if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
-                // ...existing code...
-                // If shield is active, destroy obstacle but don't damage balloon
                 if (this.shieldActive) {
-                                        // Speel shield-hit geluid af
                     this.sound.play('hit-metal', { volume: 0.5 });
                     this.setPropellorPositions('normal');
                     const x = obstacle.x;
@@ -1758,8 +1551,6 @@ export class Game extends Scene {
                     const obstacleScaleX = obstacle.scaleX;
                     obstacle.destroy();
                     
-                    // Play destruction animations without damaging balloon
-                    // Bird death animation
                     if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
                         const xOffset = obstacleScaleX < 0 ? -100 : 100;
                         const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
@@ -1795,7 +1586,6 @@ export class Game extends Scene {
                         });
                     }
                     
-                    // Meteor breaking animation
                     if (obstacleType === 'meteor-falling' && this.textures.exists('meteor-breaking')) {
                         const breakingMeteor = this.physics.add.sprite(x+30, y+60, 'meteor-breaking')
                             .setScale(1)
@@ -1821,7 +1611,6 @@ export class Game extends Scene {
                         }
                     }
                     
-                    // Plane crashing animation
                     if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
                         const xOffset = obstacleScaleX < 0 ? -100 : 100;
                         const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-crashing')
@@ -1848,7 +1637,6 @@ export class Game extends Scene {
                         }
                     }
                     
-                    // Satellite breaking animation
                     if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
                         const xOffset = obstacleScaleX < 0 ? 0 : 0;
                         const breakingSattelite = this.physics.add.sprite(x + xOffset, y-50, 'sattelite-breaking')
@@ -1874,7 +1662,6 @@ export class Game extends Scene {
                             });
                         }
                     }
-                    // UFO breaking animation
                     if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
                         const breakingUfo = this.physics.add.sprite(x, y, 'ufo-breaking')
                             .setScale(0.5, 0.5)
@@ -1941,11 +1728,9 @@ export class Game extends Scene {
               
                     this.obstacles.splice(i, 1);
                 } else {
-                    // Normal collision - damage balloon
                     this.damageBallon();
                     this.ballonInvulnerable = true;
                     
-                    // Camera shake effect
                     this.cameras.main.shake(500, 0.01);
                     
                     this.time.delayedCall(1000, () => {
@@ -1956,16 +1741,13 @@ export class Game extends Scene {
                     const y = obstacle.y;
                     const parent = obstacle.parentContainer;
                     const obstacleType = (obstacle as any).obstacleType;
-                    const obstacleScaleX = obstacle.scaleX; // Save scale for mirroring
+                    const obstacleScaleX = obstacle.scaleX; 
                     obstacle.destroy();
                 
-                    // Bird death animation
                     if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
-                    // Adjust x offset based on direction (if mirrored, offset should be negative)
                     const xOffset = obstacleScaleX < 0 ? -100 : 100;
                     const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
-                        .setScale(obstacleScaleX, 1) // Use the same horizontal scale (mirroring) as the original bird
-                        .setDepth(50)
+                        .setScale(obstacleScaleX, 1) 
                         .setOrigin(0.5);
                     if (parent) parent.add(deadObstacle);
                     
@@ -2024,11 +1806,9 @@ export class Game extends Scene {
                 
                 // Plane crashing animation
                 if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
-                    // Adjust x offset based on direction (if mirrored, offset should be negative)
                     const xOffset = obstacleScaleX < 0 ? -100 : 100;
                     const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-crashing')
-                        .setScale(obstacleScaleX, 1) // Use the same horizontal scale (mirroring) as the original plane
-                        .setDepth(50)
+                        .setScale(obstacleScaleX, 1) 
                         .setOrigin(0.5);
                     if (parent) parent.add(crashingPlane);
                     
@@ -2141,14 +1921,12 @@ export class Game extends Scene {
             return;
         }
 
-        // Calculate spawn position based on sfeer's actual position and height
         const x = Phaser.Math.Between(150, this.scale.width - 150);
         const sfeerCenterY = this.sfeerBaseY[sfeerIndex] + this.sfeerOffsetY;
         const sfeerHeight = this.sfeerHoogtes[sfeerIndex];
         
         let minOffset = sfeerHeight * 0.3;
         let maxOffset = sfeerHeight * 0.6;
-        // Laat freeze power-up lager spawnen in de sfeer
         if (type === 'freeze') {
             minOffset = sfeerHeight * 0.55;
             maxOffset = sfeerHeight * 0.85;
@@ -2161,7 +1939,6 @@ export class Game extends Scene {
         const y = sfeerCenterY - (sfeerHeight / 2) + randomOffset;
 
         try {
-            // Kies kleur per type
             let circleColor = 0x00d9ff; // default blauw
             switch (type) {
                 case 'health': circleColor = 0xE73228; break; // groen
@@ -2169,7 +1946,6 @@ export class Game extends Scene {
                 case 'shield': circleColor = 0x26B31F; break; // geel
                 case 'timer':  circleColor = 0xFFB703; break; // paars
             }
-            // Maak twee cirkels achter de power-up
             const circle1 = this.add.circle(0, 0, 100, circleColor, 0.5)
                 .setDepth(98)
                 .setOrigin(0.5)
@@ -2187,7 +1963,6 @@ export class Game extends Scene {
                 .setDepth(100)
                 .setOrigin(0.5);
 
-            // Voeg cirkels en sprite toe aan container (cirkels eerst)
             const container = this.add.container(x, y, [circle1, circle2, powerUp]);
             container.setDepth(100);
             (container as any).powerUpSprite = powerUp;
@@ -2218,18 +1993,15 @@ export class Game extends Scene {
             container.x = (container as any).x;
             container.y = (container as any).baseY + (container as any).bobOffset;
 
-            // Puls: cirkels gaan van klein (0) naar groot (1), resetten naar 0
-            // Fade-out in laatste 7% van de animatie, zodat de pauze minimaal is
-            const speed = 1 / 1800; // 1.8 seconden per pulse
+            const speed = 1 / 1800;
             if ((container as any).circle1 && (container as any).circle2) {
                 const baseTime = this.time.now * speed + (container as any).circleAnimOffset;
-                // Circle 1
                 let p1 = baseTime % 1;
                 if (p1 < 0) p1 += 1;
                 let scale1 = p1;
                 let alpha1 = 1;
                 if (scale1 > 0.93) {
-                    alpha1 = 1 - ((scale1 - 0.93) / 0.07); // fade out van 1 naar 0 tussen 0.93 en 1
+                    alpha1 = 1 - ((scale1 - 0.93) / 0.07);
                 }
                 if (scale1 >= 1 || scale1 === 0) {
                     scale1 = 0;
@@ -2238,7 +2010,6 @@ export class Game extends Scene {
                 (container as any).circle1.setScale(scale1);
                 (container as any).circle1.setAlpha(Math.max(0, Math.min(1, alpha1)));
 
-                // Circle 2, kwart fase offset (0.25)
                 let p2 = (baseTime + 0.25) % 1;
                 if (p2 < 0) p2 += 1;
                 let scale2 = p2;
@@ -2255,7 +2026,6 @@ export class Game extends Scene {
             }
         }
 
-        // Remove power-ups that are off screen
         for (let i = this.powerUps.length - 1; i >= 0; i--) {
             if ((this.powerUps[i] as any).baseY > this.scale.height + 200) {
                 this.powerUps[i].destroy();
@@ -2274,7 +2044,6 @@ export class Game extends Scene {
                 const type = (container as any).powerUpType;
                 this.activatePowerUp(type);
 
-                // Play sound for health power-up
                 if (type === 'health') {
                     this.sound.play('pick-up', { volume: 0.5 });
                     this.time.delayedCall(1000, () => {
@@ -2283,7 +2052,6 @@ export class Game extends Scene {
                 } else {
                     this.sound.play('pick-up', { volume: 0.2 });
                 }
-                // Visual feedback
                 this.tweens.add({
                     targets: container,
                     scale: 0,
@@ -2302,7 +2070,6 @@ export class Game extends Scene {
                 if (this.ballonHealth < 3) {
                     this.ballonHealth++;
                     EventBus.emit('update-health', this.ballonHealth);
-                    // Update balloon texture based on new health (if no other power-up is active)
                     if (this.ballon && !this.activePowerUp) {
                         if (this.ballonHealth === 3 && this.textures.exists('balloon')) {
                             this.ballon.setTexture('balloon');
@@ -2318,10 +2085,9 @@ export class Game extends Scene {
             case 'freeze':
                 this.freezeActive = true;
                 this.activePowerUp = 'freeze';
-                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
+                this.powerUpEndTime = Date.now() + 10000; 
                 EventBus.emit('update-powerup', 'freeze');
                 
-                // Change balloon to freeze version
                 if (this.ballon && this.textures.exists('balloon-freeze')) {
                     this.ballon.setTexture('balloon-freeze');
                 }
@@ -2330,17 +2096,15 @@ export class Game extends Scene {
             case 'shield':
                 this.shieldActive = true;
                 this.activePowerUp = 'shield';
-                this.powerUpEndTime = Date.now() + 10000; // 10 seconds
+                this.powerUpEndTime = Date.now() + 10000; 
                 EventBus.emit('update-powerup', 'shield');
                 
-                // Change balloon to shield version
                 if (this.ballon && this.textures.exists('balloon-shield')) {
                     this.ballon.setTexture('balloon-shield');
                 }
                 break;
 
             case 'timer':
-                // Subtract 10 seconds from elapsed time
                 this.gameStartTime += 10000;
                 EventBus.emit('timer-update', '-10s');
                 break;
@@ -2350,18 +2114,15 @@ export class Game extends Scene {
     private updateActivePowerUp() {
         if (this.activePowerUp && Date.now() >= this.powerUpEndTime) {
             const powerUpType = this.activePowerUp;
-            // Clear power-up state and notify UI immediately
             this.activePowerUp = null;
             EventBus.emit('update-powerup', null);
 
             if (powerUpType === 'freeze') {
                 this.freezeActive = false;
-                // Unfreeze all frozen obstacles immediately
                 for (const obstacle of this.obstacles) {
                     if (obstacle.getData('frozen')) {
                         obstacle.clearTint();
                         obstacle.setData('frozen', false);
-                        // Change plane back to animated version
                         if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-flying')) {
                             obstacle.setTexture('plane-flying');
                             if (this.anims.exists('plane-flying')) {
@@ -2371,7 +2132,6 @@ export class Game extends Scene {
                         }
                     }
                 }
-                // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
                         this.ballon.setTexture('balloon').setScale(0.54);
@@ -2386,7 +2146,6 @@ export class Game extends Scene {
                 }
             } else if (powerUpType === 'shield') {
                 this.shieldActive = false;
-                // Change balloon back based on health
                 if (this.ballon && this.textures.exists('balloon')) {
                     if (this.ballonHealth === 3) {
                         this.ballon.setTexture('balloon').setScale(0.54);
@@ -2400,23 +2159,18 @@ export class Game extends Scene {
                     }
                 }
             }
-            // Zet de propellor posities afhankelijk van health
         }
     }
 
     private setPropellorPositions(mode: 'normal' | 'tilted') {
         if (!this.propellorBlauw || !this.propellorRood) return;
-        // Sync wind mode
-        // Let op: setRotation gebruikt radialen, setAngle gebruikt graden
         if (mode === 'tilted') {
             this.propellorBlauw.x = this.propellorOffsetXBlauw -5;
             this.propellorBlauw.y = this.propellorOffsetY - 15;
             this.propellorBlauw.setRotation(0.26); // ~15 graden
-            // this.propellorBlauw.setTint(0x3399ff); // debug: blauw
             this.propellorRood.x = this.propellorOffsetXRood-12;
             this.propellorRood.y = this.propellorOffsetY + 3;
             this.propellorRood.setRotation(0.26); // ~15 graden
-            // this.propellorRood.setTint(0xff3333); // debug: rood
         } else {
             this.propellorBlauw.x = this.propellorOffsetXBlauw;
             this.propellorBlauw.y = this.propellorOffsetY;
@@ -2425,13 +2179,11 @@ export class Game extends Scene {
             this.propellorRood.y = this.propellorOffsetY;
             this.propellorRood.setRotation(0);
         }
-        // Wind logica nu in updateWindEffects
     }
 
 
     
 
-    // setWindPositions verwijderd, logica zit nu in updateWindEffects
 
 }
 

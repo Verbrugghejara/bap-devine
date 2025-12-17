@@ -25,9 +25,6 @@ export class StoryTelling extends Scene {
     }
 
     create() {
-        // Reset skip button state
-        console.log('Creating StoryTelling scene');
-        console.log(this.sound)
         this.skipHoldStart = null;
         this.skipHoldProgress = 0;
         this.skipButtonIsDown = false;
@@ -40,25 +37,21 @@ export class StoryTelling extends Scene {
             .setOrigin(0.5)
             .setDepth(1000);
 
-        console.log('Video object:', video);
 
         video.on('play', () => {
-            console.log('Video started playing!');
             this.videoIsPlaying = true;
         });
 
-        // When video completes, go to next scene
         video.on('complete', () => {
             if (!this.isTransitioning) {
-                console.log('Video completed - going to TutorialBlue');
                 this.isTransitioning = true;
                 this.scene.start('TutorialBlue');
             }
         });
 
-        // video.setMute(true);
+        
         video.setMute(false);
-        video.setVolume(0.3); // Zet het volume lager
+        video.setVolume(0.3);
         video.play(false);
     }
     private createSkipButton() {
@@ -71,7 +64,6 @@ export class StoryTelling extends Scene {
         const gap = 32;
         const skipTextPadding = 12;
         
-        // Shadow
         const skipShadow = this.add.graphics();
         skipShadow.fillStyle(0xB68302, 1);
         skipShadow.fillRoundedRect(
@@ -83,13 +75,11 @@ export class StoryTelling extends Scene {
         );
         skipShadow.setDepth(1999);
         
-        // Background
         const skipBg = this.add.graphics();
         skipBg.fillStyle(0xFFB703, 1);
         skipBg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16);
         skipBg.setDepth(2000);
 
-        // Shining effects
         const shineTopLeft = this.add.graphics();
         shineTopLeft.fillStyle(0xFFFFFF, 0.4);
         shineTopLeft.fillRoundedRect(-buttonWidth / 2 +70, -buttonHeight / 2 -105, 16.844, 5.877, 3);
@@ -105,24 +95,20 @@ export class StoryTelling extends Scene {
         shineBottomRight.rotation = -33.256 * (Math.PI / 180);
 
         
-        // Text
         const skipText = this.add.text(0, 0, 'OVERSLAAN', {
             fontFamily: 'Bungee',
             fontSize: 50,
             color: '#ffffff',
         }).setOrigin(0, 0.5).setDepth(2001);
         
-        // Circle outline
         const skipCircle = this.add.graphics();
         skipCircle.lineStyle(8, 0xffffff, 1);
         skipCircle.strokeCircle(0, 0, circleRadius);
         skipCircle.setDepth(2002);
         
-        // Circle fill
         const skipFill = this.add.graphics();
         skipFill.setDepth(2003);
         
-        // Position elements
         const skipTotalWidth = circleRadius * 2 + gap + skipText.width + skipTextPadding * 2;
         skipCircle.x = -skipTotalWidth / 2 + circleRadius + skipTextPadding;
         skipCircle.y = 0;
@@ -131,7 +117,6 @@ export class StoryTelling extends Scene {
         skipText.x = skipCircle.x + circleRadius + gap;
         skipText.y = 0;
         
-        // Container
         const skipButton = this.add.container(buttonX, buttonY, [skipShadow, skipBg, skipCircle, skipFill,
             shineTopLeft,
             shineTopLeft2,
@@ -139,19 +124,16 @@ export class StoryTelling extends Scene {
         skipButton.setSize(buttonWidth, buttonHeight);
         skipButton.setDepth(2000);
         skipButton.setInteractive({ useHandCursor: true });
-        skipButton.setAlpha(0); // Start onzichtbaar
+        skipButton.setAlpha(0);
         skipButton.setScale(0.7);
 
-        // Store references
         this.skipFill = skipFill;
         this.skipCircleRadius = circleRadius;
         this.animTargets = [skipBg, skipCircle, skipFill, skipText, shineTopLeft, shineTopLeft2, shineBottomRight];
         this.skipButton = skipButton;
         this.skipButtonVisible = false;
 
-        // Click handler
         skipButton.on('pointerdown', () => {
-            console.log('Skip button clicked!');
             this.scene.start('TutorialBlue');
         });
     }
@@ -184,19 +166,17 @@ export class StoryTelling extends Scene {
     private handleButtonInput() {
         const buttonPressed = this.rotary?.buttonPressed || false;
 
-        // Keyboard support: Enter or Space
+        
         const enterKey = this.input.keyboard?.addKey('ENTER');
         const spaceKey = this.input.keyboard?.addKey('SPACE');
         const enterDown = !!(enterKey && enterKey.isDown);
         const spaceDown = !!(spaceKey && spaceKey.isDown);
 
-        // Separate state for rotary and keyboard
-        // Track last state for each input separately
+        
         if (typeof this._keyboardWasDown !== 'boolean') this._keyboardWasDown = false;
         const keyboardDown: boolean = enterDown || spaceDown;
 
 
-        // Rotary button logic (only if not holding from keyboard)
         if (this.videoIsPlaying && buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
             this.skipHoldSource = 'rotary';
@@ -240,7 +220,7 @@ export class StoryTelling extends Scene {
                             if (this.skipButton) this.skipButton.setAlpha(0);
                         }
                     });
-                }, 1500); // 1.5 seconde zichtbaar houden
+                }, 1500); 
             }
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
@@ -252,7 +232,6 @@ export class StoryTelling extends Scene {
         }
         this.wasButtonPressed = buttonPressed;
 
-        // Keyboard logic (only if not holding from rotary)
         if (this.videoIsPlaying && keyboardDown && !this._keyboardWasDown && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
             this.skipHoldSource = 'keyboard';
@@ -296,7 +275,7 @@ export class StoryTelling extends Scene {
                             if (this.skipButton) this.skipButton.setAlpha(0);
                         }
                     });
-                }, 1500); // 1.5 seconde zichtbaar houden
+                }, 1500); 
             }
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
@@ -308,7 +287,6 @@ export class StoryTelling extends Scene {
         }
         this._keyboardWasDown = keyboardDown;
 
-        // Check hold progress
         if (this.videoIsPlaying && this.skipHoldStart !== null && !this.isTransitioning) {
             const elapsed = Date.now() - this.skipHoldStart;
             this.skipHoldProgress = Math.min(1, elapsed / 2800);

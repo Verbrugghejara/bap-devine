@@ -243,20 +243,16 @@
       </div>
       
     </div>
-    <!-- <div class="distance-container"> -->
           <div class="distance">
             <p :style="{ color: `${SFEER_COLORS[sfeerIndex].d}` }">{{ distanceText }}</p>
           </div>
-        <!-- </div> -->
 
   </div>
 </template>
 
 <script setup lang="ts">
-// Angry alien (hit) event logic
 import { ref, watch } from 'vue';
 import { computed } from 'vue';
-// ...existing code...
 const hitTimeout = ref<number | null>(null);
 EventBus.on('show-hit-emotion', () => {
   if (hitTimeout.value) clearTimeout(hitTimeout.value);
@@ -267,10 +263,8 @@ EventBus.on('show-hit-emotion', () => {
     alienEnlarged.value = true;
     hitTimeout.value = window.setTimeout(() => {
       alienEnlarged.value = false;
-      // Terug naar juiste emotie na 3s
       if (nearObstacle.value) {
         currentAlienSVG.value = 'nearObstacle';
-        // Heractiveer de animatie
       } else if (health.value === 1) {
         currentAlienSVG.value = 'oneHeart';
       } else if (healthUpdated.value) {
@@ -285,7 +279,6 @@ EventBus.on('show-hit-emotion', () => {
 import { onMounted, onUnmounted } from 'vue';
 import { EventBus } from '../EventBus';
 import { SFEER_COLORS } from '../utils/sfeerLabels';
-// import { sfeerProgress as sfeerProgressStore } from '../utils/sfeerProgressStore'; // not used
 // --- Reactive state declarations ---
 const health = ref(3);
 const healthUpdated = ref(false);
@@ -300,18 +293,15 @@ const powerUpProgress = ref(0);
 const isPaused = ref(false);
 let powerUpPauseData: null | { remaining: number; powerUp: string } = null;
 
-// Reset UI state when game restarts
 function resetGameUI() {
   sfeerProgress.value = 0;
   sfeerIndex.value = 0;
-  // Force update for all watchers/computed
   EventBus.emit('update-sfeer-index', 0);
   EventBus.emit('update-sfeer-progress', 0);
   sfeerText.value = 'TROPOSFEER';
   timerText.value = '0:00';
   distanceText.value = '0';
   powerUpProgress.value = 0;
-  // Reset alien/progress SVG state
   currentAlienSVG.value = 'default';
   alienEnlarged.value = false;
   transitionClass.value = '';
@@ -327,7 +317,7 @@ function resumeGameUI() {
     const duration = 10000;
     let startTime = Date.now();
     const initialRemaining = powerUpPauseData.remaining;
-    const pauseData = powerUpPauseData; // capture for closure
+    const pauseData = powerUpPauseData; 
     const updateProgress = () => {
       if (isPaused.value) {
         powerUpPauseData = {
@@ -357,21 +347,18 @@ onUnmounted(() => {
   EventBus.off('game-pause', pauseGameUI);
   EventBus.off('game-resume', resumeGameUI);
 });
-// Geef elke powerup een andere kleur
 const powerUpBarColor = computed(() => {
   switch (activePowerUp.value) {
     case 'freeze':
-      return '#35BBF0'; // blauw
+      return '#35BBF0';
     case 'shield':
-      return '#26B31F'; // goud/geel
-    // Voeg hier extra powerups toe indien nodig
+      return '#26B31F';
     default:
-      return '#26B31F'; // standaard groen
+      return '#26B31F';
   }
 });
 const showTimerUpdate = ref(false);
 
-// (already imported above)
 
 const nearObstacle = ref(false);
 let scaredLock = false;
@@ -391,7 +378,6 @@ EventBus.on('update-near-obstacle', (val: boolean) => {
       nearObstacle.value = false;
     }
   }
-  console.log('Near obstacle updated to', nearObstacle.value);
 });
 onUnmounted(() => {
   EventBus.off('update-near-obstacle');
@@ -407,18 +393,15 @@ watch(alienEnlarged, (val, oldVal) => {
   }
   lastEnlarged = val;
 });
-// Voor debug button:
 // @ts-ignore
 window.alienEnlarged = alienEnlarged;
 let alienTimeout: number | null = null;
-// Track which SVG is currently shown in sfeer-progress-alien
 const currentAlienSVG = ref<string>('default');
 
 watch([
   health,
   nearObstacle
 ], ([newHealth, newNearObstacle]) => {
-  // Geef 'hit' prioriteit: als currentAlienSVG 'hit' is, overschrijf niet
   if (currentAlienSVG.value === 'hit') return;
   let newSVG = 'default';
   if (newNearObstacle) {
@@ -426,7 +409,6 @@ watch([
   } else if (newHealth === 1) {
     newSVG = 'oneHeart';
   }
-  // Always restart animation for nearObstacle, even if already active
   if (newSVG === 'nearObstacle') {
     if (alienTimeout) clearTimeout(alienTimeout);
     alienEnlarged.value = false;
@@ -441,14 +423,12 @@ watch([
     return;
   }
   if (currentAlienSVG.value !== newSVG) {
-    // If coming FROM 'nearObstacle' (scared alien), do NOT enlarge, just show normal size
     if (currentAlienSVG.value === 'nearObstacle') {
       alienEnlarged.value = false;
       if (alienTimeout) clearTimeout(alienTimeout);
       currentAlienSVG.value = newSVG;
       return;
     }
-    // Otherwise, enlarge on any SVG change
     alienEnlarged.value = false;
     if (alienTimeout) clearTimeout(alienTimeout);
     void alienEnlarged.value;
@@ -469,15 +449,11 @@ function showGameUI() {
 }
 
 function updateHealth(newHealth: number) {
-  // Controleer of er een hartje bij of af is gegaan
   const previous = health.value;
   health.value = newHealth;
   if (newHealth > previous) {
-    // Hartje erbij
     healthUpdated.value = true;
-    // Hier kun je animatie of effect triggeren
   } 
-  console.log('Health updated to', health.value);
 }
 
 function updateSfeer(text: string) {
@@ -487,7 +463,6 @@ function updateSfeer(text: string) {
 function updateSfeerIndex(idx: number) {
   if (typeof idx === 'number' && idx >= 0 && idx <= 4) {
     sfeerIndex.value = idx;
-    // console.log('Sfeer index updated to', sfeerIndex.value);
   }
 }
 
@@ -495,7 +470,6 @@ function updateSfeerIndex(idx: number) {
 function updateSfeerProgress(progress: number) {
   if (typeof progress === 'number') {
     sfeerProgress.value = Math.max(0, Math.min(1, progress));
-    // console.log('Sfeer progress updated to', sfeerProgress.value);
   }
 }
 
@@ -516,11 +490,9 @@ function updateTimerBonus() {
 
 function updatePowerUp(powerUp: string | null) {
   activePowerUp.value = powerUp;
-  console.log('Active power-up updated to', activePowerUp.value);
   if (powerUp) {
-    // Start progress countdown
     powerUpProgress.value = 1;
-    const duration = 10000; // 10 seconds
+    const duration = 10000; 
     let startTime = Date.now();
     let initialRemaining = duration;
     if (powerUpPauseData && powerUpPauseData.powerUp === powerUp) {
