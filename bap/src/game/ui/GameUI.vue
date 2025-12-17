@@ -191,7 +191,7 @@
               <path d="M53.259 39.5868C53.259 40.2733 52.7025 40.8298 52.016 40.8298C51.3295 40.8298 50.7729 40.2733 50.7729 39.5868C50.7729 38.9003 51.3295 38.3438 52.016 38.3438C52.7025 38.3438 53.259 38.9003 53.259 39.5868Z" fill="#0E0B2A"/>
             </svg>
           </div>
-          <div class="sfeer-label-text" :style="{ color: SFEER_COLORS[sfeerIndex].e }">{{ sfeerText }}</div>
+          <div class="sfeer-label-text" :style="{ color: SFEER_COLORS[sfeerIndex].d }">{{ sfeerText }}</div>
         </div>
         <div class="timer-container">
 
@@ -202,10 +202,10 @@
       <ellipse cx="28.8756" cy="35.1309" rx="3.85022" ry="3.84961" fill="#E73228"/>
       <path d="M27.8968 25.6893C28.1244 24.6381 29.6238 24.6381 29.8514 25.6893L31.1126 31.5135C31.2475 32.1366 30.7728 32.7251 30.1353 32.7251H27.6129C26.9754 32.7251 26.5007 32.1366 26.6356 31.5135L27.8968 25.6893Z" fill="#E73228"/>
     </svg>
-    <p :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">{{ timerText }}</p>
+    <p :style="{ color: `${SFEER_COLORS[sfeerIndex].d}` }">{{ timerText }}</p>
           </div>
           <Transition name="timer-bonus">
-            <p v-if="showTimerUpdate" class="timer-update" :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">-10</p>
+            <p v-if="showTimerUpdate" class="timer-update" :style="{ color: `${SFEER_COLORS[sfeerIndex].d}` }">-10</p>
           </Transition>
         </div>
         
@@ -245,7 +245,7 @@
     </div>
     <!-- <div class="distance-container"> -->
           <div class="distance">
-            <p :style="{ color: `${SFEER_COLORS[sfeerIndex].e}` }">{{ distanceText }}</p>
+            <p :style="{ color: `${SFEER_COLORS[sfeerIndex].d}` }">{{ distanceText }}</p>
           </div>
         <!-- </div> -->
 

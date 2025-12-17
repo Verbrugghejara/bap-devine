@@ -37,7 +37,9 @@ export class GameVictory extends Scene {
                         }
                         this.timeoutStarted = false;
                         console.log('Stopping GameVictory and starting MainMenu');
+                        this.sound.stopAll();
                         this.scene.stop('Game');
+
                         this.scene.stop('GameVictory');
                         this.scene.start('MainMenu');
                     }, 60000);

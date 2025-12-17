@@ -170,8 +170,14 @@ export class MainMenu extends Scene {
     update() {
         // Check hardware button press
         const buttonPressed = this.rotary?.buttonPressed || false;
-        
-        if (buttonPressed && !this.wasButtonPressed) {
+
+        // Keyboard support: Enter or Space
+        const enterKey = this.input.keyboard?.addKey('ENTER');
+        const spaceKey = this.input.keyboard?.addKey('SPACE');
+        const enterPressed = enterKey && Phaser.Input.Keyboard.JustDown(enterKey);
+        const spacePressed = spaceKey && Phaser.Input.Keyboard.JustDown(spaceKey);
+
+        if ((buttonPressed && !this.wasButtonPressed) || enterPressed || spacePressed) {
             const bg = this.startButton.list[1];
             const shineTopLeft = this.startButton.list[2];
             const shineTopLeft2 = this.startButton.list[3];
@@ -179,7 +185,6 @@ export class MainMenu extends Scene {
             const circle = this.startButton.list[5];
             const startText = this.startButton.list[6];
 
-            // Play button-click sound when hardware button is pressed
             this.sound.play('button-click');
 
             this.tweens.add({

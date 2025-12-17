@@ -16,11 +16,14 @@ function angleDiff(a: number, b: number): number {
 
 
 export class Game extends Scene {
-            private hasPlayedVictoryCheer: boolean = false;
-        private hasPlayedScream: boolean = false;
-        private troposfeerSound: Phaser.Sound.BaseSound | null = null;
-        private stratosfeerSound: Phaser.Sound.BaseSound | null = null;
-        private spaceSound: Phaser.Sound.BaseSound | null = null;
+    private hasPlayedVictoryCheer: boolean = false;
+    private hasPlayedScream: boolean = false;
+    private troposfeerSound: Phaser.Sound.BaseSound | null = null;
+    private stratosfeerSound: Phaser.Sound.BaseSound | null = null;
+    private spaceSound: Phaser.Sound.BaseSound | null = null;
+    // Pauze input state
+    private _keyboardWasDown: boolean = false;
+    private pauseHoldSource: 'rotary' | 'keyboard' | null = null;
     // ==================== PROPERTIES ====================
     // --- Game State ---
     private gameStartTime: number = 0;
@@ -643,6 +646,7 @@ export class Game extends Scene {
             this.isGamePaused = false;
             this.gameOverSwipeStarted = false;
             EventBus.emit('hide-gameui');
+            EventBus.emit('hide-interlude');
             this.isGameOverSequence = true; 
         }
     }
@@ -736,6 +740,13 @@ export class Game extends Scene {
                     return;
                 }
             }
+            if (this.huidigeSfeerIndex === 4) {
+                let startSpawnThreshold = 768*3; // Original threshold
+                if (currentSfeerTop > -startSpawnThreshold) {
+                    // We haven't progressed enough into this sfeer yet
+                    return;
+                }
+            }
             else {
                 const startSpawnThreshold = 500;
                 if (currentSfeerTop > -startSpawnThreshold) {
@@ -801,13 +812,13 @@ export class Game extends Scene {
                         minSpeed = 2; maxSpeed = 3;
                         break;
                     case 2: // Mesosfeer - meteors (should be vertical, but just in case)
-                        minSpeed = 1; maxSpeed = 1;
+                        minSpeed = 0.5; maxSpeed = 1;
                         break;
                     case 3: // Thermosfeer - satellites
-                        minSpeed = 4; maxSpeed = 5;
+                        minSpeed = 3; maxSpeed = 5;
                         break;
                     case 4: // Exosfeer - ufos
-                        minSpeed = 5; maxSpeed = 6;
+                        minSpeed = 4; maxSpeed = 6;
                         break;
                 }
                 speed = Phaser.Math.Between(minSpeed, maxSpeed);
@@ -899,7 +910,7 @@ export class Game extends Scene {
             this.ballonContainer,
             ...this.sfeerRects
         ].filter(obj => obj !== null);
-
+        EventBus.emit('hide-interlude');
         this.tweens.add({
             targets: allGameObjects,
             y: `-=${this.scale.height}`,
@@ -929,33 +940,42 @@ export class Game extends Scene {
     // ==================== INPUT HANDLING ====================
 
     private handlePauseInput() {
-        const buttonPressed = this.rotary?.buttonPressed || false;
-        
-        if (buttonPressed && !this.wasButtonPressed && this.countdownDone) {
-            if (!this.isGamePaused) {
-                this.isGamePaused = true;
-                this.pauseStartTime = Date.now();
-                EventBus.emit('show-pauseui');
-            }
+        // Rotary button
+        const buttonRaw = this.rotary?.buttonPressed;
+        const buttonPressed = typeof buttonRaw === 'boolean' || typeof buttonRaw === 'number' ? !!buttonRaw : false;
+
+        // Keyboard support: Enter of Space
+        const enterKey = this.input.keyboard?.addKey('ENTER');
+        const spaceKey = this.input.keyboard?.addKey('SPACE');
+        const enterDown = !!(enterKey && enterKey.isDown);
+        const spaceDown = !!(spaceKey && spaceKey.isDown);
+        if (typeof this._keyboardWasDown !== 'boolean') (this as any)._keyboardWasDown = false;
+        const keyboardDown: boolean = enterDown || spaceDown;
+
+        // --- Rotary button logic ---
+        if (buttonPressed && !this.wasButtonPressed && this.countdownDone && !this.isGamePaused) {
+            this.isGamePaused = true;
+            this.pauseStartTime = Date.now();
+            this.pauseHoldSource = 'rotary';
+            EventBus.emit('show-pauseui');
         }
         this.wasButtonPressed = buttonPressed;
-        
-        // Fallback: Enter key voor debugging
-        if (this.enterKey) {
-            if (this.enterKey.isDown && !this.wasEnterDown) {
-                if (!this.isGamePaused) {
-                    this.isGamePaused = true;
-                    this.pauseStartTime = Date.now();
-                    EventBus.emit('show-pauseui');
-                }
-            }
-            this.wasEnterDown = this.enterKey.isDown;
+
+        // --- Keyboard logic ---
+        if (keyboardDown && !this._keyboardWasDown && this.countdownDone && !this.isGamePaused) {
+            this.isGamePaused = true;
+            this.pauseStartTime = Date.now();
+            this.pauseHoldSource = 'keyboard';
+            EventBus.emit('show-pauseui');
         }
+        (this as any)._keyboardWasDown = keyboardDown;
     }
 
     private checkPauseTimeout() {
         if (this.pauseStartTime && Date.now() - this.pauseStartTime >= 60000) {
             EventBus.emit('hide-pauseui');
+
+            this.sound.stopAll();
             this.scene.start('MainMenu');
             this.isGamePaused = false;
             this.pauseStartTime = null;
@@ -981,6 +1001,8 @@ export class Game extends Scene {
 
         // ==================== GAME OVER SEQUENCE ====================
     private updateGameOverSequence() {
+
+        EventBus.emit('hide-interlude');
         // 1. Tijdens het vallen van de ballon: alleen de huidige sfeer als stilstaande achtergrond
         const sfeerBgs = [this.bgTroposfeer, this.bgStratosfeer, this.bgMesosfeer, this.bgThermosfeer, this.bgExosfeer];
         // for (let i = 0; i < sfeerBgs.length; i++) {
@@ -1052,6 +1074,7 @@ export class Game extends Scene {
                     })(),
                     ease: 'Sine.easeIn',
                     onUpdate: tween => {
+                        EventBus.emit('hide-interlude');
                         const currentValue = tween.getValue() ?? 0;
                         const delta = currentValue - lastTweenValue;
                         this.sfeerOffsetY = currentValue;
@@ -1092,6 +1115,8 @@ export class Game extends Scene {
                         }
                     },
                     onComplete: () => {
+
+                        EventBus.emit('hide-interlude');
                         this.scene.launch('GameOver');
                         EventBus.emit('gameover-swipe-in');
                     }
@@ -1101,7 +1126,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [200, 7, 9, 11, 12];
+        const scrollSpeeds = [5, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {

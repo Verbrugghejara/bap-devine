@@ -21,6 +21,9 @@ export class Tutorial extends Scene {
     private skipButtonTween: Phaser.Tweens.Tween | null = null;
     private skipButtonIsDown: boolean = false;
     private isTransitioning: boolean = false;
+    // Input state tracking for skip/continue
+    private _keyboardWasDown: boolean = false;
+    private skipHoldSource: 'rotary' | 'keyboard' | null = null;
     
     // UI elements
     private progressBar: Phaser.GameObjects.Graphics | null = null;
@@ -453,13 +456,21 @@ export class Tutorial extends Scene {
         const buttonRaw = this.rotary?.buttonPressed;
         const buttonPressed = typeof buttonRaw === 'boolean' || typeof buttonRaw === 'number' ? !!buttonRaw : false;
 
-        // Button pressed (alleen als sceneIsReady)
+        // Keyboard support: Enter or Space
+        const enterKey = this.input.keyboard?.addKey('ENTER');
+        const spaceKey = this.input.keyboard?.addKey('SPACE');
+        const enterDown = !!(enterKey && enterKey.isDown);
+        const spaceDown = !!(spaceKey && spaceKey.isDown);
+        if (typeof this._keyboardWasDown !== 'boolean') (this as any)._keyboardWasDown = false;
+        const keyboardDown: boolean = enterDown || spaceDown;
+
+        // --- Rotary button logic ---
         if (this.sceneIsReady && buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
+            this.skipHoldSource = 'rotary';
             if (this.skipHoldStart === null) {
                 this.skipHoldStart = Date.now();
             }
-
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
                 targets: this.animTargets,
@@ -468,13 +479,11 @@ export class Tutorial extends Scene {
                 yoyo: false
             });
         }
-
-        // Button released (alleen als sceneIsReady)
-        if (this.sceneIsReady && !buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
+        if (this.sceneIsReady && !buttonPressed && this.wasButtonPressed && !this.isTransitioning && this.skipHoldSource === 'rotary') {
             this.skipButtonIsDown = false;
             this.skipHoldStart = null;
             this.skipHoldProgress = 0;
-
+            this.skipHoldSource = null;
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
                 targets: this.animTargets,
@@ -483,8 +492,37 @@ export class Tutorial extends Scene {
                 yoyo: false
             });
         }
-
         this.wasButtonPressed = buttonPressed;
+
+        // --- Keyboard logic ---
+        if (this.sceneIsReady && keyboardDown && !this._keyboardWasDown && !this.skipButtonIsDown && !this.isTransitioning) {
+            this.skipButtonIsDown = true;
+            this.skipHoldSource = 'keyboard';
+            if (this.skipHoldStart === null) {
+                this.skipHoldStart = Date.now();
+            }
+            if (this.skipButtonTween) this.skipButtonTween.stop();
+            this.skipButtonTween = this.tweens.add({
+                targets: this.animTargets,
+                y: 8,
+                duration: 80,
+                yoyo: false
+            });
+        }
+        if (this.sceneIsReady && !keyboardDown && this._keyboardWasDown && !this.isTransitioning && this.skipHoldSource === 'keyboard') {
+            this.skipButtonIsDown = false;
+            this.skipHoldStart = null;
+            this.skipHoldProgress = 0;
+            this.skipHoldSource = null;
+            if (this.skipButtonTween) this.skipButtonTween.stop();
+            this.skipButtonTween = this.tweens.add({
+                targets: this.animTargets,
+                y: 0,
+                duration: 80,
+                yoyo: false
+            });
+        }
+        (this as any)._keyboardWasDown = keyboardDown;
 
         // Check hold progress (alleen als sceneIsReady)
         if (this.sceneIsReady && this.skipHoldStart !== null && !this.isTransitioning) {
@@ -496,17 +534,14 @@ export class Tutorial extends Scene {
                 this.skipHoldStart = null;
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
-                // Play button-click sound when skip is triggered
-                // if (this.sound && this.sound.get('button-click')) {
-                    this.sound.play('button-click');
-                // }console.log('Setting up change-scene listener in TutorialBlue scene');
-                    const tropo = this.sound.get('troposfeer');
-                    console.log('---------------------------')
-                    console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
-                    if (tropo) {
-                        tropo.stop();
-                        tropo.destroy();
-                    }
+                this.sound.play('button-click');
+                const tropo = this.sound.get('troposfeer');
+                console.log('---------------------------')
+                console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
+                if (tropo) {
+                    tropo.stop();
+                    tropo.destroy();
+                }
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {
@@ -567,43 +602,57 @@ export class Tutorial extends Scene {
     }
 
     private updateBalloonMovement() {
-        if (!this.rotary || !Array.isArray(this.rotary.lastAngles)) {
-            return;
+        // Rotary input
+        let rotaryDelta = 0;
+        if (this.rotary && Array.isArray(this.rotary.lastAngles)) {
+            const angle1 = this.rotary.lastAngles[0];
+            if (typeof angle1 === 'number') {
+                if (this.startAngle1 === null) {
+                    this.startAngle1 = angle1;
+                    this.lastAngle1 = angle1;
+                } else if (this.lastAngle1 !== null && angle1 !== this.lastAngle1) {
+                    const deltaStep = angle1 - this.lastAngle1;
+                    if (Math.abs(deltaStep) >= 2 && Math.abs(deltaStep) < 50) {
+                        rotaryDelta = Math.sign(deltaStep) * Math.min(Math.abs(deltaStep), 10);
+                        this.didRotateThisFrame = true;
+                        this.totalDelta += Math.abs(deltaStep);
+                        this.progress = Math.min(1, this.totalDelta / 2000);
+                        this.drawProgressBar();
+                    } else {
+                        this.didRotateThisFrame = false;
+                    }
+                    this.lastAngle1 = angle1;
+                }
+            }
         }
-        
-        const angle1 = this.rotary.lastAngles[0];
-        if (typeof angle1 !== 'number') {
-            return;
+
+        // Keyboard pijltjes
+        let keyboardDelta = 0;
+        const cursors = this.input.keyboard?.createCursorKeys();
+        if (cursors) {
+            // Alleen naar rechts (blauw) toegestaan
+            if (cursors.right.isDown) {
+                keyboardDelta = 8;
+            }
         }
-        
-        if (this.startAngle1 === null) {
-            this.startAngle1 = angle1;
-            this.lastAngle1 = angle1;
-            return;
-        }
-        
-        if (this.lastAngle1 === null || angle1 === this.lastAngle1) {
-            this.didRotateThisFrame = false;
-            return;
-        }
-        
-        const deltaStep = angle1 - this.lastAngle1;
-        if (Math.abs(deltaStep) >= 2 && Math.abs(deltaStep) < 50) {
+
+        // Combineer input
+        let totalDelta = rotaryDelta + keyboardDelta;
+        if (totalDelta !== 0) {
             this.didRotateThisFrame = true;
-            this.totalDelta += Math.abs(deltaStep);
-            this.progress = Math.min(1, this.totalDelta / 2000);
-            
             // Move balloon
             const balloonStartX = 280;
             const balloonEndX = this.scale.width - 280;
+            if (!this.progress) this.progress = 0;
+            // Simuleer progressie bij keyboard input
+            if (keyboardDelta !== 0) {
+                this.progress = Math.min(1, Math.max(0, this.progress + keyboardDelta / (balloonEndX - balloonStartX)));
+                this.drawProgressBar();
+            }
             this.balloon.x = balloonStartX + (balloonEndX - balloonStartX) * this.progress;
-            
-            this.drawProgressBar();
         } else {
             this.didRotateThisFrame = false;
         }
-        
-        this.lastAngle1 = angle1;
     }
 
     private updatePropellorAnimations() {

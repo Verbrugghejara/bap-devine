@@ -16,6 +16,8 @@ export class StoryTelling extends Scene {
     private skipButtonIsDown: boolean = false;
     private isTransitioning: boolean = false;
     private videoIsPlaying: boolean = false;
+    private _keyboardWasDown: boolean = false;
+    private skipHoldSource: 'rotary' | 'keyboard' | null = null;
 
     constructor() {
         super('StoryTelling');
@@ -149,11 +151,6 @@ export class StoryTelling extends Scene {
             console.log('Skip button clicked!');
             this.scene.start('TutorialBlue');
         });
-        this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
-            if (event.code === 'Enter' || event.code === 'Space') {
-                this.scene.start('TutorialBlue');
-            }
-        });
     }
     
     update() {
@@ -184,9 +181,22 @@ export class StoryTelling extends Scene {
     private handleButtonInput() {
         const buttonPressed = this.rotary?.buttonPressed || false;
 
-        // Button pressed: pop in skip button (alleen als video speelt)
+        // Keyboard support: Enter or Space
+        const enterKey = this.input.keyboard?.addKey('ENTER');
+        const spaceKey = this.input.keyboard?.addKey('SPACE');
+        const enterDown = !!(enterKey && enterKey.isDown);
+        const spaceDown = !!(spaceKey && spaceKey.isDown);
+
+        // Separate state for rotary and keyboard
+        // Track last state for each input separately
+        if (typeof this._keyboardWasDown !== 'boolean') this._keyboardWasDown = false;
+        const keyboardDown: boolean = enterDown || spaceDown;
+
+
+        // Rotary button logic (only if not holding from keyboard)
         if (this.videoIsPlaying && buttonPressed && !this.wasButtonPressed && !this.skipButtonIsDown && !this.isTransitioning) {
             this.skipButtonIsDown = true;
+            this.skipHoldSource = 'rotary';
             if (this.skipHoldStart === null) {
                 this.skipHoldStart = Date.now();
             }
@@ -209,12 +219,11 @@ export class StoryTelling extends Scene {
                 yoyo: false
             });
         }
-
-        // Button released: pop out skip button
-        if (this.videoIsPlaying && !buttonPressed && this.wasButtonPressed && !this.isTransitioning) {
+        if (this.videoIsPlaying && !buttonPressed && this.wasButtonPressed && !this.isTransitioning && this.skipHoldSource === 'rotary') {
             this.skipButtonIsDown = false;
             this.skipHoldStart = null;
             this.skipHoldProgress = 0;
+            this.skipHoldSource = null;
             if (this.skipButton && this.skipButtonVisible) {
                 this.skipButtonVisible = false;
                 this.tweens.add({
@@ -235,8 +244,60 @@ export class StoryTelling extends Scene {
                 yoyo: false
             });
         }
-
         this.wasButtonPressed = buttonPressed;
+
+        // Keyboard logic (only if not holding from rotary)
+        if (this.videoIsPlaying && keyboardDown && !this._keyboardWasDown && !this.skipButtonIsDown && !this.isTransitioning) {
+            this.skipButtonIsDown = true;
+            this.skipHoldSource = 'keyboard';
+            if (this.skipHoldStart === null) {
+                this.skipHoldStart = Date.now();
+            }
+            if (this.skipButton && !this.skipButtonVisible) {
+                this.skipButtonVisible = true;
+                this.skipButton.setAlpha(1);
+                this.skipButton.setScale(0.7);
+                this.tweens.add({
+                    targets: this.skipButton,
+                    scale: 1,
+                    duration: 220,
+                    ease: 'Back.easeOut'
+                });
+            }
+            if (this.skipButtonTween) this.skipButtonTween.stop();
+            this.skipButtonTween = this.tweens.add({
+                targets: this.animTargets,
+                y: 8,
+                duration: 80,
+                yoyo: false
+            });
+        }
+        if (this.videoIsPlaying && !keyboardDown && this._keyboardWasDown && !this.isTransitioning && this.skipHoldSource === 'keyboard') {
+            this.skipButtonIsDown = false;
+            this.skipHoldStart = null;
+            this.skipHoldProgress = 0;
+            this.skipHoldSource = null;
+            if (this.skipButton && this.skipButtonVisible) {
+                this.skipButtonVisible = false;
+                this.tweens.add({
+                    targets: this.skipButton,
+                    scale: 0.7,
+                    duration: 180,
+                    ease: 'Back.easeIn',
+                    onComplete: () => {
+                        if (this.skipButton) this.skipButton.setAlpha(0);
+                    }
+                });
+            }
+            if (this.skipButtonTween) this.skipButtonTween.stop();
+            this.skipButtonTween = this.tweens.add({
+                targets: this.animTargets,
+                y: 0,
+                duration: 80,
+                yoyo: false
+            });
+        }
+        this._keyboardWasDown = keyboardDown;
 
         // Check hold progress
         if (this.videoIsPlaying && this.skipHoldStart !== null && !this.isTransitioning) {

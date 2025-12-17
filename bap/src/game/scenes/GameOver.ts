@@ -36,6 +36,7 @@ export class GameOver extends Scene {
                             this.autoNavigateTimeout = null;
                         }
                         this.timeoutStarted = false;
+                        this.sound.stopAll();
                         console.log('Stopping GameOver and starting MainMenu');
                         this.scene.stop('Game');
                         this.scene.stop('GameOver');
