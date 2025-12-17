@@ -13,6 +13,7 @@ export class StoryTelling extends Scene {
     private skipHoldStart: number | null = null;
     private skipHoldProgress: number = 0;
     private skipButtonTween: Phaser.Tweens.Tween | null = null;
+    private skipButtonHideTimeout: ReturnType<typeof setTimeout> | null = null;
     private skipButtonIsDown: boolean = false;
     private isTransitioning: boolean = false;
     private videoIsPlaying: boolean = false;
@@ -227,16 +228,19 @@ export class StoryTelling extends Scene {
             this.skipHoldProgress = 0;
             this.skipHoldSource = null;
             if (this.skipButton && this.skipButtonVisible) {
-                this.skipButtonVisible = false;
-                this.tweens.add({
-                    targets: this.skipButton,
-                    scale: 0.7,
-                    duration: 180,
-                    ease: 'Back.easeIn',
-                    onComplete: () => {
-                        if (this.skipButton) this.skipButton.setAlpha(0);
-                    }
-                });
+                if (this.skipButtonHideTimeout) clearTimeout(this.skipButtonHideTimeout);
+                this.skipButtonHideTimeout = setTimeout(() => {
+                    this.skipButtonVisible = false;
+                    this.tweens.add({
+                        targets: this.skipButton,
+                        scale: 0.7,
+                        duration: 180,
+                        ease: 'Back.easeIn',
+                        onComplete: () => {
+                            if (this.skipButton) this.skipButton.setAlpha(0);
+                        }
+                    });
+                }, 1500); // 1.5 seconde zichtbaar houden
             }
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
@@ -280,16 +284,19 @@ export class StoryTelling extends Scene {
             this.skipHoldProgress = 0;
             this.skipHoldSource = null;
             if (this.skipButton && this.skipButtonVisible) {
-                this.skipButtonVisible = false;
-                this.tweens.add({
-                    targets: this.skipButton,
-                    scale: 0.7,
-                    duration: 180,
-                    ease: 'Back.easeIn',
-                    onComplete: () => {
-                        if (this.skipButton) this.skipButton.setAlpha(0);
-                    }
-                });
+                if (this.skipButtonHideTimeout) clearTimeout(this.skipButtonHideTimeout);
+                this.skipButtonHideTimeout = setTimeout(() => {
+                    this.skipButtonVisible = false;
+                    this.tweens.add({
+                        targets: this.skipButton,
+                        scale: 0.7,
+                        duration: 180,
+                        ease: 'Back.easeIn',
+                        onComplete: () => {
+                            if (this.skipButton) this.skipButton.setAlpha(0);
+                        }
+                    });
+                }, 1500); // 1.5 seconde zichtbaar houden
             }
             if (this.skipButtonTween) this.skipButtonTween.stop();
             this.skipButtonTween = this.tweens.add({
