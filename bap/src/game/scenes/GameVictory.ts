@@ -72,6 +72,11 @@ export class GameVictory extends Scene {
             .setDepth(1);
         victoryContainer.add(bgVictory);
         
+        const aliensVictoryImg = this.add.image(this.scale.width / 2, this.scale.height, 'aliens-gamevictory')
+            .setOrigin(0.5, 1)
+            .setDepth(5)
+            .setScale(1);
+        victoryContainer.add(aliensVictoryImg);
         // Aliens victory video als overlay (Phaser video object)
         const aliensVictoryVideo = this.add.video(this.scale.width / 2, this.scale.height, 'win-animation')
             .setOrigin(0.5, 1)
