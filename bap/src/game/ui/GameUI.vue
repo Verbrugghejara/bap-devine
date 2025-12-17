@@ -297,6 +297,8 @@ const timerText = ref('0:00');
 const distanceText = ref('0');
 const activePowerUp = ref<string | null>(null);
 const powerUpProgress = ref(0);
+const isPaused = ref(false);
+let powerUpPauseData: null | { remaining: number; powerUp: string } = null;
 
 // Reset UI state when game restarts
 function resetGameUI() {
@@ -315,11 +317,45 @@ function resetGameUI() {
   transitionClass.value = '';
   healthUpdated.value = false;
 }
+function pauseGameUI() {
+  isPaused.value = true;
+}
+
+function resumeGameUI() {
+  isPaused.value = false;
+  if (powerUpPauseData && activePowerUp.value === powerUpPauseData.powerUp) {
+    const duration = 10000;
+    let startTime = Date.now();
+    const initialRemaining = powerUpPauseData.remaining;
+    const pauseData = powerUpPauseData; // capture for closure
+    const updateProgress = () => {
+      if (isPaused.value) {
+        powerUpPauseData = {
+          remaining: initialRemaining - (Date.now() - startTime),
+          powerUp: activePowerUp.value!
+        };
+        return;
+      }
+      const elapsed = Date.now() - startTime;
+      const remaining = initialRemaining - elapsed;
+      powerUpProgress.value = Math.max(0, remaining / duration);
+      if (powerUpProgress.value > 0 && activePowerUp.value === pauseData.powerUp) {
+        requestAnimationFrame(updateProgress);
+      }
+    };
+    requestAnimationFrame(updateProgress);
+    powerUpPauseData = null;
+  }
+}
 onMounted(() => {
   EventBus.on('reset-game-ui', resetGameUI);
+  EventBus.on('game-pause', pauseGameUI);
+  EventBus.on('game-resume', resumeGameUI);
 });
 onUnmounted(() => {
   EventBus.off('reset-game-ui', resetGameUI);
+  EventBus.off('game-pause', pauseGameUI);
+  EventBus.off('game-resume', resumeGameUI);
 });
 // Geef elke powerup een andere kleur
 const powerUpBarColor = computed(() => {
@@ -484,18 +520,27 @@ function updatePowerUp(powerUp: string | null) {
   if (powerUp) {
     // Start progress countdown
     powerUpProgress.value = 1;
-    const startTime = Date.now();
     const duration = 10000; // 10 seconds
-    
+    let startTime = Date.now();
+    let initialRemaining = duration;
+    if (powerUpPauseData && powerUpPauseData.powerUp === powerUp) {
+      initialRemaining = powerUpPauseData.remaining;
+      powerUpPauseData = null;
+    }
     const updateProgress = () => {
+      if (isPaused.value) {
+        powerUpPauseData = {
+          remaining: initialRemaining - (Date.now() - startTime),
+          powerUp: powerUp
+        };
+        return;
+      }
       const elapsed = Date.now() - startTime;
-      powerUpProgress.value = Math.max(0, 1 - (elapsed / duration));
-      
+      powerUpProgress.value = Math.max(0, initialRemaining / duration - (elapsed / duration));
       if (powerUpProgress.value > 0 && activePowerUp.value === powerUp) {
         requestAnimationFrame(updateProgress);
       }
     };
-    
     requestAnimationFrame(updateProgress);
   }
 }

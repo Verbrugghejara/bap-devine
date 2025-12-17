@@ -24,6 +24,9 @@ export class Game extends Scene {
     // Pauze input state
     private _keyboardWasDown: boolean = false;
     private pauseHoldSource: 'rotary' | 'keyboard' | null = null;
+    // Timer pause tracking
+    private totalPausedDuration: number = 0;
+    private pauseBeganAt: number | null = null;
     // ==================== PROPERTIES ====================
     // --- Game State ---
     private gameStartTime: number = 0;
@@ -83,6 +86,7 @@ export class Game extends Scene {
     private obstacles: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody[] = [];
     private lastObstacleSides: { [key: string]: number[] } = {};
     private obstacleSpawnTimer: Phaser.Time.TimerEvent | null = null;
+    private obstacleSpawnPausedRemaining: number | null = null;
     private firstMeteorSpawned: boolean = false;
     private wasNearObstacle: boolean = false;
 
@@ -92,6 +96,7 @@ export class Game extends Scene {
     private powerUpsSpawned: Set<string> = new Set();
     private activePowerUp: string | null = null;
     private powerUpEndTime: number = 0;
+    private powerUpPausedRemaining: number | null = null;
     private freezeActive: boolean = false;
     private shieldActive: boolean = false;
 
@@ -143,7 +148,6 @@ export class Game extends Scene {
         this.startAlienSpawner();
         // this.sound.stopAll();
         // Spawn tropo-alien direct bij start
-        
         const tropoConfig = this.alienConfigs.find(a => a.key === 'alien-tropo');
         if (tropoConfig && this.textures.exists(tropoConfig.key)) {
             const sfeerCenterY = this.sfeerBaseY[tropoConfig.sfeer] + this.sfeerOffsetY;
@@ -164,7 +168,7 @@ export class Game extends Scene {
         // // TEST: Speel troposfeer sound direct af
         // if (this.sound && this.sound.locked === false) {
         //         this.sound.play('troposfeer', { loop: true, volume: 1 });
-            
+        //     
         // } else {
         //     console.warn('Phaser sound is locked of niet beschikbaar.');
         // }
@@ -201,47 +205,48 @@ export class Game extends Scene {
         this.checkNearObstacle(10); // Check for proximity to obstacles and notify UI
         this.updateAliens();
     }
-        // ==================== ALIEN EASTER EGGS ====================
-        private startAlienSpawner() {
-            // Geen timer meer: aliens worden direct gespawned bij sfeerwissel
-            // Functie blijft voor compatibiliteit, maar doet niets meer
-            if (this.alienSpawnTimer) {
-                this.alienSpawnTimer.remove(false);
-                this.alienSpawnTimer = null;
-            }
-        }
 
-        private spawnAlien() {
-            // Kies random alien config
-            // Spawn alleen de alien van de huidige sfeer, maar niet als hij al bestaat
-            const sfeerAliens = this.alienConfigs.filter(a => a.sfeer === this.huidigeSfeerIndex);
-            if (sfeerAliens.length === 0) return;
-            const config = Phaser.Utils.Array.GetRandom(sfeerAliens);
-            // Check of deze alien al bestaat (op key)
-            if (this.aliens.some(a => (a as any).alienKey === config.key)) return;
-            if (!this.textures.exists(config.key)) return;
-            const scale = config.scale;
-            let y;
-            if (config.key === 'alien-tropo') {
-                // Forceer tropo-alien in het midden van het scherm
-                y = this.scale.height / 2;
-            } else {
-                const sfeerCenterY = this.sfeerBaseY[config.sfeer] + this.sfeerOffsetY;
-                const sfeerHeight = this.sfeerHoogtes[config.sfeer];
-                y = sfeerCenterY - (sfeerHeight / 2) + config.y;
-            }
-            const alien = this.physics.add.sprite(config.x, y, config.key, 0)
-                .setScale(scale)
-                .setDepth(1)
-                .setOrigin(0.5);
-            (alien.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-            (alien as any).alienKey = config.key;
-            // Speel animatie af als die bestaat
-            if (this.anims.exists(config.key)) {
-                alien.play(config.key);
-            }
-            this.aliens.push(alien);
+    // ==================== ALIEN EASTER EGGS ====================
+    private startAlienSpawner() {
+        // Geen timer meer: aliens worden direct gespawned bij sfeerwissel
+        // Functie blijft voor compatibiliteit, maar doet niets meer
+        if (this.alienSpawnTimer) {
+            this.alienSpawnTimer.remove(false);
+            this.alienSpawnTimer = null;
         }
+    }
+
+    private spawnAlien() {
+        // Kies random alien config
+        // Spawn alleen de alien van de huidige sfeer, maar niet als hij al bestaat
+        const sfeerAliens = this.alienConfigs.filter(a => a.sfeer === this.huidigeSfeerIndex);
+        if (sfeerAliens.length === 0) return;
+        const config = Phaser.Utils.Array.GetRandom(sfeerAliens);
+        // Check of deze alien al bestaat (op key)
+        if (this.aliens.some(a => (a as any).alienKey === config.key)) return;
+        if (!this.textures.exists(config.key)) return;
+        const scale = config.scale;
+        let y;
+        if (config.key === 'alien-tropo') {
+            // Forceer tropo-alien in het midden van het scherm
+            y = this.scale.height / 2;
+        } else {
+            const sfeerCenterY = this.sfeerBaseY[config.sfeer] + this.sfeerOffsetY;
+            const sfeerHeight = this.sfeerHoogtes[config.sfeer];
+            y = sfeerCenterY - (sfeerHeight / 2) + config.y;
+        }
+        const alien = this.physics.add.sprite(config.x, y, config.key, 0)
+            .setScale(scale)
+            .setDepth(1)
+            .setOrigin(0.5);
+        (alien.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+        (alien as any).alienKey = config.key;
+        // Speel animatie af als die bestaat
+        if (this.anims.exists(config.key)) {
+            alien.play(config.key);
+        }
+        this.aliens.push(alien);
+    }
 
         private updateAliens() {
             // Laat aliens naar beneden bewegen
@@ -926,8 +931,42 @@ export class Game extends Scene {
     private handleResumeGameScene() {
         if (this.isGamePaused) {
             this.isGamePaused = false;
+            // Calculate total paused duration
+            if (this.pauseBeganAt) {
+                this.totalPausedDuration += Date.now() - this.pauseBeganAt;
+            }
+            // Resume power-up timer if paused
+            if (this.activePowerUp && this.powerUpPausedRemaining !== null) {
+                this.powerUpEndTime = Date.now() + this.powerUpPausedRemaining;
+                this.powerUpPausedRemaining = null;
+            }
+            // Resume obstacle spawn timer if paused
+            if (this.obstacleSpawnPausedRemaining !== null) {
+                if (this.obstacleSpawnTimer) {
+                    this.obstacleSpawnTimer.remove(false);
+                }
+                this.obstacleSpawnTimer = this.time.addEvent({
+                    delay: this.obstacleSpawnPausedRemaining,
+                    loop: true,
+                    callback: () => {
+                        this.spawnObstacle();
+                        // Reset timer met nieuwe delay voor variatie
+                        if (this.obstacleSpawnTimer) {
+                            this.obstacleSpawnTimer.reset({
+                                delay: this.getObstacleSpawnDelay(),
+                                callback: this.obstacleSpawnTimer.callback,
+                                callbackScope: this.obstacleSpawnTimer.callbackScope,
+                                loop: true
+                            });
+                        }
+                    }
+                });
+                this.obstacleSpawnPausedRemaining = null;
+            }
             this.pauseStartTime = null;
+            this.pauseBeganAt = null;
             EventBus.emit('hide-pauseui');
+            EventBus.emit('game-resume'); // Notify UI to resume
         }
     }
 
@@ -956,8 +995,21 @@ export class Game extends Scene {
         if (buttonPressed && !this.wasButtonPressed && this.countdownDone && !this.isGamePaused) {
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
+            this.pauseBeganAt = Date.now();
+            // Pause power-up timer if active
+            if (this.activePowerUp && this.powerUpEndTime > Date.now()) {
+                this.powerUpPausedRemaining = this.powerUpEndTime - Date.now();
+            }
+            // Pause obstacle spawn timer if active
+            if (this.obstacleSpawnTimer && this.obstacleSpawnTimer.getProgress() < 1) {
+                const remaining = this.obstacleSpawnTimer.delay - (this.obstacleSpawnTimer.getElapsed());
+                this.obstacleSpawnPausedRemaining = remaining > 0 ? remaining : 0;
+                this.obstacleSpawnTimer.remove(false);
+                this.obstacleSpawnTimer = null;
+            }
             this.pauseHoldSource = 'rotary';
             EventBus.emit('show-pauseui');
+            EventBus.emit('game-pause'); // Notify UI to pause
         }
         this.wasButtonPressed = buttonPressed;
 
@@ -965,8 +1017,21 @@ export class Game extends Scene {
         if (keyboardDown && !this._keyboardWasDown && this.countdownDone && !this.isGamePaused) {
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
+            this.pauseBeganAt = Date.now();
+            // Pause power-up timer if active
+            if (this.activePowerUp && this.powerUpEndTime > Date.now()) {
+                this.powerUpPausedRemaining = this.powerUpEndTime - Date.now();
+            }
+            // Pause obstacle spawn timer if active
+            if (this.obstacleSpawnTimer && this.obstacleSpawnTimer.getProgress() < 1) {
+                const remaining = this.obstacleSpawnTimer.delay - (this.obstacleSpawnTimer.getElapsed());
+                this.obstacleSpawnPausedRemaining = remaining > 0 ? remaining : 0;
+                this.obstacleSpawnTimer.remove(false);
+                this.obstacleSpawnTimer = null;
+            }
             this.pauseHoldSource = 'keyboard';
             EventBus.emit('show-pauseui');
+            EventBus.emit('game-pause'); // Notify UI to pause
         }
         (this as any)._keyboardWasDown = keyboardDown;
     }
@@ -1126,7 +1191,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
+        const scrollSpeeds = [200, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
@@ -1349,6 +1414,8 @@ export class Game extends Scene {
                 if ((window as any).gameDurationMs === undefined) {
                     (window as any).gameDurationMs = duration;
                 }
+                // Zet altijd de totale pauzetijd op window zodat GameVictory deze kan uitlezen
+                (window as any).totalPausedDuration = this.totalPausedDuration;
             }
             // Speel victory sound alleen hier
             // this.sound.play('alien-cheers', { volume: 0.8 });
@@ -1360,12 +1427,13 @@ export class Game extends Scene {
 
     private updateTimer() {
         if (!this.countdownDone || this.gameStartTime === 0) return;
-        
-        const elapsed = Date.now() - this.gameStartTime;
+        // If paused, don't update timer
+        if (this.isGamePaused) return;
+        // Subtract total paused duration from elapsed
+        const elapsed = Date.now() - this.gameStartTime - this.totalPausedDuration;
         const seconds = Math.floor(elapsed / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        
         const timeString = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
         EventBus.emit('update-timer', timeString);
     }
@@ -2078,7 +2146,7 @@ export class Game extends Scene {
     }
 
     private updatePowerUpPositions() {
-
+        if (this.isGamePaused) return;
         const time = this.time.now;
         for (const container of this.powerUps) {
             (container as any).baseY += this.smoothScrollSpeed;

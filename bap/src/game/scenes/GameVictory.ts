@@ -118,6 +118,10 @@ export class GameVictory extends Scene {
         let durationMs = 0;
         if (typeof window !== 'undefined' && (window as any).gameDurationMs) {
             durationMs = (window as any).gameDurationMs;
+            // Trek totale pauzetijd af als die beschikbaar is
+            if ((window as any).totalPausedDuration) {
+                durationMs -= (window as any).totalPausedDuration;
+            }
         }
         let bestTimeMs = null;
         let bestTimeDate = null;
