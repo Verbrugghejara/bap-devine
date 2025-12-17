@@ -21,6 +21,25 @@ export class GameVictory extends Scene {
     }
 
     create() {
+                                // Verwijder snelste tijd van vorige dagen uit localStorage
+                                if (typeof window !== 'undefined' && window.localStorage) {
+                                    const today = new Date();
+                                    const yyyy = today.getFullYear();
+                                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                                    const dd = String(today.getDate()).padStart(2, '0');
+                                    const todayKey = `bestTime_${yyyy}-${mm}-${dd}`;
+                                    // Verzamel alle keys die met bestTime_ beginnen en niet van vandaag zijn
+                                    const keysToRemove = [];
+                                    for (let i = 0; i < window.localStorage.length; i++) {
+                                        const key = window.localStorage.key(i);
+                                        if (key && key.startsWith('bestTime_') && key !== todayKey) {
+                                            keysToRemove.push(key);
+                                        }
+                                    }
+                                    for (const key of keysToRemove) {
+                                        window.localStorage.removeItem(key);
+                                    }
+                                }
                         
                 this.rotary = getRotaryClient();
                 console.log('GameVictory create() called, timeoutStarted:', this.timeoutStarted);
@@ -428,8 +447,11 @@ export class GameVictory extends Scene {
             }
             this.timeoutStarted = false;
 
-            // Emit UI reset event
-            
+            // Reset alleen de gameDurationMs en totalPausedDuration zodat tijd niet blijft staan
+            if (typeof window !== 'undefined') {
+                (window as any).gameDurationMs = undefined;
+                (window as any).totalPausedDuration = undefined;
+            }
 
             const bg = this.againButton.list[1];
             const shineTopLeft = this.againButton.list[2];

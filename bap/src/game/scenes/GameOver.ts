@@ -482,6 +482,12 @@ export class GameOver extends Scene {
             }
             this.timeoutStarted = false;
             
+            // Reset ook de gameDurationMs en totalPausedDuration zodat tijd niet blijft staan
+            if (typeof window !== 'undefined') {
+                (window as any).gameDurationMs = undefined;
+                (window as any).totalPausedDuration = undefined;
+            }
+
             const bg = this.againButton.list[1];
             const shineTopLeft = this.againButton.list[2];
             const shineTopLeft2 = this.againButton.list[3];
@@ -494,7 +500,6 @@ export class GameOver extends Scene {
                 duration: 80,
                 yoyo: true,
                 onComplete: () => {
-
                     this.sound.stopAll();
                     if (typeof window !== 'undefined') {
                         (window as any).sfeerProgress = 0;
@@ -517,13 +522,12 @@ export class GameOver extends Scene {
                         if (s && s.destroy) s.destroy();
                     }
                     // Emit UI reset event
-                        EventBus.emit('reset-game-ui');
+                    EventBus.emit('reset-game-ui');
                     EventBus.emit('update-health', 3);
                     EventBus.emit('show-gameui');
                     this.scene.stop('GameOver');
                     this.scene.start('Game');
                     this.sound.play('button-click');
-
                 }
             });
         };
