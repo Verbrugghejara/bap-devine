@@ -1201,7 +1201,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
+        const scrollSpeeds = [50, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
@@ -1688,6 +1688,7 @@ export class Game extends Scene {
                         this.sound.play('freeze', { volume: 0.6 });
                     // Change plane texture to frozen version if it's a plane
                     if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
+                        console.log('Freezing plane obstacle');
                         obstacle.setTexture('plane-freeze');
                         obstacle.anims.stop();
                     }
@@ -1885,6 +1886,47 @@ export class Game extends Scene {
                         }
                     }
                     
+                    this.obstacles.splice(i, 1);
+                } else 
+                    if (this.freezeActive){
+                    this.setPropellorPositions('normal');
+                    const x = obstacle.x;
+                    const y = obstacle.y;
+                    const parent = obstacle.parentContainer;
+                    const obstacleType = (obstacle as any).obstacleType;
+                    const obstacleScaleX = obstacle.scaleX;
+                    obstacle.destroy();
+                    console.log('');
+                    console.log('Obstacle type on shield collision:', obstacleType);
+                    console.log('Obstacle type on shield collision:', this.freezeActive);
+                    console.log('Obstacle type on shield collision:', this.textures.exists('plane-freeze-crashing'));
+                    if (obstacleType === 'plane-flying' && this.textures.exists('plane-freeze-crashing')) {
+                        console.log('Playing plane freeze crashing animation------------------------');
+                        const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                        const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-freeze-crashing')
+                            .setScale(obstacleScaleX, 1)
+                            .setDepth(50)
+                            .setOrigin(0.5);
+                        if (parent) parent.add(crashingPlane);
+                        
+                        const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
+                        body.setAllowGravity(true);
+                        body.setGravityY(700);
+                        body.setVelocityY(Phaser.Math.Between(250, 350));
+                        
+                        if (this.anims.exists('plane-freeze-crashing')) {
+                            crashingPlane.play('plane-freeze-crashing');
+                            crashingPlane.once('animationcomplete', () => {
+                                this.tweens.add({
+                                    targets: crashingPlane,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => crashingPlane.destroy()
+                                });
+                            });
+                        }
+                    }
+              
                     this.obstacles.splice(i, 1);
                 } else {
                     // Normal collision - damage balloon

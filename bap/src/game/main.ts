@@ -29,10 +29,10 @@ const config: Phaser.Types.Core.GameConfig = {
             debug: false
         }
     },
-    // fps: {
-    //     target: 60,
-    //     forceSetTimeOut: false
-    // },
+    fps: {
+        target: 60,
+        forceSetTimeOut: true
+    },
     audio: {
     disableWebAudio: false,
 

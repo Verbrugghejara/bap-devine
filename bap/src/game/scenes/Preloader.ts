@@ -96,6 +96,7 @@ export class Preloader extends Scene
         this.load.spritesheet('meteor-breaking', 'meteor/meteorBreaking.png', { frameWidth: 407, frameHeight: 403 });
         this.load.spritesheet('plane-flying', 'plane/planeFlying.png', { frameWidth: 350, frameHeight: 143 });
         this.load.spritesheet('plane-crashing', 'plane/planeCrashing.png', { frameWidth: 621, frameHeight: 719 });
+        this.load.spritesheet('plane-freeze-crashing', 'plane/planeFreezingCrashing.png', { frameWidth: 621, frameHeight: 719 });
         this.load.spritesheet('propellor-blauw', 'propellors/propellorBlauw.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('propellor-rood', 'propellors/propellorRood.png', { frameWidth: 28, frameHeight: 88 });
         this.load.spritesheet('wind-blauw', 'wind/windBlue.png', { frameWidth: 200, frameHeight: 160 });
@@ -182,6 +183,12 @@ export class Preloader extends Scene
                 frames: this.anims.generateFrameNumbers('sattelite-flying', { start: 0, end: 8 }),
                 frameRate: 4,
                 repeat: -1
+            });
+            this.anims.create({
+                key: 'plane-freeze-crashing',
+                frames: this.anims.generateFrameNumbers('plane-freeze-crashing', { start: 0, end: 8 }),
+                frameRate: 10,
+                repeat: 0
             });
             this.anims.create({
                 key: 'plane-crashing',
