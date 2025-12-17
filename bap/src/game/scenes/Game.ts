@@ -23,7 +23,7 @@ export class Game extends Scene {
     private spaceSound: Phaser.Sound.BaseSound | null = null;
     // Pauze input state
     private _keyboardWasDown: boolean = false;
-    private pauseHoldSource: 'rotary' | 'keyboard' | null = null;
+    // private pauseHoldSource: 'rotary' | 'keyboard' | null = null; // verwijderd, niet gebruikt
     // Timer pause tracking
     private totalPausedDuration: number = 0;
     private pauseBeganAt: number | null = null;
@@ -43,11 +43,11 @@ export class Game extends Scene {
     // --- Input State ---
     private rotary: any = null;
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
-    private enterKey: Phaser.Input.Keyboard.Key | null = null;
-    private wasEnterDown: boolean = false;
+    // private enterKey: Phaser.Input.Keyboard.Key | null = null; // verwijderd, niet gebruikt
+    // private wasEnterDown: boolean = false; // verwijderd, niet gebruikt
     private wasButtonPressed: boolean = false;
     private inactivityTimeout: any = null;
-    private _lastRotaryDiffs: number[] = [0, 0];
+    // private _lastRotaryDiffs: number[] = [0, 0]; // verwijderd, niet gebruikt
 
     // --- Sfeer Layers ---
     private huidigeSfeerIndex: number = 0;
@@ -125,7 +125,7 @@ export class Game extends Scene {
     constructor() {
         super('Game');
         EventBus.emit('show-countdown');
-        EventBus.on('pause-game-scene', this.handlePauseGameScene, this);
+        // EventBus.on('pause-game-scene', this.handlePauseGameScene, this); // Removed: handled by App.vue
         EventBus.on('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.on('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.on('gameover-swipe-in', this.handleGameOverSwipeIn, this);
@@ -265,7 +265,7 @@ export class Game extends Scene {
     shutdown() {
         clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = null;
-        EventBus.off('pause-game-scene', this.handlePauseGameScene, this);
+        // EventBus.off('pause-game-scene', this.handlePauseGameScene, this); // Removed: handled by App.vue
         EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.off('gameover-swipe-in', this.handleGameOverSwipeIn, this);
@@ -402,8 +402,8 @@ export class Game extends Scene {
     private setupInput() {
         // Keyboard pijltjes als fallback/debug
         this.cursors = this.input.keyboard?.createCursorKeys() || null;
-        this.enterKey = null;
-        this.wasEnterDown = false;
+        // this.enterKey = null; // verwijderd, niet gebruikt
+        // this.wasEnterDown = false; // verwijderd, niet gebruikt
         this.wasButtonPressed = false;
     }
 
@@ -963,18 +963,22 @@ export class Game extends Scene {
                 });
                 this.obstacleSpawnPausedRemaining = null;
             }
+            // Stop snor sound if playing
+            if (this.sound && this.sound.get && this.sound.get('snor')) {
+                const snorSound = this.sound.get('snor');
+                if (snorSound && snorSound.isPlaying) {
+                    snorSound.stop();
+                }
+            }
             this.pauseStartTime = null;
             this.pauseBeganAt = null;
             EventBus.emit('hide-pauseui');
             EventBus.emit('game-resume'); // Notify UI to resume
+            console.log('[Game] Pausing game scene via event.');
         }
     }
 
-    private handlePauseGameScene() {
-        if (this.scene.isActive() && !this.scene.isPaused()) {
-            this.scene.pause();
-        }
-    }
+    // handlePauseGameScene removed: pausing handled by App.vue
 
     // ==================== INPUT HANDLING ====================
 
@@ -993,6 +997,9 @@ export class Game extends Scene {
 
         // --- Rotary button logic ---
         if (buttonPressed && !this.wasButtonPressed && this.countdownDone && !this.isGamePaused) {
+
+            this.sound.play('snor', { volume: 0.4, loop: true });
+            console.log('[Game] Rotary button pressed for pause. button'); 
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
             this.pauseBeganAt = Date.now();
@@ -1007,7 +1014,7 @@ export class Game extends Scene {
                 this.obstacleSpawnTimer.remove(false);
                 this.obstacleSpawnTimer = null;
             }
-            this.pauseHoldSource = 'rotary';
+            // this.pauseHoldSource = 'rotary'; // verwijderd, niet gebruikt
             EventBus.emit('show-pauseui');
             EventBus.emit('game-pause'); // Notify UI to pause
         }
@@ -1015,6 +1022,9 @@ export class Game extends Scene {
 
         // --- Keyboard logic ---
         if (keyboardDown && !this._keyboardWasDown && this.countdownDone && !this.isGamePaused) {
+
+            this.sound.play('snor', { volume: 0.4, loop: true });
+            console.log('[Game] Rotary button pressed for pause. key'); 
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
             this.pauseBeganAt = Date.now();
@@ -1029,7 +1039,7 @@ export class Game extends Scene {
                 this.obstacleSpawnTimer.remove(false);
                 this.obstacleSpawnTimer = null;
             }
-            this.pauseHoldSource = 'keyboard';
+            // this.pauseHoldSource = 'keyboard'; // verwijderd, niet gebruikt
             EventBus.emit('show-pauseui');
             EventBus.emit('game-pause'); // Notify UI to pause
         }
@@ -1069,7 +1079,7 @@ export class Game extends Scene {
 
         EventBus.emit('hide-interlude');
         // 1. Tijdens het vallen van de ballon: alleen de huidige sfeer als stilstaande achtergrond
-        const sfeerBgs = [this.bgTroposfeer, this.bgStratosfeer, this.bgMesosfeer, this.bgThermosfeer, this.bgExosfeer];
+        // const sfeerBgs = [this.bgTroposfeer, this.bgStratosfeer, this.bgMesosfeer, this.bgThermosfeer, this.bgExosfeer]; // verwijderd, niet gebruikt
         // for (let i = 0; i < sfeerBgs.length; i++) {
         //     const bg = sfeerBgs[i];
         //     if (bg) {
@@ -1308,7 +1318,7 @@ export class Game extends Scene {
                 const prevSfeerHeight = this.sfeerHoogtes[prevSfeerIndex];
                 const prevSfeerBaseY = this.sfeerBaseY[prevSfeerIndex];
                 const prevSfeerTop = prevSfeerBaseY - prevSfeerHeight / 2;
-                const prevSfeerBottom = prevSfeerBaseY + prevSfeerHeight / 2;
+                // const prevSfeerBottom = prevSfeerBaseY + prevSfeerHeight / 2; // verwijderd, niet gebruikt
                 const centerWorldY = (this.scale.height / 2) - this.sfeerOffsetY;
                 const progressInPrevSfeer = 1 - ((centerWorldY - prevSfeerTop) / prevSfeerHeight);
                 if (progressInPrevSfeer > 0.70) {
@@ -1471,7 +1481,7 @@ export class Game extends Scene {
                     deltaX -= Math.abs(diff2); // links
                 }
 
-                this._lastRotaryDiffs = [diff1, diff2];
+                // this._lastRotaryDiffs = [diff1, diff2]; // verwijderd, niet gebruikt
             }
         }
 

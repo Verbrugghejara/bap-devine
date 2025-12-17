@@ -130,6 +130,7 @@ export class Preloader extends Scene
         this.load.audio('space', 'audio/space.mp3');
         this.load.audio('wind', 'audio/wind.mp3');
         this.load.audio('freeze', 'audio/freeze.mp3');
+        this.load.audio('snor', 'audio/snor.mp3');
     }
     create() {
         // Animaties pas aanmaken als alles geladen is
