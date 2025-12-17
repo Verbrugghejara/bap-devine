@@ -37,6 +37,22 @@ export class GameOver extends Scene {
                         }
                         this.timeoutStarted = false;
                         this.sound.stopAll();
+                        // Stop en destroy alle troposfeer sounds expliciet
+                        const soundManagerAny = this.sound as any;
+                        let tropoSounds: any[] = [];
+                        if (this.sound.get && this.sound.get('troposfeer')) {
+                            tropoSounds.push(this.sound.get('troposfeer'));
+                        }
+                        if (Array.isArray(soundManagerAny.sounds)) {
+                            tropoSounds = tropoSounds.concat(
+                                soundManagerAny.sounds.filter((s: any) => s && s.key === 'troposfeer')
+                            );
+                        }
+                        tropoSounds = [...new Set(tropoSounds)];
+                        for (const s of tropoSounds) {
+                            if (s && s.stop) s.stop();
+                            if (s && s.destroy) s.destroy();
+                        }
                         console.log('Stopping GameOver and starting MainMenu');
                         this.scene.stop('Game');
                         this.scene.stop('GameOver');
@@ -484,7 +500,6 @@ export class GameOver extends Scene {
                         (window as any).sfeerProgress = 0;
                     }
 
-                    this.sound.stopAll();
                     const soundManagerAny = this.sound as any;
                     let tropoSounds: any[] = [];
                     if (this.sound.get && this.sound.get('troposfeer')) {

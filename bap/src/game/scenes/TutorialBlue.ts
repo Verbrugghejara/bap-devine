@@ -4,6 +4,7 @@ import { SFEER_LABELS } from "../utils/sfeerLabels";
 import { getRotaryClient } from "../utils/rotaryClientSingleton";
 
 export class Tutorial extends Scene {
+    private troposfeerSound: Phaser.Sound.BaseSound | null = null;
     private sceneIsReady: boolean = false;
     // ==================== PROPERTIES ====================
     
@@ -78,7 +79,13 @@ export class Tutorial extends Scene {
         this.createSkipButton();
         // setupEventListeners verwijderd, niet meer nodig
 
-        this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+        const result = this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+        const soundResult = result as unknown;
+        if (typeof soundResult === 'object' && soundResult !== null && typeof (soundResult as any).stop === 'function') {
+            this.troposfeerSound = soundResult as Phaser.Sound.BaseSound;
+        } else {
+            this.troposfeerSound = this.sound.get('troposfeer');
+        }
         // Reset rotary button state zodat een ingedrukte knop niet direct effect heeft
         this.wasButtonPressed = this.rotary?.buttonPressed || false;
         this.sceneIsReady = true;
@@ -535,13 +542,17 @@ export class Tutorial extends Scene {
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
                 this.sound.play('button-click');
-                const tropo = this.sound.get('troposfeer');
                 console.log('---------------------------')
-                console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
-                if (tropo) {
-                    tropo.stop();
-                    tropo.destroy();
+                console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', this.troposfeerSound);
+                if (this.troposfeerSound && typeof this.troposfeerSound.stop === 'function') {
+                    this.troposfeerSound.stop();
+                    if (typeof this.troposfeerSound.destroy === 'function') {
+                        this.troposfeerSound.destroy();
+                    }
+                    this.troposfeerSound = null;
                 }
+                console.log('---------------------------')
+                console.log(this.sound)
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {

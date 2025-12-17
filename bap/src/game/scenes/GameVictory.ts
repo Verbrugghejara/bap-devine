@@ -38,8 +38,23 @@ export class GameVictory extends Scene {
                         this.timeoutStarted = false;
                         console.log('Stopping GameVictory and starting MainMenu');
                         this.sound.stopAll();
+                        // Stop en destroy alle troposfeer sounds expliciet
+                        const soundManagerAny = this.sound as any;
+                        let spaceSounds: any[] = [];
+                        if (this.sound.get && this.sound.get('space')) {
+                            spaceSounds.push(this.sound.get('space'));
+                        }
+                        if (Array.isArray(soundManagerAny.sounds)) {
+                            spaceSounds = spaceSounds.concat(
+                                soundManagerAny.sounds.filter((s: any) => s && s.key === 'space')
+                            );
+                        }
+                        spaceSounds = [...new Set(spaceSounds)];
+                        for (const s of spaceSounds) {
+                            if (s && s.stop) s.stop();
+                            if (s && s.destroy) s.destroy();
+                        }
                         this.scene.stop('Game');
-
                         this.scene.stop('GameVictory');
                         this.scene.start('MainMenu');
                     }, 60000);
@@ -433,7 +448,6 @@ export class GameVictory extends Scene {
                             soundManagerAny.sounds.filter((s: any) => s && s.key === 'space')
                         );
                     }
-                    // Uniek maken
                     spaceSounds = [...new Set(spaceSounds)];
                     for (const s of spaceSounds) {
                         if (s && s.stop) s.stop();

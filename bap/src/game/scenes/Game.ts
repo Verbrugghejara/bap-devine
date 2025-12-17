@@ -143,8 +143,7 @@ export class Game extends Scene {
         this.startAlienSpawner();
         // this.sound.stopAll();
         // Spawn tropo-alien direct bij start
-        this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
-                    this.troposfeerSound.play();
+        
         const tropoConfig = this.alienConfigs.find(a => a.key === 'alien-tropo');
         if (tropoConfig && this.textures.exists(tropoConfig.key)) {
             const sfeerCenterY = this.sfeerBaseY[tropoConfig.sfeer] + this.sfeerOffsetY;
@@ -367,9 +366,10 @@ export class Game extends Scene {
         setTimeout(() => {
             this.gameStartTime = Date.now();
             this.countdownDone = true;
-            
             // Show initial interlude for troposfeer after a short delay
             setTimeout(() => {
+                this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
+                        this.troposfeerSound.play();
                 EventBus.emit('show-interlude', 0);
             }, 1000);
             

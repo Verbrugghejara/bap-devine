@@ -2,10 +2,10 @@
 import { GameObjects, Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { getRotaryClient } from '../utils/rotaryClientSingleton';
-import { SFEER_LABELS } from "../utils/sfeerLabels";
 
 
 export class MainMenu extends Scene {
+    private troposfeerSound: Phaser.Sound.BaseSound | null = null;
     rotary: any;
     title: GameObjects.Text;
     title2: GameObjects.Text;
@@ -19,7 +19,14 @@ export class MainMenu extends Scene {
 
 
     create() {
-        this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+        this.sound.stopAll();
+        const result = this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+        const soundResult = result as unknown;
+        if (typeof soundResult === 'object' && soundResult !== null && typeof (soundResult as any).stop === 'function') {
+            this.troposfeerSound = soundResult as Phaser.Sound.BaseSound;
+        } else {
+            this.troposfeerSound = this.sound.get('troposfeer');
+        }
 
             this.rotary = getRotaryClient();
         const video = this.add.video(this.scale.width / 2, this.scale.height / 2, 'home-animation')
@@ -206,12 +213,14 @@ export class MainMenu extends Scene {
 
         this.scene.start('StoryTelling');
 
-        const tropo = this.sound.get('troposfeer');
-        console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', tropo);
-        if (tropo) {
-            tropo.stop();
-            tropo.destroy();
-        }
+            console.log('Shutting down MainMenu scene, stopping troposfeer sound if playing.', this.troposfeerSound);
+            if (this.troposfeerSound && typeof this.troposfeerSound.stop === 'function') {
+                this.troposfeerSound.stop();
+                if (typeof this.troposfeerSound.destroy === 'function') {
+                    this.troposfeerSound.destroy();
+                }
+                this.troposfeerSound = null;
+            }
         
     }
 

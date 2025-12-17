@@ -25,6 +25,8 @@ export class StoryTelling extends Scene {
 
     create() {
         // Reset skip button state
+        console.log('Creating StoryTelling scene');
+        console.log(this.sound)
         this.skipHoldStart = null;
         this.skipHoldProgress = 0;
         this.skipButtonIsDown = false;
