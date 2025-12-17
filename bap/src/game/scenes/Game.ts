@@ -573,6 +573,7 @@ export class Game extends Scene {
         });
                 
         this.ballonHealth--;
+        this.updateWindEffects();
         // Speel geluid af als je op 1 hartje komt
         if (this.ballonHealth === 1) {
             this.sound.play('alien-sad', { volume: 0.7 });
@@ -1201,7 +1202,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [50, 7, 9, 11, 12];
+        const scrollSpeeds = [100, 100, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
@@ -1640,7 +1641,10 @@ export class Game extends Scene {
         }
         // ...existing code...
         if (this.windBlauw && this.ballonContainer) {
-            if (this._windIsTilted) {
+            if (this.ballonHealth === 2) {
+                this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
+                this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY;
+            } else if (this._windIsTilted) {
                 this.windBlauw.x = this.ballonContainer.x + this.propellorOffsetXBlauw - 50;
                 this.windBlauw.y = this.ballonContainer.y + this.propellorOffsetY - this.blauwYOffsetTilted;
             } else {
@@ -1650,7 +1654,10 @@ export class Game extends Scene {
             this.windBlauw.setVisible(true);
         }
         if (this.windRood && this.ballonContainer) {
-            if (this._windIsTilted) {
+            if (this.ballonHealth === 2) {
+                this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 50;
+                this.windRood.y = this.ballonContainer.y + this.propellorOffsetY;
+            } else if (this._windIsTilted) {
                 this.windRood.x = this.ballonContainer.x + this.propellorOffsetXRood + 40;
                 this.windRood.y = this.ballonContainer.y + this.propellorOffsetY + this.roodYOffsetTilted;
             } else {
@@ -2290,17 +2297,16 @@ export class Game extends Scene {
                 if (this.ballonHealth < 3) {
                     this.ballonHealth++;
                     EventBus.emit('update-health', this.ballonHealth);
-                    
                     // Update balloon texture based on new health (if no other power-up is active)
                     if (this.ballon && !this.activePowerUp) {
                         if (this.ballonHealth === 3 && this.textures.exists('balloon')) {
                             this.ballon.setTexture('balloon');
                         } else if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                             this.ballon.setTexture('balloon-health2');
-
-                    this.setPropellorPositions('normal');
                         }
+                        this.setPropellorPositions('normal');
                     }
+                    this.updateWindEffects();
                 }
                 break;
 

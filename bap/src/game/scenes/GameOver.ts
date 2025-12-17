@@ -281,7 +281,7 @@ export class GameOver extends Scene {
         const distanceText = this.add.text(
             this.scale.width / 2,
             sfeerProgressY + 120,
-            `${meters} METER`,
+            `${meters}`,
             {
                 fontFamily: 'Bungee',
                 fontSize: 64,
