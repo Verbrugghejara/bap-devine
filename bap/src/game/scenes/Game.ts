@@ -932,6 +932,8 @@ export class Game extends Scene {
     private handleResumeGameScene() {
         if (this.isGamePaused) {
             this.isGamePaused = false;
+
+            this.sound.play('button-click', { volume: 0.5 });
             // Calculate total paused duration
             if (this.pauseBeganAt) {
                 this.totalPausedDuration += Date.now() - this.pauseBeganAt;
@@ -964,11 +966,13 @@ export class Game extends Scene {
                 });
                 this.obstacleSpawnPausedRemaining = null;
             }
-            // Stop snor sound if playing
+            // Force stop snor sound on every resume, regardless of isPlaying state
             if (this.sound && this.sound.get && this.sound.get('snor')) {
+                console.log('[Game] Stopping snor sound on resume.');
                 const snorSound = this.sound.get('snor');
-                if (snorSound && snorSound.isPlaying) {
-                    snorSound.stop();
+                console.log(snorSound)
+                if (snorSound) {
+                    snorSound.destroy();
                 }
             }
             this.pauseStartTime = null;
@@ -977,6 +981,7 @@ export class Game extends Scene {
             EventBus.emit('game-resume'); // Notify UI to resume
             console.log('[Game] Pausing game scene via event.');
         }
+        
     }
 
     // handlePauseGameScene removed: pausing handled by App.vue
