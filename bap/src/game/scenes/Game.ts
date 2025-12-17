@@ -1202,7 +1202,7 @@ export class Game extends Scene {
     }
 
     private updateScroll() {
-        const scrollSpeeds = [5, 7, 9, 11, 12];
+        const scrollSpeeds = [50, 7, 9, 11, 12];
         // const scrollSpeeds = [200, 200, 200, 200, 200];
         // Scroll pas als ballon op targetY is
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
@@ -1908,7 +1908,7 @@ export class Game extends Scene {
                     console.log('Obstacle type on shield collision:', this.freezeActive);
                     console.log('Obstacle type on shield collision:', this.textures.exists('plane-freeze-crashing'));
                     if (obstacleType === 'plane-flying' && this.textures.exists('plane-freeze-crashing')) {
-                        console.log('Playing plane freeze crashing animation------------------------');
+                        this.damageBallon();
                         const xOffset = obstacleScaleX < 0 ? -100 : 100;
                         const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-freeze-crashing')
                             .setScale(obstacleScaleX, 1)
