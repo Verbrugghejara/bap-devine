@@ -73,15 +73,19 @@ void loop() {
   if (diff > 180) diff -= 360;
   if (diff < -180) diff += 360;
 
-  // Alleen printen bij echte beweging
+  int button = digitalRead(BUTTON_PIN) == LOW ? 1 : 0;
+
+  // Altijd sturen: angle,diff,button
+  Serial.print(angle, 2);
+  Serial.print(",");
+  Serial.print(diff, 2);
+  Serial.print(",");
+  Serial.println(button);
+
+  // Alleen prevAngle updaten bij echte beweging
   if (abs(diff) > THRESHOLD) {
-    Serial.print(angle, 2);
-    Serial.print(",");
-    Serial.print(diff, 2);
-    Serial.print(",");
-    Serial.println(digitalRead(BUTTON_PIN) == LOW ? 1 : 0);
     prevAngle = angle;
   }
 
-  delay(5);  // 200 Hz update rate
+  delay(20); // 50 Hz, past goed bij je WebSocket bridge
 }
