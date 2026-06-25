@@ -185,7 +185,6 @@ onUnmounted(() => {
     border-radius: 32px;
     width: fit-content;
     height: fit-content;
-
     gap: 48px;
 }
 .pop-in-delayed-2 {
@@ -195,11 +194,41 @@ onUnmounted(() => {
 .pop-in-delayed-3 {
     animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.2s backwards;
     display:flex;
+    align-items: center;
     flex-direction: row;
 }
 
 .pop-in-delayed-4 {
     animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s backwards;
+}
+
+.obstacle-icon {
+    width: min(70vw, 420px) !important;
+    height: auto !important;
+}
+
+/* Landscape / wide screens: use compact modal */
+@media (orientation: landscape) {
+    .interlude-sfeer {
+        padding: 12px 24px;
+        font-size: 24px;
+        border-radius: 12px;
+    }
+    .interlude-container p {
+        font-size: 28px;
+    }
+    .pop-in-delayed-1 {
+        padding: 20px 20px;
+        border-radius: 20px;
+        max-width: 420px;
+        width: 100%;
+        box-sizing: border-box;
+        gap: 16px;
+    }
+    .obstacle-icon {
+        max-width: 260px !important;
+        width: 100% !important;
+    }
 }
 
 @keyframes popIn {

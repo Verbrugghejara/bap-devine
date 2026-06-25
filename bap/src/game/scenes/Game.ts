@@ -4,6 +4,10 @@ import { SFEER_LABELS } from '../utils/sfeerLabels';
 import { EventBus } from '../EventBus';
 import { sfeerProgress } from '../utils/sfeerProgressStore';
 
+// Reference design resolution used when coordinates were authored.
+const DESIGN_WIDTH = 1080;
+const DESIGN_HEIGHT = 1920;
+
 // ==================== UTILITIES ====================
 
 // ==================== UTILITIES ====================
@@ -126,6 +130,15 @@ export class Game extends Scene {
         EventBus.on('play-startled-sound', this.handlePlayStartledSound, this);
     }
 
+    // Convert coordinates authored for DESIGN_WIDTH / DESIGN_HEIGHT to runtime scale
+    private scaleDesignX(x: number): number {
+        return (x / DESIGN_WIDTH) * this.scale.width;
+    }
+
+    private scaleDesignY(y: number): number {
+        return (y / DESIGN_HEIGHT) * this.scale.height;
+    }
+
 
     create() {
         this.initializeGameState();
@@ -140,9 +153,10 @@ export class Game extends Scene {
         if (tropoConfig && this.textures.exists(tropoConfig.key)) {
             const sfeerCenterY = this.sfeerBaseY[tropoConfig.sfeer] + this.sfeerOffsetY;
             const sfeerHeight = this.sfeerHoogtes[tropoConfig.sfeer];
-            const y = sfeerCenterY - (sfeerHeight / 2) + tropoConfig.y;
+            const y = sfeerCenterY - (sfeerHeight / 2) + this.scaleDesignY(tropoConfig.y);
             const scale = tropoConfig.scale;
-            const alien = this.physics.add.sprite(tropoConfig.x, y, tropoConfig.key, 0)
+            const alienX = this.scaleDesignX(tropoConfig.x);
+            const alien = this.physics.add.sprite(alienX, y, tropoConfig.key, 0)
                 .setScale(scale)
                 .setDepth(999)
                 .setOrigin(0.5);
@@ -208,9 +222,10 @@ export class Game extends Scene {
         } else {
             const sfeerCenterY = this.sfeerBaseY[config.sfeer] + this.sfeerOffsetY;
             const sfeerHeight = this.sfeerHoogtes[config.sfeer];
-            y = sfeerCenterY - (sfeerHeight / 2) + config.y;
+            y = sfeerCenterY - (sfeerHeight / 2) + this.scaleDesignY(config.y);
         }
-        const alien = this.physics.add.sprite(config.x, y, config.key, 0)
+        const scaledX = this.scaleDesignX(config.x);
+        const alien = this.physics.add.sprite(scaledX, y, config.key, 0)
             .setScale(scale)
             .setDepth(1)
             .setOrigin(0.5);
@@ -345,7 +360,9 @@ export class Game extends Scene {
 
     private setupPhysics() {
         if (this.physics && this.physics.world) {
-            this.physics.world.setBounds(0, 0, this.scale.width, this.scale.height);
+            const screenWidth = this.scaleDesignX(DESIGN_WIDTH);
+            const screenHeight = this.scaleDesignY(DESIGN_HEIGHT);
+            this.physics.world.setBounds(0, 0, screenWidth, screenHeight);
         }
         this.cameras.main.setBackgroundColor(0x00000000);
     }
@@ -358,7 +375,7 @@ export class Game extends Scene {
     // ==================== SFEER LAYERS ====================
 
     private createSfeerLayers() {
-        const standaardHoogte = this.scale.height;
+        const standaardHoogte = this.scaleDesignY(DESIGN_HEIGHT);
         this.sfeerHoogtes = [
             standaardHoogte * 4, // troposfeer
             standaardHoogte * 5, // stratosfeer
@@ -370,7 +387,7 @@ export class Game extends Scene {
         this.sfeerRects = [];
         this.sfeerBaseY = [];
         
-        let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
+        let worldY = this.scaleDesignY(DESIGN_HEIGHT) - this.sfeerHoogtes[0] / 2;
         
         for (let i = 0; i < this.sfeerHoogtes.length; i++) {
             const hoogte = this.sfeerHoogtes[i];
@@ -443,11 +460,11 @@ export class Game extends Scene {
     ) {
         if (!this.textures.exists(textureKey)) return;
 
-        const img = this.add.image(this.scale.width / 2, 0, textureKey);
+        const img = this.add.image(this.scaleDesignX(DESIGN_WIDTH / 2), 0, textureKey);
         const tex = this.textures.get(textureKey).getSourceImage();
         const bgHoogte = this.sfeerHoogtes[sfeerIndex];
-        const scaleX = this.scale.width / tex.width;
-        const scaleY = bgHoogte / tex.height;
+        const scaleX = this.scaleDesignX(DESIGN_WIDTH) / tex.width;
+        const scaleY = this.scaleDesignY(bgHoogte) / tex.height;
         
         callback(img, { x: scaleX, y: scaleY });
     }

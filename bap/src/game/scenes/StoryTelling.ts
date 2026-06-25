@@ -2,6 +2,10 @@ import { Scene } from 'phaser';
 import { getRotaryClient } from '../utils/rotaryClientSingleton';
 
 
+// Design reference resolution used when coordinates were authored.
+const DESIGN_WIDTH = 1080;
+const DESIGN_HEIGHT = 1920;
+
 export class StoryTelling extends Scene {
     private skipFill: Phaser.GameObjects.Graphics | null = null;
     private skipCircleRadius: number = 20;
@@ -22,6 +26,18 @@ export class StoryTelling extends Scene {
 
     constructor() {
         super('StoryTelling');
+    }
+
+    private getDesignScale(): number {
+        return Math.min(this.scale.width / DESIGN_WIDTH, this.scale.height / DESIGN_HEIGHT);
+    }
+
+    private scaleDesignX(x: number): number {
+        return x * this.getDesignScale();
+    }
+
+    private scaleDesignY(y: number): number {
+        return y * this.getDesignScale();
     }
 
     create() {
@@ -55,12 +71,12 @@ export class StoryTelling extends Scene {
         video.play(false);
     }
     private createSkipButton() {
-        const buttonWidth = 500;
-        const buttonHeight = 100;
-        const skipShadowOffsetY = 8;
-        const buttonX = this.scale.width - buttonWidth / 2 - 54;
-        const buttonY = this.scale.height / 2 + 850;
-        const circleRadius = 20;
+        const buttonWidth = Math.round(this.scaleDesignX(500));
+        const buttonHeight = Math.round(this.scaleDesignY(100));
+        const skipShadowOffsetY = this.scaleDesignY(8);
+        const buttonX = this.scale.width - buttonWidth / 2 - this.scaleDesignX(54);
+        const buttonY = this.scale.height / 2 + this.scaleDesignY(850);
+        const circleRadius = Math.max(8, Math.round(this.scaleDesignX(20)));
         const gap = 32;
         const skipTextPadding = 12;
         

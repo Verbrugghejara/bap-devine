@@ -9,10 +9,14 @@ import { Preloader } from './scenes/Preloader';
 // https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
-    width: 1024,
-    height: 768,
     parent: 'game-container',
-    backgroundColor: '#028af8',
+    backgroundColor: '#FFF4D9',
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 1080,
+        height: 1920
+    },
     scene: [
         Boot,
         Preloader,
@@ -23,8 +27,10 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const StartGame = (parent: string) => {
-
-    return new Game({ ...config, parent });
+    return new Game({
+        ...config,
+        parent
+    });
 
 }
 

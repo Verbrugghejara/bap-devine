@@ -1,6 +1,7 @@
 <template>
   <div class="game-ui-container" v-show="visible">
-    <div class="sfeer-progress-outer">
+    <div class="game-ui-root">
+      <div class="sfeer-progress-outer">
       <div class="sfeer-progress-alien" :class="transitionClass" :style="{ bottom: 'calc(' + (sfeerProgress * 100) + '% - 32px)', transition: 'background 3s ease' }">
         <svg v-if="healthUpdated == true" width="81" height="92" viewBox="0 0 128 147" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M91.3716 48.4137L114.141 25.6447C115.052 24.7335 116.529 24.7334 117.44 25.6447V25.6447C123.272 31.4766 123.272 40.9319 117.44 46.7638L115.791 48.4137C109.047 55.1568 98.1147 55.1568 91.3716 48.4137V48.4137Z" fill="#008049"/>
@@ -247,7 +248,7 @@
             <p :style="{ color: `${SFEER_COLORS[sfeerIndex].d}` }">{{ distanceText }}</p>
           </div>
 
-  </div>
+  </div></div>
 </template>
 
 <script setup lang="ts">
@@ -559,29 +560,41 @@ onUnmounted(() => {
 }
 .game-ui-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
+  inset: 0;
   width: 100vw;
+  height: 100vh;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
   pointer-events: none;
   z-index: 20;
 }
 
+.game-ui-root {
+  position: relative;
+  width: 1080px;
+  height: 1920px;
+  transform-origin: center center;
+  transform: scale(var(--game-scale, 1));
+}
+
 .game-ui {
-  margin-top: 48px;
-  margin-left: 48px;
-  margin-right: 72px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 48px 72px;
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   flex-direction: row;
   align-items: start;
-  width: 100%;
   pointer-events: auto;
   z-index: 10;
 }
+
 
 .left-ui {
   display: flex;
@@ -603,20 +616,19 @@ onUnmounted(() => {
   /* border: 6px solid #2E3A6A; */
   /* box-shadow: 10px 10px 0 0 rgba(0, 0, 0, 0.25); */
   /* box-shadow: 10px 10px 0 0 #2E3A6A; */
-  border-radius: 16px;
-  height: 110px;
-  min-width: 450px;
-  /* margin-right: 32px; */
-  padding-left: 32px;
+  border-radius: 12px;
+  height: 84px;
+  min-width: 320px;
+  padding-left: 20px;
   position: relative;
 }
 
 .sfeer-circle-outer {
-  width: 140px;
-  height: 140px;
+  width: 100px;
+  height: 100px;
   background: #fff;
-  border: 12px solid #2E3A6A;
-  border-radius: 32px;
+  border: 8px solid #2E3A6A;
+  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -626,8 +638,8 @@ onUnmounted(() => {
 }
 
 .sfeer-circle-inner {
-  width: 100px;
-  height: 100px;
+  width: 72px;
+  height: 72px;
   background: #ffffff25;
   /* border: 3px solid #2E3A6A; */
   border-radius: 50%;
@@ -635,11 +647,11 @@ onUnmounted(() => {
 
 .sfeer-label-text {
   font-family: 'Bungee', 'Arial Black', Arial, sans-serif;
-  font-size: 48px;
+  font-size: 36px;
   color: #fff;
   font-weight: bold;
   margin-left: 12px;
-  margin-right: 24px;
+  margin-right: 16px;
   z-index: 2;
   text-align: center;
   flex: 1;
