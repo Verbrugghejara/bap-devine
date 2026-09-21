@@ -102,9 +102,9 @@ export class Game extends Scene {
     private alienConfigs = [
         { key: 'alien-tropo', sfeer: 0, x: 540, y: 5365, scale: 0 },
         { key: 'alien-strato', sfeer: 1, x: 100, y: 4800, scale: 0.6 },
-        { key: 'alien-meso', sfeer: 2, x: 80, y: 8900 , scale: 0.5},
-        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5450 , scale: 0.6},
-        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400 , scale: 0.5},
+        { key: 'alien-meso', sfeer: 2, x: 80, y: 8900, scale: 0.5 },
+        { key: 'alien-thermo', sfeer: 3, x: 80, y: 5450, scale: 0.6 },
+        { key: 'alien-exo', sfeer: 4, x: 80, y: 8400, scale: 0.5 },
     ];
     private alienSpawnTimer: Phaser.Time.TimerEvent | null = null;
 
@@ -185,7 +185,7 @@ export class Game extends Scene {
         this.updateBalloonMovement();
         this.updateWindEffects();
         this.checkObstacleCollisions();
-        this.checkNearObstacle(10); 
+        this.checkNearObstacle(10);
         this.updateAliens();
     }
 
@@ -224,18 +224,18 @@ export class Game extends Scene {
         this.aliens.push(alien);
     }
 
-        private updateAliens() {
-            for (const alien of this.aliens) {
-                alien.y += this.smoothScrollSpeed;
-            }
-            for (let i = this.aliens.length - 1; i >= 0; i--) {
-                if (this.aliens[i].y > this.scale.height + 200) {
-                    this.aliens[i].destroy();
-                    this.aliens.splice(i, 1);
-                }
+    private updateAliens() {
+        for (const alien of this.aliens) {
+            alien.y += this.smoothScrollSpeed;
+        }
+        for (let i = this.aliens.length - 1; i >= 0; i--) {
+            if (this.aliens[i].y > this.scale.height + 200) {
+                this.aliens[i].destroy();
+                this.aliens.splice(i, 1);
             }
         }
-    
+    }
+
     shutdown() {
         clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = null;
@@ -271,7 +271,7 @@ export class Game extends Scene {
     }
     private handlePlayCountdownSound() {
         this.sound.play('count-down', { volume: 0.3 });
-    
+
     }
 
     private handlePlayStartdownSound() {
@@ -331,14 +331,28 @@ export class Game extends Scene {
         this.isVictorySequence = false;
         this.isGameOverSequence = false;
         this.isBalloonLeaving = false;
+        this.isVictorySwiping = false;
+        this.hasPlayedVictoryCheer = false;
         this.powerUps = [];
         this.powerUpsSpawned = new Set();
         this.activePowerUp = null;
         this.powerUpEndTime = 0;
         this.freezeActive = false;
         this.shieldActive = false;
+
+        this._windIsTilted = false;
+        this.isGameOverSequence = false;
+        this.gameOverSwipeStarted = false;
+        this.isGameOverSwiping = false;
+        this.hasPlayedScream = false;
         this.aliens = [];
-        
+
+        // Make sure a previous victory screen cannot remain active when a new
+        // Game scene starts. This is important when the game is replayed.
+        if (this.scene.isActive('GameVictory')) {
+            this.scene.stop('GameVictory');
+        }
+
         sfeerProgress.value = 0;
         if (typeof window !== 'undefined') {
             delete (window as any).gameDurationMs;
@@ -346,7 +360,7 @@ export class Game extends Scene {
         }
         EventBus.emit('show-countdown');
         EventBus.emit('show-gameui');
-        
+
         this.countdownStartTimeout = setTimeout(() => {
             this.countdownStartTimeout = null;
 
@@ -391,20 +405,20 @@ export class Game extends Scene {
             standaardHoogte * 7, // thermosfeer
             standaardHoogte * 8, // exosfeer
         ];
-        
+
         this.sfeerRects = [];
         this.sfeerBaseY = [];
-        
+
         let worldY = this.scale.height - this.sfeerHoogtes[0] / 2;
-        
+
         for (let i = 0; i < this.sfeerHoogtes.length; i++) {
             const hoogte = this.sfeerHoogtes[i];
             const kleur = SFEER_LABELS[i]?.colors?.a ?? 0xffffff;
             const kleurInt = typeof kleur === 'number' ? kleur : 0xffffff;
             const baseCenterY = worldY;
-            
+
             this.sfeerBaseY.push(baseCenterY);
-            
+
             const rect = this.add.rectangle(
                 this.scale.width / 2,
                 baseCenterY,
@@ -412,18 +426,18 @@ export class Game extends Scene {
                 hoogte,
                 kleurInt
             ).setDepth(-100);
-            
+
             rect.setFillStyle(kleurInt, 0);
             rect.width = this.scale.width;
             rect.height = hoogte;
-            
+
             this.sfeerRects.push(rect);
-            
+
             if (i < this.sfeerHoogtes.length - 1) {
                 worldY -= (hoogte / 2) + (this.sfeerHoogtes[i + 1] / 2);
             }
         }
-        
+
         this.sfeerOffsetY = 0;
     }
 
@@ -462,8 +476,8 @@ export class Game extends Scene {
     }
 
     private createBackground(
-        textureKey: string, 
-        sfeerIndex: number, 
+        textureKey: string,
+        sfeerIndex: number,
         callback: (img: Phaser.GameObjects.Image, scale: { x: number; y: number }) => void
     ) {
         if (!this.textures.exists(textureKey)) return;
@@ -473,7 +487,7 @@ export class Game extends Scene {
         const bgHoogte = this.sfeerHoogtes[sfeerIndex];
         const scaleX = this.scale.width / tex.width;
         const scaleY = bgHoogte / tex.height;
-        
+
         callback(img, { x: scaleX, y: scaleY });
     }
 
@@ -515,17 +529,17 @@ export class Game extends Scene {
             );
             this.ballonContainer.setDepth(1002);
 
-            this.scene.pause(); 
+            this.scene.pause();
             this.tweens.add({
                 targets: this.ballonContainer,
                 y: targetY,
                 duration: 1200,
-                ease: 'Cubic.easeOut',onStart: () => {
+                ease: 'Cubic.easeOut', onStart: () => {
                     this.sound.detune = 0;
                     this.sound.play('alien-cheers', { volume: 0.4 });
                 },
                 onComplete: () => {
-                    this.scene.resume(); 
+                    this.scene.resume();
                 }
             });
         } catch (e) {
@@ -542,7 +556,7 @@ export class Game extends Scene {
             }
 
         });
-                
+
         this.ballonHealth--;
         this.updateWindEffects();
         if (this.ballonHealth === 1) {
@@ -551,7 +565,7 @@ export class Game extends Scene {
         this.ballonInvulnerable = true;
         EventBus.emit('update-health', this.ballonHealth);
         EventBus.emit('show-hit-emotion');
-        
+
         if (this.ballon) {
             this.tweens.add({
                 targets: this.ballon,
@@ -564,7 +578,7 @@ export class Game extends Scene {
                     this.ballonInvulnerable = false;
                 }
             });
-            
+
             if (!this.activePowerUp) {
                 if (this.ballonHealth === 2 && this.textures.exists('balloon-health2')) {
                     this.ballon.setTexture('balloon-health2');
@@ -585,7 +599,7 @@ export class Game extends Scene {
                 }
             }
         }
-        
+
         if (this.ballonHealth <= 0) {
             if (this.windBlauw) {
                 this.windBlauw.destroy();
@@ -599,7 +613,7 @@ export class Game extends Scene {
             this.gameOverSwipeStarted = false;
             EventBus.emit('hide-gameui');
             EventBus.emit('hide-interlude');
-            this.isGameOverSequence = true; 
+            this.isGameOverSequence = true;
         }
     }
 
@@ -668,13 +682,13 @@ export class Game extends Scene {
             const currentSfeerTop = currentSfeerCenterY - (currentSfeerHeight / 2);
 
             if (this.huidigeSfeerIndex === 2) {
-                let startSpawnThreshold = 768*2; 
+                let startSpawnThreshold = 768 * 2;
                 if (currentSfeerTop > -startSpawnThreshold) {
                     return;
                 }
             }
             if (this.huidigeSfeerIndex === 4) {
-                let startSpawnThreshold = 768*3; 
+                let startSpawnThreshold = 768 * 3;
                 if (currentSfeerTop > -startSpawnThreshold) {
 
                     return;
@@ -689,11 +703,11 @@ export class Game extends Scene {
 
 
             if (config.movementType === 'vertical') {
-                direction = Math.random() < 0.5 ? 1 : -1; 
+                direction = Math.random() < 0.5 ? 1 : -1;
                 if (direction === -1) {
                     x = Phaser.Math.Between(this.scale.width * 0.5, this.scale.width - 100);
                 } else {
-               
+
                     x = Phaser.Math.Between(100, this.scale.width * 0.5);
                 }
                 y = -100;
@@ -745,7 +759,7 @@ export class Game extends Scene {
 
             const obstacle = this.physics.add.sprite(x, y, config.texture)
                 .setScale(
-                    (config.movementType === 'horizontal' && direction === -1) || (config.movementType === 'vertical' && direction === -1) ? -config.scale : config.scale, 
+                    (config.movementType === 'horizontal' && direction === -1) || (config.movementType === 'vertical' && direction === -1) ? -config.scale : config.scale,
                     config.scale
                 )
                 .setDepth(50)
@@ -789,8 +803,12 @@ export class Game extends Scene {
     private handleVictorySwipeIn() {
         if (this.isVictorySwiping) return;
         this.isVictorySwiping = true;
-        
+
         const VICTORY_SWIPE_DURATION = 1400;
+
+        // Only tween objects that still exist and are active. This prevents
+        // stale/destroyed objects from a previous run from interfering with
+        // the victory transition.
         const allGameObjects = [
             this.bgTroposfeer,
             this.bgStratosfeer,
@@ -800,8 +818,11 @@ export class Game extends Scene {
             this.ballonContainer,
             ...this.sfeerRects,
             ...this.obstacles
-        ].filter(obj => obj !== null);
-        
+        ].filter(
+            (obj): obj is Phaser.GameObjects.GameObject & { y: number } =>
+                obj !== null && obj.active
+        );
+
         this.tweens.add({
             targets: allGameObjects,
             y: `+=${this.scale.height}`,
@@ -816,8 +837,8 @@ export class Game extends Scene {
     private handleGameOverSwipeIn() {
         if (this.isGameOverSwiping) return;
         this.isGameOverSwiping = true;
-        
-        const GAMEOVER_SWIPE_DURATION = 1200; 
+
+        const GAMEOVER_SWIPE_DURATION = 1200;
         const allGameObjects = [
             this.bgTroposfeer,
             this.bgStratosfeer,
@@ -884,10 +905,10 @@ export class Game extends Scene {
             this.pauseStartTime = null;
             this.pauseBeganAt = null;
             EventBus.emit('hide-pauseui');
-            EventBus.emit('game-resume'); 
+            EventBus.emit('game-resume');
             console.log('[Game] Pausing game scene via event.');
         }
-        
+
     }
     // ==================== INPUT HANDLING ====================
 
@@ -906,7 +927,7 @@ export class Game extends Scene {
         if (buttonPressed && !this.wasButtonPressed && this.countdownDone && !this.isGamePaused) {
 
             this.sound.play('snor', { volume: 0.4, loop: true });
-            console.log('[Game] Rotary button pressed for pause. button'); 
+            console.log('[Game] Rotary button pressed for pause. button');
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
             this.pauseBeganAt = Date.now();
@@ -920,7 +941,7 @@ export class Game extends Scene {
                 this.obstacleSpawnTimer = null;
             }
             EventBus.emit('show-pauseui');
-            EventBus.emit('game-pause'); 
+            EventBus.emit('game-pause');
         }
         this.wasButtonPressed = buttonPressed;
 
@@ -928,7 +949,7 @@ export class Game extends Scene {
         if (keyboardDown && !this._keyboardWasDown && this.countdownDone && !this.isGamePaused) {
 
             this.sound.play('snor', { volume: 0.4, loop: true });
-            console.log('[Game] Rotary button pressed for pause. key'); 
+            console.log('[Game] Rotary button pressed for pause. key');
             this.isGamePaused = true;
             this.pauseStartTime = Date.now();
             this.pauseBeganAt = Date.now();
@@ -942,7 +963,7 @@ export class Game extends Scene {
                 this.obstacleSpawnTimer = null;
             }
             EventBus.emit('show-pauseui');
-            EventBus.emit('game-pause'); 
+            EventBus.emit('game-pause');
         }
         (this as any)._keyboardWasDown = keyboardDown;
     }
@@ -969,113 +990,192 @@ export class Game extends Scene {
             }
             if (this.ballonContainer.y + (this.ballon?.height ?? 100) < -50) {
                 this.isBalloonLeaving = false;
+
+                // GameVictory is launched as an overlay. When the player
+                // replays the game, Phaser can still have the old
+                // GameVictory scene alive, so launch() alone is not enough.
+                // Stop the old instance first and then launch a fresh one.
+                if (this.scene.isActive('GameVictory')) {
+                    this.scene.stop('GameVictory');
+                }
+
                 this.scene.launch('GameVictory');
-                EventBus.emit('victory-swipe-in');
+
             }
         }
     }
 
-        // ==================== GAME OVER SEQUENCE ====================
+    // ==================== GAME OVER SEQUENCE ====================
     private updateGameOverSequence() {
-
         EventBus.emit('hide-interlude');
 
+        // Laat de ballon omhoog vliegen en speel de scream maar één keer af
         if (this.ballonContainer) {
             if (!this.hasPlayedScream) {
                 this.sound.play('alien-scream', { volume: 0.3 });
                 this.hasPlayedScream = true;
             }
-            this.ballonContainer.y += 18; 
+
+            this.ballonContainer.y += 18;
+
+            // Wacht tot de ballon volledig uit beeld is
             if (
                 this.ballonHealth <= 0 &&
                 this.ballonContainer &&
                 !this.gameOverSwipeStarted &&
-                this.ballonContainer.y - (this.ballon?.height ?? 100) > this.scale.height + 100
+                this.ballonContainer.y -
+                (this.ballon?.height ?? 100) >
+                this.scale.height + 100
             ) {
                 this.ballonContainer.destroy();
                 this.ballonContainer = null;
                 this.ballon = null;
+
                 this.gameOverSwipeStarted = true;
             }
         }
 
+        // Start de Game Over transition zodra de ballon verdwenen is
         if (
             this.ballonHealth <= 0 &&
             !this.ballonContainer &&
-            this.gameOverSwipeStarted
+            this.gameOverSwipeStarted &&
+            !this.isGameOverSwiping
         ) {
-            this.gameOverSwipeStarted = false; 
+            // Voorkom dat deze code meerdere keren wordt uitgevoerd
+            this.gameOverSwipeStarted = false;
+
+            // Als we al in de troposfeer zitten, hoeven we niet eerst terug te scrollen
             if (this.huidigeSfeerIndex === 0) {
                 this.scene.launch('GameOver');
                 EventBus.emit('gameover-swipe-in');
-            } else {
-                const startOffset = this.sfeerOffsetY;
-                let lastTweenValue = startOffset;
-                const troposfeerHeight = this.sfeerHoogtes[0];
-                const troposfeerEnd = troposfeerHeight - (this.scale.height * 2);
-                const targetOffset = Math.max(troposfeerEnd, 0);
-                this.tweens.addCounter({
-                    from: startOffset,
-                    to: targetOffset,
-                    duration: (() => {
-                        switch (this.huidigeSfeerIndex) {
-                            case 1: return 1000; // stratosfeer
-                            case 2: return 2000; // mesosfeer
-                            case 3: return 2500; // thermosfeer
-                            case 4: return 3000; // exosfeer
-                            default: return 2000;
-                        }
-                    })(),
-                    ease: 'Sine.easeIn',
-                    onUpdate: tween => {
-                        EventBus.emit('hide-interlude');
-                        const currentValue = tween.getValue() ?? 0;
-                        const delta = currentValue - lastTweenValue;
-                        this.sfeerOffsetY = currentValue;
-                        lastTweenValue = currentValue;
-                        for (let i = 0; i < this.sfeerRects.length; i++) {
-                            const baseY = this.sfeerBaseY[i];
-                            this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
-                        }
-                        if (this.bgTroposfeer) {
-                            this.bgTroposfeer.y = this.scale.height + this.sfeerOffsetY;
-                        }
-                        if (this.bgStratosfeer && this.bgTroposfeer) {
-                            this.bgStratosfeer.y = this.bgTroposfeer.y - this.bgTroposfeer.displayHeight;
-                        }
-                        if (this.bgMesosfeer && this.bgStratosfeer) {
-                            this.bgMesosfeer.y = this.bgStratosfeer.y - this.bgStratosfeer.displayHeight;
-                        }
-                        if (this.bgThermosfeer && this.bgMesosfeer) {
-                            this.bgThermosfeer.y = this.bgMesosfeer.y - this.bgMesosfeer.displayHeight;
-                        }
-                        if (this.bgExosfeer && this.bgThermosfeer) {
-                            this.bgExosfeer.y = this.bgThermosfeer.y - this.bgThermosfeer.displayHeight;
-                        }
-                        for (const obstacle of this.obstacles) {
-                            if (obstacle && obstacle.active) {
-                                obstacle.y += delta;
-                            }
-                        }
-                        for (const powerUp of this.powerUps) {
-                            if (powerUp && powerUp.active) {
-                                powerUp.y += delta;
-                            }
-                        }
-                        for (const alien of this.aliens) {
-                            if (alien && alien.active) {
-                                alien.y += delta;
-                            }
-                        }
-                    },
-                    onComplete: () => {
-
-                        EventBus.emit('hide-interlude');
-                        this.scene.launch('GameOver');
-                        EventBus.emit('gameover-swipe-in');
-                    }
-                });
+                return;
             }
+
+            // We zitten hoger in de atmosfeer:
+            // eerst helemaal terug naar de troposfeer scrollen
+            const startOffset = this.sfeerOffsetY;
+            let lastTweenValue = startOffset;
+
+            const troposfeerHeight = this.sfeerHoogtes[0];
+            const troposfeerEnd =
+                troposfeerHeight - (this.scale.height * 2);
+
+            const targetOffset = Math.max(troposfeerEnd, 0);
+
+            this.tweens.addCounter({
+                from: startOffset,
+                to: targetOffset,
+
+                duration: (() => {
+                    switch (this.huidigeSfeerIndex) {
+                        case 1:
+                            return 1000; // stratosfeer
+
+                        case 2:
+                            return 2000; // mesosfeer
+
+                        case 3:
+                            return 2500; // thermosfeer
+
+                        case 4:
+                            return 3000; // exosfeer
+
+                        default:
+                            return 2000;
+                    }
+                })(),
+
+                ease: 'Sine.easeIn',
+
+                onUpdate: (tween) => {
+                    EventBus.emit('hide-interlude');
+
+                    const currentValue = tween.getValue() ?? 0;
+                    const delta = currentValue - lastTweenValue;
+
+                    this.sfeerOffsetY = currentValue;
+                    lastTweenValue = currentValue;
+
+                    // Atmosfeerlagen verplaatsen
+                    for (let i = 0; i < this.sfeerRects.length; i++) {
+                        const baseY = this.sfeerBaseY[i];
+
+                        this.sfeerRects[i].y =
+                            baseY + this.sfeerOffsetY;
+                    }
+
+                    // Achtergronden opnieuw positioneren
+                    if (this.bgTroposfeer) {
+                        this.bgTroposfeer.y =
+                            this.scale.height + this.sfeerOffsetY;
+                    }
+
+                    if (
+                        this.bgStratosfeer &&
+                        this.bgTroposfeer
+                    ) {
+                        this.bgStratosfeer.y =
+                            this.bgTroposfeer.y -
+                            this.bgTroposfeer.displayHeight;
+                    }
+
+                    if (
+                        this.bgMesosfeer &&
+                        this.bgStratosfeer
+                    ) {
+                        this.bgMesosfeer.y =
+                            this.bgStratosfeer.y -
+                            this.bgStratosfeer.displayHeight;
+                    }
+
+                    if (
+                        this.bgThermosfeer &&
+                        this.bgMesosfeer
+                    ) {
+                        this.bgThermosfeer.y =
+                            this.bgMesosfeer.y -
+                            this.bgMesosfeer.displayHeight;
+                    }
+
+                    if (
+                        this.bgExosfeer &&
+                        this.bgThermosfeer
+                    ) {
+                        this.bgExosfeer.y =
+                            this.bgThermosfeer.y -
+                            this.bgThermosfeer.displayHeight;
+                    }
+
+                    // Obstakels meebewegen
+                    for (const obstacle of this.obstacles) {
+                        if (obstacle && obstacle.active) {
+                            obstacle.y += delta;
+                        }
+                    }
+
+                    // Power-ups meebewegen
+                    for (const powerUp of this.powerUps) {
+                        if (powerUp && powerUp.active) {
+                            powerUp.y += delta;
+                        }
+                    }
+
+                    // Aliens meebewegen
+                    for (const alien of this.aliens) {
+                        if (alien && alien.active) {
+                            alien.y += delta;
+                        }
+                    }
+                },
+
+                onComplete: () => {
+                    EventBus.emit('hide-interlude');
+
+                    this.scene.launch('GameOver');
+                    EventBus.emit('gameover-swipe-in');
+                }
+            });
         }
     }
 
@@ -1084,18 +1184,22 @@ export class Game extends Scene {
         if (this.ballonContainer && this.ballonContainer.y > this.scale.height * 0.86) {
             return;
         }
-        
+
         let healthSpeedModifier = 1.0;
         if (this.ballonHealth === 2) {
             healthSpeedModifier = 0.90;
         } else if (this.ballonHealth === 1) {
             healthSpeedModifier = 0.80;
         }
-        
-        const targetScrollSpeed = (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) * healthSpeedModifier; // * (this.shieldActive ? 1.5 : 1);
-        this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
+
+        const upBoost = this.cursors?.up?.isDown ? 5.0 : 1.0;
+
+        const targetScrollSpeed =
+            (scrollSpeeds[this.huidigeSfeerIndex] ?? 15) *
+            healthSpeedModifier *
+            upBoost; this.smoothScrollSpeed += (targetScrollSpeed - this.smoothScrollSpeed) * 0.05;
         this.sfeerOffsetY += this.smoothScrollSpeed;
-        
+
         for (let i = 0; i < this.sfeerRects.length; i++) {
             const baseY = this.sfeerBaseY[i];
             this.sfeerRects[i].y = baseY + this.sfeerOffsetY;
@@ -1143,7 +1247,7 @@ export class Game extends Scene {
         const centerScreenY = this.scale.height / 2;
         const centerWorldY = centerScreenY - this.sfeerOffsetY;
         let sfeerIndex = this.sfeerBaseY.length - 1;
-        
+
         for (let i = 0; i < this.sfeerBaseY.length; i++) {
             const baseCenterY = this.sfeerBaseY[i];
             const hoogte = this.sfeerHoogtes[i];
@@ -1154,7 +1258,7 @@ export class Game extends Scene {
                 break;
             }
         }
-        
+
         if (this.huidigeSfeerIndex !== sfeerIndex) {
             if (this.huidigeSfeerIndex === 2 && sfeerIndex !== 2) {
                 this.firstMeteorSpawned = false;
@@ -1202,7 +1306,7 @@ export class Game extends Scene {
 
             console.log(this.sound.locked)
             if (this.sound.locked === false) {
-                const FADE_TIME = 1500; 
+                const FADE_TIME = 1500;
                 let oldSound: Phaser.Sound.BaseSound | null = null;
                 let newSound: Phaser.Sound.BaseSound | null = null;
                 let newKey = '';
@@ -1258,7 +1362,7 @@ export class Game extends Scene {
                     if (this.stratosfeerSound) { this.stratosfeerSound = null; }
                 }
             }
-            
+
         }
         EventBus.emit('update-sfeer-index', sfeerIndex);
     }
@@ -1268,15 +1372,15 @@ export class Game extends Scene {
         const safeTotal = Math.max(1, totalHeight);
         const scrolled = Math.min(this.sfeerOffsetY, totalHeight);
         const progress = Math.min(Math.max(scrolled / safeTotal, 0), 1);
-        
+
         const metersClimbed = Math.round(progress * 1000);
-        
+
         EventBus.emit('update-sfeer-progress', progress);
         EventBus.emit('update-distance', metersClimbed);
         if (typeof window !== 'undefined') {
             (window as any).sfeerProgress = progress;
         }
-        
+
         if (progress >= 1 && this.countdownDone && !this.isVictorySequence) {
             this.gameEndTime = Date.now();
 
@@ -1315,9 +1419,9 @@ export class Game extends Scene {
         return Math.max(
             0,
             now -
-                this.gameStartTime -
-                this.totalPausedDuration -
-                activePauseDuration
+            this.gameStartTime -
+            this.totalPausedDuration -
+            activePauseDuration
         );
     }
 
@@ -1399,7 +1503,7 @@ export class Game extends Scene {
 
     private updatePropellorAnimation(propellor: Phaser.GameObjects.Sprite | null, isActive: boolean) {
         if (!propellor) return;
-        
+
         if (isActive) {
             if (!propellor.anims.isPlaying) {
                 const animKey = propellor.texture.key === 'propellor-blauw' ? 'propellor-blauw' : 'propellor-rood';
@@ -1419,7 +1523,7 @@ export class Game extends Scene {
 
     private updateWindSprite(sensor1Active: boolean, sensor2Active: boolean) {
         if (!this.ballonContainer) return;
-        
+
         if (sensor1Active) {
             if (!this.windBlauw) {
                 let x = this.ballonContainer.x + this.propellorOffsetXBlauw + 30;
@@ -1458,7 +1562,7 @@ export class Game extends Scene {
                 this.windBlauw = null;
             }
         }
-        
+
         if (sensor2Active) {
             if (!this.windRood) {
                 let x = this.ballonContainer.x + this.propellorOffsetXRood - 30;
@@ -1536,26 +1640,26 @@ export class Game extends Scene {
 
     private checkObstacleCollisions() {
         if (!this.ballon || !this.ballonContainer) return;
-        
+
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obstacle = this.obstacles[i];
             const speed = (obstacle as any).speed || 5;
             const direction = (obstacle as any).direction;
             const movementType = (obstacle as any).movementType || 'horizontal';
-            
+
             const isFrozen = obstacle.getData('frozen');
-            
+
             if (!isFrozen && this.freezeActive) {
                 this.setPropellorPositions('normal');
                 const distanceToBalloon = Phaser.Math.Distance.Between(
                     obstacle.x, obstacle.y,
                     this.ballonContainer.x, this.ballonContainer.y
                 );
-                
+
                 if (distanceToBalloon < 1100) {
                     obstacle.setData('frozen', true);
-                    
-                        this.sound.play('freeze', { volume: 0.6 });
+
+                    this.sound.play('freeze', { volume: 0.6 });
                     if ((obstacle as any).obstacleType === 'plane-flying' && this.textures.exists('plane-freeze')) {
                         console.log('Freezing plane obstacle');
                         obstacle.setTexture('plane-freeze');
@@ -1563,7 +1667,7 @@ export class Game extends Scene {
                     }
                 }
             }
-            
+
             if (!isFrozen) {
                 if (movementType === 'vertical') {
                     obstacle.y += speed;
@@ -1573,14 +1677,14 @@ export class Game extends Scene {
                 } else {
                     if (!direction) (obstacle as any).direction = 1;
                     obstacle.x += speed * direction;
-                    
+
                     if ((obstacle as any).obstacleType === 'bird-walk') {
                         (obstacle as any).flyingOffset += (obstacle as any).flyingSpeed * 0.1;
                         obstacle.y += Math.sin((obstacle as any).flyingOffset) * 1.5;
                     }
                 }
             }
-            
+
             if (movementType === 'vertical') {
                 if (obstacle.y > this.scale.height + obstacle.displayHeight + 100) {
                     obstacle.destroy();
@@ -1595,7 +1699,7 @@ export class Game extends Scene {
                     continue;
                 }
             }
-            
+
             if (!this.ballonInvulnerable && this.checkOverlap(obstacle, this.ballon)) {
                 if (this.shieldActive) {
                     this.sound.play('hit-metal', { volume: 0.5 });
@@ -1606,26 +1710,26 @@ export class Game extends Scene {
                     const obstacleType = (obstacle as any).obstacleType;
                     const obstacleScaleX = obstacle.scaleX;
                     obstacle.destroy();
-                    
+
                     if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
                         const xOffset = obstacleScaleX < 0 ? -100 : 100;
-                        const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
+                        const deadObstacle = this.physics.add.sprite(x + xOffset, y + 100, "bird-walk")
                             .setScale(obstacleScaleX, 1)
                             .setDepth(50)
                             .setOrigin(0.5);
                         if (parent) parent.add(deadObstacle);
-                        
+
                         if (this.anims.exists('bird-death')) {
                             deadObstacle.play("bird-death");
                         }
-                        
+
                         const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
                         body.setAllowGravity(true);
                         body.setGravityY(800);
                         body.setVelocityY(Phaser.Math.Between(250, 400));
                         body.setVelocityX(Phaser.Math.Between(-50, 50));
                         body.setBounce(0.2);
-                        
+
                         this.time.addEvent({
                             delay: 100,
                             loop: true,
@@ -1641,19 +1745,19 @@ export class Game extends Scene {
                             }
                         });
                     }
-                    
+
                     if (obstacleType === 'meteor-falling' && this.textures.exists('meteor-breaking')) {
-                        const breakingMeteor = this.physics.add.sprite(x+30, y+60, 'meteor-breaking')
+                        const breakingMeteor = this.physics.add.sprite(x + 30, y + 60, 'meteor-breaking')
                             .setScale(1)
                             .setDepth(50)
                             .setOrigin(0.5);
                         if (parent) parent.add(breakingMeteor);
-                        
+
                         const body = breakingMeteor.body as Phaser.Physics.Arcade.Body;
                         body.setAllowGravity(true);
                         body.setGravityY(600);
                         body.setVelocityY(Phaser.Math.Between(200, 300));
-                        
+
                         if (this.anims.exists('meteor-breaking')) {
                             breakingMeteor.play('meteor-breaking');
                             breakingMeteor.once('animationcomplete', () => {
@@ -1666,20 +1770,20 @@ export class Game extends Scene {
                             });
                         }
                     }
-                    
+
                     if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
                         const xOffset = obstacleScaleX < 0 ? -100 : 100;
-                        const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-crashing')
+                        const crashingPlane = this.physics.add.sprite(x + xOffset, y + 170, 'plane-crashing')
                             .setScale(obstacleScaleX, 1)
                             .setDepth(50)
                             .setOrigin(0.5);
                         if (parent) parent.add(crashingPlane);
-                        
+
                         const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
                         body.setAllowGravity(true);
                         body.setGravityY(700);
                         body.setVelocityY(Phaser.Math.Between(250, 350));
-                        
+
                         if (this.anims.exists('plane-crashing')) {
                             crashingPlane.play('plane-crashing');
                             crashingPlane.once('animationcomplete', () => {
@@ -1692,20 +1796,20 @@ export class Game extends Scene {
                             });
                         }
                     }
-                    
+
                     if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
                         const xOffset = obstacleScaleX < 0 ? 0 : 0;
-                        const breakingSattelite = this.physics.add.sprite(x + xOffset, y-50, 'sattelite-breaking')
+                        const breakingSattelite = this.physics.add.sprite(x + xOffset, y - 50, 'sattelite-breaking')
                             .setScale(obstacleScaleX, 0.7)
                             .setDepth(50)
                             .setOrigin(0.5);
                         if (parent) parent.add(breakingSattelite);
-                        
+
                         const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
                         body.setAllowGravity(true);
                         body.setGravityY(600);
                         body.setVelocityY(Phaser.Math.Between(200, 300));
-                        
+
                         if (this.anims.exists('sattelite-breaking')) {
                             breakingSattelite.play('sattelite-breaking');
                             breakingSattelite.once('animationcomplete', () => {
@@ -1740,205 +1844,205 @@ export class Game extends Scene {
                             });
                         }
                     }
-                    
+
                     this.obstacles.splice(i, 1);
-                } else 
-                    if (this.freezeActive){
-                    this.setPropellorPositions('normal');
-                    const x = obstacle.x;
-                    const y = obstacle.y;
-                    const parent = obstacle.parentContainer;
-                    const obstacleType = (obstacle as any).obstacleType;
-                    const obstacleScaleX = obstacle.scaleX;
-                    obstacle.destroy();
-                    console.log('');
-                    console.log('Obstacle type on shield collision:', obstacleType);
-                    console.log('Obstacle type on shield collision:', this.freezeActive);
-                    console.log('Obstacle type on shield collision:', this.textures.exists('plane-freeze-crashing'));
-                    if (obstacleType === 'plane-flying' && this.textures.exists('plane-freeze-crashing')) {
-                        this.damageBallon();
-                        const xOffset = obstacleScaleX < 0 ? -100 : 100;
-                        const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-freeze-crashing')
-                            .setScale(obstacleScaleX, 1)
-                            .setDepth(50)
-                            .setOrigin(0.5);
-                        if (parent) parent.add(crashingPlane);
-                        
-                        const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
-                        body.setAllowGravity(true);
-                        body.setGravityY(700);
-                        body.setVelocityY(Phaser.Math.Between(250, 350));
-                        
-                        if (this.anims.exists('plane-freeze-crashing')) {
-                            crashingPlane.play('plane-freeze-crashing');
-                            crashingPlane.once('animationcomplete', () => {
-                                this.tweens.add({
-                                    targets: crashingPlane,
-                                    alpha: 0,
-                                    duration: 300,
-                                    onComplete: () => crashingPlane.destroy()
-                                });
-                            });
-                        }
-                    }
-              
-                    this.obstacles.splice(i, 1);
-                } else {
-                    this.damageBallon();
-                    this.ballonInvulnerable = true;
-                    
-                    this.cameras.main.shake(500, 0.01);
-                    
-                    this.time.delayedCall(1000, () => {
-                        this.ballonInvulnerable = false;
-                    });
-                    
-                    const x = obstacle.x;
-                    const y = obstacle.y;
-                    const parent = obstacle.parentContainer;
-                    const obstacleType = (obstacle as any).obstacleType;
-                    const obstacleScaleX = obstacle.scaleX; 
-                    obstacle.destroy();
-                
-                    if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
-                    const xOffset = obstacleScaleX < 0 ? -100 : 100;
-                    const deadObstacle = this.physics.add.sprite(x + xOffset, y+100, "bird-walk")
-                        .setScale(obstacleScaleX, 1) 
-                        .setOrigin(0.5);
-                    if (parent) parent.add(deadObstacle);
-                    
-                    if (this.anims.exists('bird-death')) {
-                        deadObstacle.play("bird-death");
-                    }
-                    
-                    const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
-                    body.setAllowGravity(true);
-                    body.setGravityY(800);
-                    body.setVelocityY(Phaser.Math.Between(250, 400));
-                    body.setVelocityX(Phaser.Math.Between(-50, 50));
-                    body.setBounce(0.2);
-                    
-                    this.time.addEvent({
-                        delay: 100,
-                        loop: true,
-                        callback: () => {
-                            if (deadObstacle && deadObstacle.y > this.scale.height + 100) {
-                                this.tweens.add({
-                                    targets: deadObstacle!,
-                                    alpha: 0,
-                                    duration: 400,
-                                    onComplete: () => deadObstacle?.destroy(),
+                } else
+                    if (this.freezeActive) {
+                        this.setPropellorPositions('normal');
+                        const x = obstacle.x;
+                        const y = obstacle.y;
+                        const parent = obstacle.parentContainer;
+                        const obstacleType = (obstacle as any).obstacleType;
+                        const obstacleScaleX = obstacle.scaleX;
+                        obstacle.destroy();
+                        console.log('');
+                        console.log('Obstacle type on shield collision:', obstacleType);
+                        console.log('Obstacle type on shield collision:', this.freezeActive);
+                        console.log('Obstacle type on shield collision:', this.textures.exists('plane-freeze-crashing'));
+                        if (obstacleType === 'plane-flying' && this.textures.exists('plane-freeze-crashing')) {
+                            this.damageBallon();
+                            const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                            const crashingPlane = this.physics.add.sprite(x + xOffset, y + 170, 'plane-freeze-crashing')
+                                .setScale(obstacleScaleX, 1)
+                                .setDepth(50)
+                                .setOrigin(0.5);
+                            if (parent) parent.add(crashingPlane);
+
+                            const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
+                            body.setAllowGravity(true);
+                            body.setGravityY(700);
+                            body.setVelocityY(Phaser.Math.Between(250, 350));
+
+                            if (this.anims.exists('plane-freeze-crashing')) {
+                                crashingPlane.play('plane-freeze-crashing');
+                                crashingPlane.once('animationcomplete', () => {
+                                    this.tweens.add({
+                                        targets: crashingPlane,
+                                        alpha: 0,
+                                        duration: 300,
+                                        onComplete: () => crashingPlane.destroy()
+                                    });
                                 });
                             }
                         }
-                    });
-                }
-                
-                // Meteor breaking animation
-                if (obstacleType === 'meteor-falling' && this.textures.exists('meteor-breaking')) {
-                    const breakingMeteor = this.physics.add.sprite(x+30, y+60, 'meteor-breaking')
-                        .setScale(1)
-                        .setDepth(50)
-                        .setOrigin(0.5);
-                    if (parent) parent.add(breakingMeteor);
-                    
-                    const body = breakingMeteor.body as Phaser.Physics.Arcade.Body;
-                    body.setAllowGravity(true);
-                    body.setGravityY(600);
-                    body.setVelocityY(Phaser.Math.Between(200, 300));
-                    
-                    if (this.anims.exists('meteor-breaking')) {
-                        breakingMeteor.play('meteor-breaking');
-                        breakingMeteor.once('animationcomplete', () => {
-                            this.tweens.add({
-                                targets: breakingMeteor,
-                                alpha: 0,
-                                duration: 300,
-                                onComplete: () => breakingMeteor.destroy()
-                            });
+
+                        this.obstacles.splice(i, 1);
+                    } else {
+                        this.damageBallon();
+                        this.ballonInvulnerable = true;
+
+                        this.cameras.main.shake(500, 0.01);
+
+                        this.time.delayedCall(1000, () => {
+                            this.ballonInvulnerable = false;
                         });
-                    }
-                }
-                
-                // Plane crashing animation
-                if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
-                    const xOffset = obstacleScaleX < 0 ? -100 : 100;
-                    const crashingPlane = this.physics.add.sprite(x + xOffset, y+170, 'plane-crashing')
-                        .setScale(obstacleScaleX, 1) 
-                        .setOrigin(0.5);
-                    if (parent) parent.add(crashingPlane);
-                    
-                    const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
-                    body.setAllowGravity(true);
-                    body.setGravityY(700);
-                    body.setVelocityY(Phaser.Math.Between(250, 350));
-                    
-                    if (this.anims.exists('plane-crashing')) {
-                        crashingPlane.play('plane-crashing');
-                        crashingPlane.once('animationcomplete', () => {
-                            this.tweens.add({
-                                targets: crashingPlane,
-                                alpha: 0,
-                                duration: 300,
-                                onComplete: () => crashingPlane.destroy()
-                            });
-                        });
-                    }
-                }
-                
-                    // Satellite breaking animation
-                    if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
-                        const xOffset = obstacleScaleX < 0 ? 0 : 0;
-                        const breakingSattelite = this.physics.add.sprite(x + xOffset, y-40, 'sattelite-breaking')
-                            .setScale(obstacleScaleX, 0.7)
-                            .setDepth(50)
-                            .setOrigin(0.5);
-                        if (parent) parent.add(breakingSattelite);
-                        const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
-                        body.setAllowGravity(true);
-                        body.setGravityY(600);
-                        body.setVelocityY(Phaser.Math.Between(200, 300));
-                        if (this.anims.exists('sattelite-breaking')) {
-                            breakingSattelite.play('sattelite-breaking');
-                            breakingSattelite.once('animationcomplete', () => {
-                                this.tweens.add({
-                                    targets: breakingSattelite,
-                                    alpha: 0,
-                                    duration: 300,
-                                    onComplete: () => breakingSattelite.destroy()
-                                });
+
+                        const x = obstacle.x;
+                        const y = obstacle.y;
+                        const parent = obstacle.parentContainer;
+                        const obstacleType = (obstacle as any).obstacleType;
+                        const obstacleScaleX = obstacle.scaleX;
+                        obstacle.destroy();
+
+                        if (obstacleType === 'bird-walk' && this.textures.exists('bird-walk')) {
+                            const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                            const deadObstacle = this.physics.add.sprite(x + xOffset, y + 100, "bird-walk")
+                                .setScale(obstacleScaleX, 1)
+                                .setOrigin(0.5);
+                            if (parent) parent.add(deadObstacle);
+
+                            if (this.anims.exists('bird-death')) {
+                                deadObstacle.play("bird-death");
+                            }
+
+                            const body = deadObstacle.body as Phaser.Physics.Arcade.Body;
+                            body.setAllowGravity(true);
+                            body.setGravityY(800);
+                            body.setVelocityY(Phaser.Math.Between(250, 400));
+                            body.setVelocityX(Phaser.Math.Between(-50, 50));
+                            body.setBounce(0.2);
+
+                            this.time.addEvent({
+                                delay: 100,
+                                loop: true,
+                                callback: () => {
+                                    if (deadObstacle && deadObstacle.y > this.scale.height + 100) {
+                                        this.tweens.add({
+                                            targets: deadObstacle!,
+                                            alpha: 0,
+                                            duration: 400,
+                                            onComplete: () => deadObstacle?.destroy(),
+                                        });
+                                    }
+                                }
                             });
                         }
-                    }
 
-                    // UFO breaking animation (ook bij gewone botsing)
-                    if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
-                        const xOffset = obstacleScaleX < 0 ? 0 : 0;
+                        // Meteor breaking animation
+                        if (obstacleType === 'meteor-falling' && this.textures.exists('meteor-breaking')) {
+                            const breakingMeteor = this.physics.add.sprite(x + 30, y + 60, 'meteor-breaking')
+                                .setScale(1)
+                                .setDepth(50)
+                                .setOrigin(0.5);
+                            if (parent) parent.add(breakingMeteor);
 
-                        const breakingUfo = this.physics.add.sprite(x + xOffset, y, 'ufo-breaking')
-                            .setScale(0.5, 0.5)
-                            .setDepth(50)
-                            .setOrigin(0.5);
-                        if (parent) parent.add(breakingUfo);
-                        const body = breakingUfo.body as Phaser.Physics.Arcade.Body;
-                        body.setAllowGravity(true);
-                        body.setGravityY(600);
-                        body.setVelocityY(Phaser.Math.Between(200, 300));
-                        if (this.anims.exists('ufo-breaking')) {
-                            breakingUfo.play('ufo-breaking');
-                            breakingUfo.once('animationcomplete', () => {
-                                this.tweens.add({
-                                    targets: breakingUfo,
-                                    alpha: 0,
-                                    duration: 300,
-                                    onComplete: () => breakingUfo.destroy()
+                            const body = breakingMeteor.body as Phaser.Physics.Arcade.Body;
+                            body.setAllowGravity(true);
+                            body.setGravityY(600);
+                            body.setVelocityY(Phaser.Math.Between(200, 300));
+
+                            if (this.anims.exists('meteor-breaking')) {
+                                breakingMeteor.play('meteor-breaking');
+                                breakingMeteor.once('animationcomplete', () => {
+                                    this.tweens.add({
+                                        targets: breakingMeteor,
+                                        alpha: 0,
+                                        duration: 300,
+                                        onComplete: () => breakingMeteor.destroy()
+                                    });
                                 });
-                            });
+                            }
                         }
+
+                        // Plane crashing animation
+                        if (obstacleType === 'plane-flying' && this.textures.exists('plane-crashing')) {
+                            const xOffset = obstacleScaleX < 0 ? -100 : 100;
+                            const crashingPlane = this.physics.add.sprite(x + xOffset, y + 170, 'plane-crashing')
+                                .setScale(obstacleScaleX, 1)
+                                .setOrigin(0.5);
+                            if (parent) parent.add(crashingPlane);
+
+                            const body = crashingPlane.body as Phaser.Physics.Arcade.Body;
+                            body.setAllowGravity(true);
+                            body.setGravityY(700);
+                            body.setVelocityY(Phaser.Math.Between(250, 350));
+
+                            if (this.anims.exists('plane-crashing')) {
+                                crashingPlane.play('plane-crashing');
+                                crashingPlane.once('animationcomplete', () => {
+                                    this.tweens.add({
+                                        targets: crashingPlane,
+                                        alpha: 0,
+                                        duration: 300,
+                                        onComplete: () => crashingPlane.destroy()
+                                    });
+                                });
+                            }
+                        }
+
+                        // Satellite breaking animation
+                        if (obstacleType === 'sattelite-flying' && this.textures.exists('sattelite-breaking')) {
+                            const xOffset = obstacleScaleX < 0 ? 0 : 0;
+                            const breakingSattelite = this.physics.add.sprite(x + xOffset, y - 40, 'sattelite-breaking')
+                                .setScale(obstacleScaleX, 0.7)
+                                .setDepth(50)
+                                .setOrigin(0.5);
+                            if (parent) parent.add(breakingSattelite);
+                            const body = breakingSattelite.body as Phaser.Physics.Arcade.Body;
+                            body.setAllowGravity(true);
+                            body.setGravityY(600);
+                            body.setVelocityY(Phaser.Math.Between(200, 300));
+                            if (this.anims.exists('sattelite-breaking')) {
+                                breakingSattelite.play('sattelite-breaking');
+                                breakingSattelite.once('animationcomplete', () => {
+                                    this.tweens.add({
+                                        targets: breakingSattelite,
+                                        alpha: 0,
+                                        duration: 300,
+                                        onComplete: () => breakingSattelite.destroy()
+                                    });
+                                });
+                            }
+                        }
+
+                        // UFO breaking animation (ook bij gewone botsing)
+                        if (obstacleType === 'ufo' && this.textures.exists('ufo-breaking')) {
+                            const xOffset = obstacleScaleX < 0 ? 0 : 0;
+
+                            const breakingUfo = this.physics.add.sprite(x + xOffset, y, 'ufo-breaking')
+                                .setScale(0.5, 0.5)
+                                .setDepth(50)
+                                .setOrigin(0.5);
+                            if (parent) parent.add(breakingUfo);
+                            const body = breakingUfo.body as Phaser.Physics.Arcade.Body;
+                            body.setAllowGravity(true);
+                            body.setGravityY(600);
+                            body.setVelocityY(Phaser.Math.Between(200, 300));
+                            if (this.anims.exists('ufo-breaking')) {
+                                breakingUfo.play('ufo-breaking');
+                                breakingUfo.once('animationcomplete', () => {
+                                    this.tweens.add({
+                                        targets: breakingUfo,
+                                        alpha: 0,
+                                        duration: 300,
+                                        onComplete: () => breakingUfo.destroy()
+                                    });
+                                });
+                            }
+                        }
+
+                        this.obstacles.splice(i, 1);
                     }
-                
-                    this.obstacles.splice(i, 1);
-                }
             }
         }
     }
@@ -1972,7 +2076,7 @@ export class Game extends Scene {
         };
 
         const texture = textureMap[type];
-        
+
         if (!this.textures.exists(texture)) {
             return;
         }
@@ -1980,14 +2084,14 @@ export class Game extends Scene {
         const x = Phaser.Math.Between(150, this.scale.width - 150);
         const sfeerCenterY = this.sfeerBaseY[sfeerIndex] + this.sfeerOffsetY;
         const sfeerHeight = this.sfeerHoogtes[sfeerIndex];
-        
+
         let minOffset = sfeerHeight * 0.3;
         let maxOffset = sfeerHeight * 0.6;
         if (type === 'freeze') {
             minOffset = sfeerHeight * 0.55;
             maxOffset = sfeerHeight * 0.85;
         }
-        if ( type === 'timer') {
+        if (type === 'timer') {
             minOffset = sfeerHeight * 0.2;
             maxOffset = sfeerHeight * 0.25;
         }
@@ -2000,7 +2104,7 @@ export class Game extends Scene {
                 case 'health': circleColor = 0xE73228; break; // groen
                 case 'freeze': circleColor = 0x35BBF0; break; // blauw
                 case 'shield': circleColor = 0x26B31F; break; // geel
-                case 'timer':  circleColor = 0xFFB703; break; // paars
+                case 'timer': circleColor = 0xFFB703; break; // paars
             }
             const circle1 = this.add.circle(0, 0, 100, circleColor, 0.5)
                 .setDepth(98)
@@ -2141,9 +2245,9 @@ export class Game extends Scene {
             case 'freeze':
                 this.freezeActive = true;
                 this.activePowerUp = 'freeze';
-                this.powerUpEndTime = Date.now() + 10000; 
+                this.powerUpEndTime = Date.now() + 10000;
                 EventBus.emit('update-powerup', 'freeze');
-                
+
                 if (this.ballon && this.textures.exists('balloon-freeze')) {
                     this.ballon.setTexture('balloon-freeze');
                 }
@@ -2152,9 +2256,9 @@ export class Game extends Scene {
             case 'shield':
                 this.shieldActive = true;
                 this.activePowerUp = 'shield';
-                this.powerUpEndTime = Date.now() + 10000; 
+                this.powerUpEndTime = Date.now() + 10000;
                 EventBus.emit('update-powerup', 'shield');
-                
+
                 if (this.ballon && this.textures.exists('balloon-shield')) {
                     this.ballon.setTexture('balloon-shield');
                 }
@@ -2221,10 +2325,10 @@ export class Game extends Scene {
     private setPropellorPositions(mode: 'normal' | 'tilted') {
         if (!this.propellorBlauw || !this.propellorRood) return;
         if (mode === 'tilted') {
-            this.propellorBlauw.x = this.propellorOffsetXBlauw -5;
+            this.propellorBlauw.x = this.propellorOffsetXBlauw - 5;
             this.propellorBlauw.y = this.propellorOffsetY - 15;
             this.propellorBlauw.setRotation(0.26); // ~15 graden
-            this.propellorRood.x = this.propellorOffsetXRood-12;
+            this.propellorRood.x = this.propellorOffsetXRood - 12;
             this.propellorRood.y = this.propellorOffsetY + 3;
             this.propellorRood.setRotation(0.26); // ~15 graden
         } else {

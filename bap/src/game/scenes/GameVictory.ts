@@ -22,7 +22,18 @@ export class GameVictory extends Scene {
         super("GameVictory");
     }
 
+    init() {
+        // Phaser hergebruikt dezelfde Scene-instance wanneer de scene
+        // opnieuw gestart wordt. Daarom moeten deze waarden bij ELKE run
+        // opnieuw naar hun beginwaarde.
+        this.hasSwipedIn = false;
+        this.isNavigating = false;
+        this.wasButtonPressed = false;
+    }
+
     create() {
+        // Extra reset voor zekerheid bij een nieuwe create().
+        this.hasSwipedIn = false;
         this.isNavigating = false;
         this.wasButtonPressed = false;
 
@@ -76,9 +87,6 @@ export class GameVictory extends Scene {
 
         victoryContainer.setDepth(9999);
 
-        if (this.hasSwipedIn) {
-            victoryContainer.y = 0;
-        }
 
         // ---------------------------------------------------------
         // BACKGROUND
