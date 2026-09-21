@@ -77,13 +77,15 @@ export class Tutorial extends Scene {
         this.createProgressBar();
         this.createSkipButton();
 
-        const result = this.sound.play('troposfeer', { loop: true, volume: 0.5 });
-        const soundResult = result as unknown;
-        if (typeof soundResult === 'object' && soundResult !== null && typeof (soundResult as any).stop === 'function') {
-            this.troposfeerSound = soundResult as Phaser.Sound.BaseSound;
-        } else {
-            this.troposfeerSound = this.sound.get('troposfeer');
-        }
+        this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+
+        // const result = this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+        // const soundResult = result as unknown;
+        // if (typeof soundResult === 'object' && soundResult !== null && typeof (soundResult as any).stop === 'function') {
+        //     this.troposfeerSound = soundResult as Phaser.Sound.BaseSound;
+        // } else {
+        //     this.troposfeerSound = this.sound.get('troposfeer');
+        // }
         this.wasButtonPressed = this.rotary?.buttonPressed || false;
         this.sceneIsReady = true;
 
@@ -508,13 +510,13 @@ export class Tutorial extends Scene {
                 this.skipButtonIsDown = false;
                 if (this.skipButtonTween) this.skipButtonTween.stop();
                 this.sound.play('button-click');
-                if (this.troposfeerSound && typeof this.troposfeerSound.stop === 'function') {
-                    this.troposfeerSound.stop();
-                    if (typeof this.troposfeerSound.destroy === 'function') {
-                        this.troposfeerSound.destroy();
-                    }
-                    this.troposfeerSound = null;
-                }
+                // if (this.troposfeerSound && typeof this.troposfeerSound.stop === 'function') {
+                //     this.troposfeerSound.stop();
+                //     if (typeof this.troposfeerSound.destroy === 'function') {
+                //         this.troposfeerSound.destroy();
+                //     }
+                //     this.troposfeerSound = null;
+                // }
                 this.scene.start('Game');
             }
         } else if (!this.isTransitioning) {

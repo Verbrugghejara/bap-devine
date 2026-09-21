@@ -65,7 +65,7 @@ export class Tutorial extends Scene {
         this.createBalloonAndPropellors();
         this.createProgressBar();
         this.createSkipButton();
-        this.sound.play('troposfeer', { loop: true, volume: 0.5 });
+        // this.sound.play('troposfeer', { loop: true, volume: 0.5 });
     }
 
     update() {

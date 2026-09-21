@@ -42,6 +42,8 @@ export class Game extends Scene {
     private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
     private wasButtonPressed: boolean = false;
     private inactivityTimeout: any = null;
+    private countdownStartTimeout: ReturnType<typeof setTimeout> | null = null;
+    private interludeTimeout: ReturnType<typeof setTimeout> | null = null;
 
     // --- Sfeer Layers ---
     private huidigeSfeerIndex: number = 0;
@@ -237,6 +239,14 @@ export class Game extends Scene {
     shutdown() {
         clearTimeout(this.inactivityTimeout);
         this.inactivityTimeout = null;
+        if (this.countdownStartTimeout !== null) {
+            clearTimeout(this.countdownStartTimeout);
+            this.countdownStartTimeout = null;
+        }
+        if (this.interludeTimeout !== null) {
+            clearTimeout(this.interludeTimeout);
+            this.interludeTimeout = null;
+        }
         EventBus.off('resume-game-scene', this.handleResumeGameScene, this);
         EventBus.off('victory-swipe-in', this.handleVictorySwipeIn, this);
         EventBus.off('gameover-swipe-in', this.handleGameOverSwipeIn, this);
@@ -313,6 +323,10 @@ export class Game extends Scene {
         this.lastSfeerIndex = 0;
         this.isGamePaused = false;
         this.pauseStartTime = null;
+        this.pauseBeganAt = null;
+        this.totalPausedDuration = 0;
+        this.gameStartTime = 0;
+        this.gameEndTime = 0;
         this.countdownDone = false;
         this.isVictorySequence = false;
         this.isGameOverSequence = false;
@@ -326,20 +340,31 @@ export class Game extends Scene {
         this.aliens = [];
         
         sfeerProgress.value = 0;
+        if (typeof window !== 'undefined') {
+            delete (window as any).gameDurationMs;
+            delete (window as any).totalPausedDuration;
+        }
         EventBus.emit('show-countdown');
         EventBus.emit('show-gameui');
         
-        setTimeout(() => {
+        this.countdownStartTimeout = setTimeout(() => {
+            this.countdownStartTimeout = null;
+
+            // The official game timer starts exactly when the countdown ends.
             this.gameStartTime = Date.now();
             this.countdownDone = true;
-            setTimeout(() => {
-                this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
-                        this.troposfeerSound.play();
-                EventBus.emit('show-interlude', 0);
+
+            this.interludeTimeout = setTimeout(() => {
+                this.interludeTimeout = null;
+
+                if (this.scene.isActive()) {
+                    this.troposfeerSound = this.sound.add('troposfeer', { loop: true, volume: 1 });
+                    this.troposfeerSound.play();
+                    EventBus.emit('show-interlude', 0);
+                }
             }, 1000);
-            
         }, 3000);
-        
+
         this.rotary = getRotaryClient();
     }
 
@@ -1172,6 +1197,7 @@ export class Game extends Scene {
             this.spawnAlien();
             this.lastSfeerIndex = sfeerIndex;
             console.log('------------------------------------');
+            console.log('LALALALALALALALAL');
             console.log(this.sound);
 
             console.log(this.sound.locked)
@@ -1253,28 +1279,58 @@ export class Game extends Scene {
         
         if (progress >= 1 && this.countdownDone && !this.isVictorySequence) {
             this.gameEndTime = Date.now();
-            const duration = this.gameEndTime - this.gameStartTime;
+
+            // Use exactly the same clock as the HUD timer.
+            // If a pause is currently active, include the current pause interval too.
+            const duration = this.getElapsedGameTimeMs();
 
             if (typeof window !== 'undefined') {
-                if ((window as any).gameDurationMs === undefined) {
-                    (window as any).gameDurationMs = duration;
-                }
+                // Always overwrite this value for the current run.
+                // Keeping an old value here can make GameVictory show a previous run.
+                (window as any).gameDurationMs = duration;
                 (window as any).totalPausedDuration = this.totalPausedDuration;
             }
+
             this.isVictorySequence = true;
             this.isBalloonLeaving = true;
             EventBus.emit('hide-gameui');
         }
     }
 
+    /**
+     * Returns the official elapsed gameplay time in milliseconds.
+     *
+     * This is the single source of truth for both the HUD timer and
+     * the final victory time.
+     */
+    private getElapsedGameTimeMs(): number {
+        if (this.gameStartTime === 0) return 0;
+
+        const now = Date.now();
+        const activePauseDuration =
+            this.pauseBeganAt !== null
+                ? now - this.pauseBeganAt
+                : 0;
+
+        return Math.max(
+            0,
+            now -
+                this.gameStartTime -
+                this.totalPausedDuration -
+                activePauseDuration
+        );
+    }
+
     private updateTimer() {
         if (!this.countdownDone || this.gameStartTime === 0) return;
         if (this.isGamePaused) return;
-        const elapsed = Date.now() - this.gameStartTime - this.totalPausedDuration;
+
+        const elapsed = this.getElapsedGameTimeMs();
         const seconds = Math.floor(elapsed / 1000);
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         const timeString = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+
         EventBus.emit('update-timer', timeString);
     }
 
@@ -2180,10 +2236,4 @@ export class Game extends Scene {
             this.propellorRood.setRotation(0);
         }
     }
-
-
-    
-
-
 }
-
